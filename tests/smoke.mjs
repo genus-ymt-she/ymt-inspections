@@ -44,11 +44,11 @@ const shot = async (page, name) => { if (SHOTS) await page.screenshot({ path: pa
 const settle = page => page.waitForTimeout(450);
 
 const page = await newPage();
-await step("home shows hero and the five tiles (no long list)", async () => {
+await step("home shows hero and the six tiles (no long list)", async () => {
   await page.waitForSelector(".hero"); await page.waitForSelector(".tiles .tile");
   if (await page.$("#lib")) throw new Error("inspection list should not be on home");
-  const n = await page.$$eval(".tiles .tile", e => e.length); if (n !== 5) throw new Error("tiles: " + n);
-  const labels = await page.$$eval(".tiles .tile b", e => e.map(x => x.textContent).join("|")); if (labels !== "Inspection|Task Observation|Mentoring|Hazard|Positive") throw new Error("tiles: " + labels);
+  const n = await page.$$eval(".tiles .tile", e => e.length); if (n !== 6) throw new Error("tiles: " + n);
+  const labels = await page.$$eval(".tiles .tile b", e => e.map(x => x.textContent.trim()).join("|")); if (labels !== "My Day|Inspection|Task Observation|Mentoring|Hazard|Positive") throw new Error("tiles: " + labels);
   await settle(page); await shot(page, "01-home");
 });
 await step("Inspection tile opens the list with category chips", async () => {
@@ -212,6 +212,29 @@ await step("Insights shows lead indicators (no targets)", async () => {
 });
 await step("monthly HSE summary PDF builds", async () => {
   const n = await page.evaluate(() => buildMonthlyPDF(DASH.j).size); if (n < 15000) throw new Error("monthly pdf bytes " + n); console.log("      monthly pdf bytes", n);
+});
+await step("My Day: private planner – add, tick, edit, per-person, never sent", async () => {
+  const postsBefore = JSON.stringify(relay.mail).length;
+  await page.evaluate(() => go("#home")); await page.waitForSelector(".tile.myday"); await page.click(".tile.myday");
+  await page.waitForSelector(".privacy"); const banner = await page.textContent(".privacy");
+  if (!/Only you can see this page/.test(banner) || !/SHE Manager cannot see it/.test(banner)) throw new Error("privacy message missing");
+  await page.fill("#mdIn", "Call Shire about Cowalla Rd potholes ZZPRIVATE"); await page.click(".chip >> text=Priority"); await page.fill("#mdIn", "Call Shire about Cowalla Rd potholes ZZPRIVATE"); await page.press("#mdIn", "Enter");
+  await page.click(".chip >> text=Toolbox talk");
+  await page.click(".seg >> text=Tomorrow"); await page.fill("#mdIn", "Review spill kit order"); await page.press("#mdIn", "Enter");
+  let t = await page.textContent("#app"); if (!/2 to do today/.test(t) || !/Tomorrow/.test(t)) throw new Error("planner state: " + t.slice(0, 200));
+  await page.click(".mdi >> nth=0 >> .mdc"); t = await page.textContent("#app"); if (!/Done today/.test(t) || !/1 to do today/.test(t)) throw new Error("tick failed");
+  await page.evaluate(() => window.scrollTo(0, 0)); await settle(page); await shot(page, "16-my-day");
+  // carried over from yesterday
+  await page.evaluate(() => { const L = mdLoad(); L.push({ id: "old1", text: "Yesterday job", date: addDaysISO(-1), time: "", pri: false, done: false, created: 1 }); mdSave(L); drawMyDay(); });
+  if (!/carried over/.test(await page.textContent("#app"))) throw new Error("carry-over missing");
+  // another person on the same phone sees their own (empty) list
+  const other = await page.evaluate(() => { const me = localStorage.getItem("inspector"); localStorage.setItem("inspector", "Matt Smith"); const n = mdLoad().length; localStorage.setItem("inspector", me); return n; });
+  if (other !== 0) throw new Error("another user can see this list");
+  // never sent anywhere
+  await page.evaluate(() => flushOutbox()); await page.waitForTimeout(500);
+  if (JSON.stringify(relay.mail).includes("ZZPRIVATE")) throw new Error("private item was emailed");
+  const j = JSON.stringify(relay.get({ action: "dashboard", key: relay.key })); if (j.includes("ZZPRIVATE")) throw new Error("private item reached the project log");
+  await page.evaluate(() => go("#home")); await page.waitForSelector(".tile.myday"); if (!/to do today/.test(await page.textContent(".tile.myday"))) throw new Error("tile count missing");
 });
 await step("CSV exports", async () => {
   const [dl] = await Promise.all([page.waitForEvent("download"), page.evaluate(() => exportActions())]);
