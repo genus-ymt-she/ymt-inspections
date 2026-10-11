@@ -14,9 +14,9 @@ function stats(d){const t=tabByNum(d.tab);const qs=allQ(t);const c={C:0,UA:0,NI:
   const den=c.C+c.UA+c.NI;return {...c,rated,total:qs.length,pct:den?Math.round(c.C/den*100):null,ncs,snnN}}
 function nonCompliances(d){const t=tabByNum(d.tab);const out=[];
   allQ(t).forEach(q=>{const a=d.answers[q.id];if(a&&(a.r==="UA"||a.r==="NI"))out.push({id:q.id,text:q.text,ref:q.ref,snn:q.snn||[],...a,photos:a.photos||[]})});
-  d.others.forEach((o,i)=>{if(o.r==="UA"||o.r==="NI")out.push({id:`${t.num}.X${i+1}`,text:"Additional hazard: "+(o.title||""),ref:"",snn:o.snn||[],...o,photos:o.photos||[]})});
+  d.others.forEach((o,i)=>{if(o.r==="UA"||o.r==="NI")out.push({id:`${t.num}.X${i+1}`,text:"Additional hazard: "+(o.title||""),ref:"",snn:o.snn||[],...o,hazard:true,photos:o.photos||[]})});
   const w=n=>(n.r==="UA"?0:2)+(n.snn.length?0:1);const rs=n=>{const k=riskOf(n.cons,n.like);return k?k.score:0};return out.map((n,i)=>[n,i]).sort((x,y)=>w(x[0])-w(y[0])||rs(y[0])-rs(x[0])||x[1]-y[1]).map(x=>x[0])}
-function ncComplete(a){if(!a.finding||!a.finding.trim())return false;if(!a.action||!a.action.trim())return false;if(!riskOf(a.cons,a.like))return false;
+function ncComplete(a){if(!a.finding||!a.finding.trim())return false;if(!a.action||!a.action.trim())return false;if(a.hazard&&!riskOf(a.cons,a.like))return false;
   if(a.closed===true)return !!(a.taken&&a.taken.trim());return a.closed===false}
 function problems(d){const p=[];const t=tabByNum(d.tab);if(t.kind==="record")return recProblems(d);
   if(!d.details.location.trim())p.push("Inspection location / work front");
@@ -24,7 +24,7 @@ function problems(d){const p=[];const t=tabByNum(d.tab);if(t.kind==="record")ret
   if(t.overall&&t.overall.req&&!d.details.overall)p.push(t.overall.label);
   if(!d.details.inspector.trim())p.push("Inspector name");
   const un=allQ(t).filter(q=>!(d.answers[q.id]&&d.answers[q.id].r));if(un.length)p.push(`${un.length} item(s) not rated`);
-  const inc=nonCompliances(d).filter(n=>!ncComplete(n));if(inc.length)p.push(`${inc.length} non-compliance(s) missing finding / corrective action / risk rating / closed status`);
+  const inc=nonCompliances(d).filter(n=>!ncComplete(n));if(inc.length)p.push(`${inc.length} non-compliance(s) missing finding / corrective action / closed status (other hazards also need a risk rating)`);
   {const bad=nonCompliances(d).filter(n=>n.closed===false&&n.ownerEmail&&!emailOK(n.ownerEmail));if(bad.length)p.push(`${bad.length} responsible person email(s) look wrong – check or clear them`)}
   d.others.forEach((o,i)=>{if(!o.r||!(o.title||"").trim())p.push(`Additional hazard ${i+1} needs a description and rating`)});
   if(t.checks){const C=t.checks;const done=checkDone(d);
@@ -66,3 +66,7 @@ function reportFacts(d){const t=tabByNum(d.tab);const s=t.kind==="record"?null:s
 function narrRows(d){const t=tabByNum(d.tab);const n=d.details.narr||{};const rows=[];
   if(t.narrative)t.narrative.fields.forEach(f=>{const v=(n[f.key]||"").trim();if(v)rows.push([f.label,v])});
   if(t.overall&&d.details.overall)rows.push([t.overall.label.replace(/^Overall – /,"Overall – "),d.details.overall]);return rows}
+
+/* suggested close-out: hazards use the Genus risk level; checklist items use the rating (UA today, NI 7 days) */
+const NC_DAYS={UA:0,NI:7};
+function suggestDays(a,hazard){const k=hazard?riskOf(a.cons,a.like):null;return k?{days:k.days,label:k.level}:{days:NC_DAYS[a.r]??7,label:a.r||"NI"}}

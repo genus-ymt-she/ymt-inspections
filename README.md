@@ -12,7 +12,7 @@ email, the shared project log (Google Sheet) and the PDF archive (Google Drive).
 | Area | Capability |
 |---|---|
 | **Inspect** | 26 checklist inspections + discussion record (incl. 24 Task Observation with a written observation record, 25 Fire Danger Day, 26 Monthly Road Condition, 27 Spill Kit), C / UA / NI / N/A ratings, SNN-linked items, EXIF-verified time-stamped photos, voice mode, signature sign-off, branded PDF |
-| **Risk** | Genus Risk Matrix on every finding (Minor → Catastrophic × Rare → Almost certain, ranked 1–25, Low / Medium / High / Critical) with the Genus risk action and a suggested due date |
+| **Risk** | Genus Risk Matrix on hazards – the Hazard report and “Other hazards identified”; checklist UA / NI findings need no risk rating (due date suggested: UA today, NI 7 days) (Minor → Catastrophic × Rare → Almost certain, ranked 1–25, Low / Medium / High / Critical) with the Genus risk action and a suggested due date |
 | **Actions** | Project-wide corrective action register. The responsible person is **emailed the action** with a link to close it out, and reminded when it is due or overdue. Close-out with photo evidence, SHE Manager emailed to verify (Manager PIN), re-open / reassign, full history, CSV export |
 | **Quick reports** | 30-second hazard report (Genus risk rating, photos, assign and email an action) and positive observation, for lead indicators |
 | **Urgent alert** | Any UA or Critical finding emails the SHE Manager and the inspection supervisor immediately |

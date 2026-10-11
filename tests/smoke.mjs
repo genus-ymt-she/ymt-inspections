@@ -103,21 +103,23 @@ await step("start inspection 01 and rate items", async () => {
   await page.click(`${q0} .rates button[data-r=NI]`);
   await page.fill(`${q0} .nc textarea >> nth=0`, "Emergency response plan on notice board is out of date");
   await page.fill(`${q0} .nc textarea >> nth=1`, "Replace with current ERP revision and brief the crew");
-  await page.click(`${q0} .riskbox .rscale >> nth=0 >> button >> nth=2`); // consequence 3
-  await page.click(`${q0} .riskbox .rscale >> nth=1 >> button >> nth=3`); // likelihood 4 -> 12 High
+  if (await page.$(`${q0} .riskbox`)) throw new Error("checklist items should not ask for a risk rating");
   await page.click(`${q0} .seg button >> nth=1`); // open
   await page.selectOption(`${q0} .pp select`, "Zane Patten");
   if (!/zane\.patten@genus\.com\.au/.test(await page.textContent(q0))) throw new Error("team email not shown");
-  const due = await page.inputValue(`${q0} .nc input[type=date]`); if (!due) throw new Error("due date was not suggested from risk");
+  const due = await page.inputValue(`${q0} .nc input[type=date]`); const want = await page.evaluate(() => addDaysISO(7)); if (due !== want) throw new Error(`NI due should be 7 days (${want}), got ${due}`);
   await settle(page); await page.locator(q0).scrollIntoViewIfNeeded(); await shot(page, "02-finding-risk");
   // second item UA closed on the spot, the rest compliant (fast path)
-  await page.evaluate(ids => { rate(ids[1], "UA"); const a = CUR.answers[ids[1]]; Object.assign(a, { finding: "First aid kit missing burns dressings", action: "Restock kit", cons: 2, like: 2, closed: true, taken: "Restocked from site store" }); ids.slice(2).forEach(id => rate(id, "C")); save(CUR, true); refreshQ(ids[1]); }, ids);
+  await page.evaluate(ids => { rate(ids[1], "UA"); const a = CUR.answers[ids[1]]; Object.assign(a, { finding: "First aid kit missing burns dressings", action: "Restock kit", closed: true, taken: "Restocked from site store" }); ids.slice(2).forEach(id => rate(id, "C")); save(CUR, true); refreshQ(ids[1]); }, ids);
   const p = await page.evaluate(() => problems(CUR)); if (p.length) throw new Error(p.join("; "));
-  const k = await page.evaluate(id => riskOf(CUR.answers[id].cons, CUR.answers[id].like).level, ids[0]); if (k !== "High") throw new Error("risk level " + k);
 });
-await step("risk is required before review", async () => {
-  const ok = await page.evaluate(() => { const a = { finding: "x", action: "y", closed: true, taken: "z" }; return ncComplete(a) === false; });
-  if (!ok) throw new Error("NC without risk counted as complete");
+await step("risk rating: not needed on checklist items, required on other hazards", async () => {
+  const r = await page.evaluate(() => [ncComplete({ finding: "x", action: "y", closed: true, taken: "z" }), ncComplete({ hazard: true, finding: "x", action: "y", closed: true, taken: "z" }), ncComplete({ hazard: true, finding: "x", action: "y", closed: true, taken: "z", cons: 2, like: 2 })]);
+  if (r.join() !== "true,false,true") throw new Error("ncComplete: " + r);
+  await page.evaluate(() => addOther()); await page.waitForSelector("#others .riskbox");
+  if (!(await page.evaluate(() => problems(CUR))).some(x => /other hazards also need a risk rating/.test(x))) throw new Error("other hazard without risk not flagged");
+  await page.evaluate(() => { CUR.others.splice(0, 1); save(CUR, true); renderOthers(); });
+  const p = await page.evaluate(() => problems(CUR)); if (p.length) throw new Error(p.join("; "));
 });
 await step("review screen, signature and PDF", async () => {
   await page.evaluate(() => toReview());
@@ -135,7 +137,7 @@ await step("send directly through the relay (findings reach the log)", async () 
   if (j.findings.length !== 2) throw new Error("findings logged: " + j.findings.length);
   if (!relay.mail.length || !relay.mail[0].attachments) throw new Error("no email with PDF");
   const rep = relay.mail.find(m => m.attachments); if (!/Risk/.test(rep.htmlBody)) throw new Error("email lacks risk column");
-  if (!/High 15/.test(rep.htmlBody)) throw new Error("Genus matrix rank not in email");
+  if (/Risk: /.test(rep.body)) throw new Error("checklist findings should not show a risk line in the email");
   const asg = relay.mail.find(m => m.to === "zane.patten@genus.com.au"); if (!asg) throw new Error("assignee not emailed");
   if (!relay.mail.find(m => /^URGENT/.test(m.subject || ""))) throw new Error("no urgent alert for the UA finding");
   globalThis.ACTION_LINK = asg.htmlBody.match(/href="[^"]*(#actions\/[^"]+)"/)[1];

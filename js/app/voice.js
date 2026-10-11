@@ -312,7 +312,7 @@ async function voiceNC(kind,id,r,note,haveFinding){ const A=getA(kind,id); const
     if(f.cmd==="stop") return "stop"; if(f.cmd==="back") return "redo"; if(f.val){ A.finding=f.val; save(CUR); refresh() } }
   if(!(A.action||"").trim()){ const f=await ask("What's the corrective action? Say next when you've finished.",{type:"long",short:"What's the corrective action?"});
     if(f.cmd==="stop") return "stop"; if(f.cmd==="back") return "redo"; if(f.val){ A.action=f.val; save(CUR); refresh() } }
-  if(!riskOf(A.cons,A.like)){
+  if(kind==="o"&&!riskOf(A.cons,A.like)){
     const rc=await ask("Risk rating. What's the worst credible consequence: minor, moderate, major, severe, or catastrophic?",{type:"scale",list:RISK.consequence,short:"Consequence: minor, moderate, major, severe, or catastrophic?"});
     if(rc.cmd==="stop") return "stop"; if(rc.cmd==="back") return "redo"; if(rc.val){ A.cons=rc.val; save(CUR); refresh() }
     const rl=await ask("And the likelihood: rare, unlikely, possible, likely, or almost certain?",{type:"scale",list:RISK.likelihood,short:"Likelihood: rare, unlikely, possible, likely, or almost certain?"});
@@ -324,7 +324,7 @@ async function voiceNC(kind,id,r,note,haveFinding){ const A=getA(kind,id); const
     if(c.val){ const f=await ask("What action was taken? Say next when you've finished.",{type:"long"}); if(f.cmd==="stop") return "stop"; if(f.val){ A.taken=f.val; save(CUR); refresh() } }
     else { const o=await ask("Who is responsible for closing it out?",{type:"text"}); if(o.cmd==="stop") return "stop"; if(o.val){ A.owner=nameCase(o.val); save(CUR); refresh() }
       const due=await ask("When is it due? For example, tomorrow, Friday, or the 20th of October.",{type:"date",short:"When is it due?"}); if(due.cmd==="stop") return "stop";
-      if(due.val){ A.due=due.val; save(CUR); refresh() } else if(due.raw!==undefined) V.pre="I didn't catch the date. Set it on screen."; else if(!A.due){ const k=riskOf(A.cons,A.like); if(k){ A.due=addDaysISO(k.days); save(CUR); refresh() } } } }
+      if(due.val){ A.due=due.val; save(CUR); refresh() } else if(due.raw!==undefined) V.pre="I didn't catch the date. Set it on screen."; else if(!A.due){ A.due=addDaysISO(Math.max(0,suggestDays(A,kind==="o").days)); save(CUR); refresh() } } }
   const p=await ask("Add a photo with the buttons below if you need one. Say next to carry on.",{type:"photo",photo:{kind,id},short:"Say next to carry on."});
   if(p.cmd==="stop") return "stop"; return "ok" }
 

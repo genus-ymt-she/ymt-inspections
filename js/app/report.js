@@ -39,7 +39,7 @@ function bodyText(d,limit){if(tabByNum(d.tab).kind==="record"){let x=recBodyText
     s.ncs.forEach((n,i)=>{L.push("");
       L.push(`${i+1} of ${s.ncs.length}  |  ${n.id}  |  ${n.r==="UA"?"UA – Unacceptable":"NI – Needs improvement"}  |  ${st(n)}`);
       if(n.snn.length)L.push(`⚠ Safety Non-Negotiable: ${snnNames(n.snn).join(" / ")}`);
-      L.push(`Risk: ${rkT(n)}`);
+      if(riskOf(n.cons,n.like))L.push(`Risk: ${rkT(n)}`);
       L.push(`Item: ${n.text}`);
       L.push(`Finding: ${n.finding}`);
       L.push(`Proposed corrective action: ${n.action}`);
