@@ -23,6 +23,7 @@ function bodyText(d,limit){if(tabByNum(d.tab).kind==="record"){let x=recBodyText
   if(t.log){const Lg=t.log;Lg.cols.forEach((col,c)=>{if(logState(d,c)!=="none")L.push(`• ${col}: ${Lg.rows.map((row,r)=>`${row.no} ${logVal(d,r,c)||"-"}`).join(" | ")}`)});logWarnings(d).forEach(w=>L.push(`⚠ ${w}`))}
   {const vr=visualPhotos(d).length;if(vr)L.push(`• Visual record photos (compliant items): ${vr} (in PDF)`)}
   if(t.checks)t.checks.cols.forEach((c,i)=>L.push(`• ${c}: ${chkVal(d,i,0)||"not recorded"}${chkVal(d,i,1)?` – ${chkVal(d,i,1)}`:""}${chkVal(d,i,2)?` – ${chkVal(d,i,2)}`:""}${(t.checks.photos||[]).filter((_,k)=>chkPhoto(d,i,k)).length?` – ${(t.checks.photos||[]).filter((_,k)=>chkPhoto(d,i,k)).length} timestamped photos (in PDF)`:""}`));
+  {const nr=narrRows(d);if(nr.length){L.push("");L.push("OBSERVATION RECORD");nr.forEach(r=>{L.push(`${r[0]}:`);L.push(r[1])})}}
   L.push("");L.push("RESULT");
   L.push(`C ${s.C}  |  UA ${s.UA}  |  NI ${s.NI}  |  N/A ${s.NA}${s.pct!==null?`  |  ${s.pct}% compliant`:""}`);
   if(s.snnN)L.push(`⚠ SAFETY NON-NEGOTIABLE NON-COMPLIANCES: ${s.snnN} (${[...new Set(s.ncs.flatMap(n=>snnNames(n.snn)))].join(", ")})`);
@@ -68,6 +69,7 @@ function htmlBody(d){if(tabByNum(d.tab).kind==="record")return recHtml(d);const 
   if(s.snnN)h+=`<p style="background:#EC7723;color:#fff;padding:8px 10px;font-weight:700;margin:8px 0">⚠ SAFETY NON-NEGOTIABLE NON-COMPLIANCES: ${s.snnN} – ${e([...new Set(s.ncs.flatMap(n=>snnNames(n.snn)))].join(", "))}</p>`;
   logWarnings(d).forEach(w=>{h+=`<p style="background:#FDECEC;border:1px solid #C62828;color:#7A1414;padding:8px 10px;font-weight:700;margin:8px 0">⚠ ${e(w)}</p>`});
   if(s.UA)h+=`<p style="background:#FDECEC;border:1px solid #C62828;color:#7A1414;padding:8px 10px;font-weight:700;margin:8px 0">UA recorded – task stopped / made safe; Supervisor and SHE Manager to be notified.</p>`;
+  {const nr=narrRows(d);if(nr.length)h+=`<h3 style="color:#112B4E;margin:16px 0 6px">Observation record</h3><table style="border-collapse:collapse;width:100%">${nr.map(r=>`<tr><td style="border:1px solid #D0D5DD;padding:6px 8px;font-size:13px;background:#F2F4F7;font-weight:700;color:#112B4E;width:200px;vertical-align:top">${e(r[0])}</td><td style="border:1px solid #D0D5DD;padding:6px 8px;font-size:13px;white-space:pre-wrap">${e(r[1])}</td></tr>`).join("")}</table>`}
   if(!s.ncs.length)h+=`<p style="font-weight:700;color:#2E7D32">No non-compliances identified.</p>`;
   else{h+=`<h3 style="color:#112B4E;margin:16px 0 6px">Non-compliances for Hazard Register (${s.ncs.length})</h3><table style="border-collapse:collapse;width:100%">
     <tr><th ${th}>#</th><th ${th}>Ref</th><th ${th}>Rating</th><th ${th}>Risk</th><th ${th}>Item / finding</th><th ${th}>Proposed corrective action</th><th ${th}>Status</th><th ${th}>SNN</th></tr>`;

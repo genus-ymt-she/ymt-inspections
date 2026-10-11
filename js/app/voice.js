@@ -208,7 +208,7 @@ async function ask(prompt,o){ o=o||{}; V.step=Object.assign({prompt},o); vOpts(o
     if(o.type==="rating"){ p=parseRating(text); if(p&&!["C","UA","NI","NA","NONC"].includes(p.val)) p=null }
     else if(o.type==="rating2"){ const q=parseRating(text); if(q&&(q.val==="UA"||q.val==="NI")) p=q }
     else if(o.type==="yesno"){ p=parseYesNo(text); if(!p&&o.yesText&&text.trim()) p={val:true,text:cap(text)} }
-    else if(o.type==="scale"){ const v=parseScale(text,o.list); p=v?{val:v}:null }
+    else if(o.type==="scale"){ const v=(o.parse||parseScale)(text,o.list); p=v?{val:v}:null }
     else if(o.type==="date"){ const d=parseDate(text); p=d?{val:d}:(tries>=1?{val:null,raw:text}:null) }
     else if(o.type==="choice"){ const sel=parseChoice(text,o.list,o.kws); p=(sel.length||o.allowOther)?{val:sel,raw:cap(text)}:null }
     else if(o.type==="photo"){ if(/ (next|done|no|skip|continue|nah|nope|that's it|carry on) /.test(norm(text))) return {cmd:"skip"}; speakText="Say next to carry on."; continue }
@@ -285,6 +285,15 @@ async function voiceInsp(d){ const t=tabByNum(d.tab); const qs=allQ(t); const hi
     if(r==="C"||r==="NA"){ if(note){ A.comment=note; A.showc=true; save(CUR); refreshQ(q.id) } V.pre=r==="C"?"Compliant.":"Not applicable." }
     else { const f=await voiceNC("q",q.id,r,note); if(f==="stop") return; if(f==="redo") continue; V.pre="Recorded." }
     i=nextIdx(i) }
+  // written observation record (e.g. 24 Task Observation)
+  if(t.narrative){ const N=d.details.narr=d.details.narr||{};
+    for(const f of t.narrative.fields){ if((N[f.key]||"").trim()) continue; const el=document.querySelector(`[data-n="${f.key}"]`); vFocus(el);
+      const a=await ask(`${f.label}. ${f.hint||""} Say next when you've finished${f.req?"":", or say skip"}.`,{type:"long",short:f.label,form:()=>(el||{}).value});
+      if(a.cmd==="stop") return; if(a.val){ N[f.key]=String(a.val); if(el) el.value=N[f.key]; save(CUR) } }
+    if(t.overall&&!d.details.overall){ vFocus($("#ovr"));
+      const a=await ask(`${t.overall.label} Say yes, yes with improvements, or no, task stopped.`,{type:"scale",list:t.overall.options.map((o,i)=>[i+1,o]),short:"Yes, yes with improvements, or no?",
+        parse:s=>{ s=norm(s); if(/ (no|not|stopped|stop|unsafe) /.test(s)) return 3; if(/ (improve|improvement|improvements|but) /.test(s)) return 2; if(/ (yes|yeah|yep|safe|safely) /.test(s)) return 1; return null }});
+      if(a.cmd==="stop") return; if(a.val){ d.details.overall=t.overall.options[a.val-1]; save(CUR); const e=$("#ovr"); if(e) e.innerHTML=overallHTML(CUR) } } }
   // other hazards
   while(true){ vFocus(document.getElementById("others")||null);
     const y=await ask("Any other hazards not covered by the checklist? Yes or no.",{type:"yesno",short:"Any other hazards? Yes or no.",yesText:true});

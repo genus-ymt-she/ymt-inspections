@@ -44,10 +44,20 @@ const shot = async (page, name) => { if (SHOTS) await page.screenshot({ path: pa
 const settle = page => page.waitForTimeout(450);
 
 const page = await newPage();
-await step("home renders hero, library and categories", async () => {
-  await page.waitForSelector(".hero"); await page.waitForSelector("#lib .card");
-  const n = await page.$$eval("#lib .card", e => e.length); if (n < 20) throw new Error("library cards: " + n);
+await step("home shows hero and the three tiles (no long list)", async () => {
+  await page.waitForSelector(".hero"); await page.waitForSelector(".tiles .tile");
+  if (await page.$("#lib")) throw new Error("inspection list should not be on home");
+  const n = await page.$$eval(".tiles .tile", e => e.length); if (n !== 3) throw new Error("tiles: " + n);
   await settle(page); await shot(page, "01-home");
+});
+await step("Inspection tile opens the list with category chips", async () => {
+  await page.click(".tile >> text=Inspection"); await page.waitForSelector("#lib .card");
+  const n = await page.$$eval("#lib .card", e => e.length); if (n !== 27) throw new Error("library cards: " + n);
+  const nums = await page.$$eval("#lib .card .n", e => e.map(x => x.textContent)); if (nums.slice(22, 26).join(",") !== "24,25,26,27") throw new Error("order: " + nums.join(","));
+  await settle(page); await shot(page, "01b-inspections");
+  await page.click("#libcats >> text=Fire, chemicals & environment"); await settle(page);
+  const env = await page.$$eval("#lib .card .n", e => e.map(x => x.textContent)); if (!env.includes("25") || !env.includes("27")) throw new Error("env category: " + env);
+  await page.click("#libcats >> text=All"); await settle(page);
 });
 await step("first run: pick your name from the team list", async () => {
   const p0 = await newPage({ name: "" }); await p0.click("text=Pick my name"); await p0.waitForSelector(".who button");
@@ -61,6 +71,25 @@ await step("library search filters templates", async () => {
   await page.fill("#libq", "crane"); await settle(page);
   const n = await page.$$eval("#lib .card", e => e.length); if (n < 1 || n > 6) throw new Error("search results: " + n);
   await page.fill("#libq", ""); await settle(page);
+});
+await step("inspection 24 – observation record is required, shown in review, email and PDF", async () => {
+  await page.evaluate(() => startInsp(24)); await page.waitForSelector("#narr textarea");
+  const p0 = await page.evaluate(() => problems(CUR));
+  for (const want of ["Observation record – What was observed", "Observation record – Positives – what went well", "Overall – was the task performed safely?"]) if (!p0.includes(want)) throw new Error("missing check: " + want);
+  await page.fill('[data-d="location"]', "Switchyard bay 3");
+  await page.fill('[data-n="observed"]', "Crew pulling cable into conduit with a winch and two spotters");
+  await page.fill('[data-n="positives"]', "Exclusion zone set up and clear comms before each pull");
+  await page.fill('[data-n="improve"]', "Gloves worn but cuffs not secured");
+  await page.click("#ovr >> text=Yes – with improvements");
+  await page.evaluate(() => allQ(tabByNum(24)).forEach(q => rate(q.id, "C")));
+  const p1 = await page.evaluate(() => problems(CUR)); if (p1.length) throw new Error(p1.join("; "));
+  await page.locator("#narr").scrollIntoViewIfNeeded(); await settle(page); await shot(page, "02a-observation-record");
+  await page.evaluate(() => toReview()); await page.waitForFunction(() => location.hash.startsWith("#review/"));
+  const rv = await page.textContent("#app"); if (!/Observation record/i.test(rv) || !/Yes – with improvements/.test(rv)) throw new Error("review missing observation record");
+  const txt = await page.evaluate(() => bodyText(CUR)); if (!/OBSERVATION RECORD/.test(txt) || !/Exclusion zone/.test(txt)) throw new Error("email text missing observation record");
+  const html = await page.evaluate(() => htmlBody(CUR)); if (!/Observation record/.test(html)) throw new Error("email html missing observation record");
+  await page.waitForFunction(() => typeof PDFFILE !== "undefined" && PDFFILE && PDFFILE.size > 20000, null, { timeout: 30000 });
+  await page.evaluate(async () => { await dbDel("drafts", CUR.id); go("#home"); });
 });
 await step("start inspection 01 and rate items", async () => {
   await page.evaluate(() => startInsp(1));
@@ -185,7 +214,8 @@ if (SHOTS) {
     const d = await newPage({ dark: true, hash: "#home" }); await d.waitForSelector(".hero"); await settle(d); await shot(d, "11-home-dark");
     await d.evaluate(() => go("#insights")); await d.waitForSelector(".chart svg"); await settle(d); await shot(d, "12-insights-dark");
     const w = await newPage({ viewport: { width: 1280, height: 860 }, hash: "#insights" }); await w.waitForSelector(".chart svg"); await settle(w); await shot(w, "13-insights-desktop");
-    await w.evaluate(() => go("#home")); await w.waitForSelector("#lib .card"); await settle(w); await shot(w, "14-home-desktop");
+    await w.evaluate(() => go("#home")); await w.waitForSelector(".tiles .tile"); await settle(w); await shot(w, "14-home-desktop");
+    await w.evaluate(() => go("#inspections")); await w.waitForSelector("#lib .card"); await settle(w); await shot(w, "15-inspections-desktop");
     fs.writeFileSync(path.join(out, "monthly.pdf"), Buffer.from(await page.evaluate(async () => { const b = buildMonthlyPDF(DASH.j); return Array.from(new Uint8Array(await b.arrayBuffer())); })));
   });
 }
