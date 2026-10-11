@@ -1,0 +1,128 @@
+"use strict";
+/* ---------- router ---------- */
+let CUR=null,ROUTE_SEQ=0;
+/* async screens capture ROUTE_SEQ when they start and stop if the user has navigated away meanwhile */
+const stale=seq=>seq!==ROUTE_SEQ;
+window.addEventListener("hashchange",route);
+function go(h){if(location.hash===h)route();else location.hash=h}
+async function route(){const seq=++ROUTE_SEQ;const h=location.hash||"#home";const [v,id]=h.slice(1).split("/");window.scrollTo(0,0);closeSheet();
+  if(v!=="insp"){const b=document.getElementById("bar");if(b)b.remove()}
+  document.body.classList.toggle("task",v==="insp"||v==="review");setNav(v);
+  if(v==="insp"){const d=await dbGet("drafts",id);if(!d)return go("#home");CUR=d;return viewInsp(d)}
+  if(v==="review"){const d=await dbGet("drafts",id);if(!d)return go("#home");CUR=d;return viewReview(d)}
+  CUR=null;
+  if(v==="settings")return viewSettings();
+  if(v==="dash"||v==="insights")return viewDash();
+  if(v==="actions")return viewActions(id?decodeURIComponent(id):"");
+  if(v==="myosh")return viewMyosh(id?decodeURIComponent(id):"");
+  return viewHome()}
+function setNav(v){const m={home:"home","":"home",insights:"insights",dash:"insights",actions:"actions",myosh:"myosh"};const k=m[v]||"";
+  document.querySelectorAll("#tabs a").forEach(a=>{const on=a.dataset.t===k;a.classList.toggle("on",on);if(on)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
+function setHeader(title,sub,btn){$("#hTitle").textContent=title;$("#hSub").textContent=sub;const b=$("#hBtn");
+  if(btn){b.innerHTML=(btn.icon?ic(btn.icon):"")+(btn.label?`<span>${esc(btn.label)}</span>`:"");b.setAttribute("aria-label",btn.aria||btn.label||"");b.onclick=btn.fn;b.classList.remove("hide")}else b.classList.add("hide")}
+const SETTINGS_BTN={icon:"settings",aria:"Settings",fn:()=>go("#settings")};
+function render(h){const a=$("#app");a.innerHTML=h;a.classList.remove("fade");void a.offsetWidth;a.classList.add("fade")}
+function setNet(){const n=$("#net");if(!n)return;const on=navigator.onLine!==false;n.classList.toggle("off",!on);n.title=on?"Online":"Offline – everything is saved on this phone"}
+window.addEventListener("online",setNet);window.addEventListener("offline",setNet);
+
+/* ---------- home ---------- */
+let LIB={q:"",cat:"all"};
+function ring(p,col){const r=18,c=2*Math.PI*r;return `<div class="ringw"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="${r}" fill="none" stroke="var(--surface-3)" stroke-width="5"/><circle cx="22" cy="22" r="${r}" fill="none" stroke="${col||"var(--accent)"}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(c*Math.max(0,Math.min(1,p))).toFixed(1)} ${c.toFixed(1)}"/></svg><b>${Math.round(p*100)}%</b></div>`}
+async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectShort,SETTINGS_BTN);
+  const me=ls("inspector")||"";const drafts=(await dbAll("drafts")).sort((a,b)=>b.updated-a.updated);
+  const sentAll=(await dbAll("sent")).sort((a,b)=>b.sentAt-a.sentAt);const ob=await dbAll("outbox");if(stale(seq))return;
+  const reg=regAll();const st=regStats(reg);const mine=reg.filter(f=>isMine(f)&&f.status==="Open");
+  const mon=new Date();mon.setDate(1);mon.setHours(0,0,0,0);const sentMonth=sentAll.filter(s=>s.sentAt>=mon.getTime()).length;
+  let h=`<section class="hero"><div class="hi">${esc(greeting())}${me?",":""}</div><h1>${esc(firstName(me)||"Welcome")}</h1>
+   <div class="proj">${ic("pin","s")} ${esc(CONFIG.jobNo)} · ${esc(CONFIG.projectShort)} · ${new Date().toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"})}</div>
+   <div class="kp"><button onclick="document.getElementById('drafts')?.scrollIntoView({behavior:'smooth'})"><b>${drafts.length}</b><span>In progress</span></button>
+   <button onclick="go('#actions')" class="${mine.length?"warn":""}"><b>${mine.length}</b><span>My actions</span></button>
+   <button onclick="ACTF.f='overdue';go('#actions')" class="${st.overdue?"bad":""}"><b>${st.overdue}</b><span>Overdue</span></button>
+   <button onclick="go('#insights')"><b>${sentMonth}</b><span>This month</span></button></div></section>`;
+  if(ob.length)h+=`<div class="outbox">${ic("inbox")}<div><b>Outbox – ${ob.length} report${ob.length>1?"s":""} waiting to send</b><div class="muted" style="margin:4px 0 8px">${ob.map(o=>`${esc(o.title)} · ${esc(o.location)}`).join("<br>")}<br>They send automatically when the phone has signal${ob[0].lastError?` (last try: ${esc(ob[0].lastError)})`:""}.</div><button class="btn o s" onclick="flushOutbox(true)">${ic("send","s")} Send now</button></div></div>`;
+  {const sod=new Date();sod.setHours(0,0,0,0);const stale=drafts.filter(d=>d.created<sod.getTime());
+   if(stale.length)h+=`<div class="alert red">${ic("clock")}<div><b>${stale.length} unsent inspection${stale.length>1?"s":""} started before today.</b> Finish and send ${stale.length>1?"them":"it"} – or delete if no longer needed.</div></div>`}
+  if(!recipientOK())h+=`<div class="alert red">${ic("alert")}<div><b>Report recipient not set.</b> Set it under Settings.</div></div>`;
+  if(!me)h+=`<div class="alert blue">${ic("user")}<div>Add your name under <a href="#settings">Settings</a> so it fills in on every report.</div></div>`;
+  if(drafts.length){h+=`<h2 id="drafts">Continue <span class="cnt">${drafts.length}</span></h2>`;
+    drafts.forEach(d=>{const t=tabByNum(d.tab);const REC=t.kind==="record";const s=REC?null:stats(d);const p=REC?Math.max(0,8-recProblems(d).length)/8:(s.total?s.rated/s.total:0);
+      h+=`<div class="card tap draft" onclick="go('#insp/${d.id}')"><div class="tab">${ring(p)}<div class="x"><b>${pad(t.num)} · ${esc(t.short)}</b><span>${esc(d.details.location||"No location yet")} · ${fmtDT(d.details.datetime)}</span>
+        ${s?`<div class="libmeta"><span class="tag">${s.rated}/${s.total} rated</span>${s.UA?`<span class="tag r">${s.UA} UA</span>`:""}${s.NI?`<span class="tag o">${s.NI} NI</span>`:""}</div>`:""}</div>
+        <button class="iconbtn" aria-label="Delete draft" onclick="event.stopPropagation();delDraft('${d.id}')">${ic("trash")}</button></div></div>`})}
+  h+=`<h2>Start an inspection <span class="cnt">${TABS.length}</span></h2>
+   <div class="search">${ic("search")}<input id="libq" type="search" placeholder="Search inspections, e.g. crane, permit, fire" value="${esc(LIB.q)}" autocomplete="off" aria-label="Search inspections"></div>
+   <div class="chips scroll" id="libcats"></div><div class="lib" id="lib"></div>`;
+  const recent=sentAll.slice(0,5);
+  if(recent.length){h+=`<h2>Recently sent <span class="cnt">${sentAll.length}</span></h2>`;
+    recent.forEach(s=>{h+=`<div class="card flat"><div class="tab"><div class="n" style="background:var(--c)">${ic("check")}</div><div class="x"><b>${esc(s.title)}</b><span>${esc(s.reportId)} · ${esc(s.location)} · ${new Date(s.sentAt).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}</span>
+      <div class="libmeta">${s.ua?`<span class="tag r">${s.ua} UA</span>`:""}${s.ni?`<span class="tag o">${s.ni} NI</span>`:""}${s.snn?`<span class="tag o">${s.snn} SNN</span>`:""}${!s.ua&&!s.ni&&s.ua!==undefined?`<span class="tag g">No findings</span>`:""}${s.via?`<span class="tag g">${ic("check","s")} Emailed</span>`:""}</div></div></div></div>`})}
+  h+=`<p class="foot">PARRON v${esc(CONFIG.appVersion)} · Proactive Assessment, Reporting, Risk &amp; Observation Network<br>Works offline · Data stays on this phone until you send it</p>`;
+  render(h);
+  const q=$("#libq");q.addEventListener("input",()=>{LIB.q=q.value;renderLib(sentAll)});renderLib(sentAll);
+  regRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home"&&!document.activeElement?.matches("#libq"))viewHome()})}
+function catOf(t){const c=CATEGORIES.find(c=>c.nums.includes(t.num));return c?c.key:"other"}
+function renderLib(sentAll){const box=$("#lib");if(!box)return;const q=LIB.q.trim().toLowerCase();
+  const last={};(sentAll||[]).forEach(s=>{const k=(s.title||"").slice(0,2);if(!last[k])last[k]=s.sentAt});
+  const match=t=>!q||[t.title,t.short,t.scope,...allQ(t).map(x=>x.text)].join(" ").toLowerCase().includes(q);
+  const cats=[{key:"all",label:"All"},...CATEGORIES];
+  $("#libcats").innerHTML=cats.map(c=>{const n=TABS.filter(t=>(c.key==="all"||catOf(t)===c.key)&&match(t)).length;return n||c.key==="all"?`<button class="chip ${LIB.cat===c.key?"on":""}" onclick="LIB.cat='${c.key}';renderLib(window._sent)">${esc(c.label)}<span class="c">${n}</span></button>`:""}).join("");
+  window._sent=sentAll;
+  const list=TABS.filter(t=>(LIB.cat==="all"||catOf(t)===LIB.cat)&&match(t));
+  box.innerHTML=list.length?list.map(t=>{const REC=t.kind==="record";const nq=REC?0:allQ(t).length;const snn=REC?0:allQ(t).filter(x=>(x.snn||[]).length).length;const ls_=last[pad(t.num)];
+    return `<div class="card tap" onclick="startInsp(${t.num})" role="button" tabindex="0" onkeydown="if(event.key==='Enter')startInsp(${t.num})"><div class="tab"><div class="n">${pad(t.num)}</div><div class="x"><b>${esc(t.short)}</b><span>${esc(t.scope)}</span>
+      <div class="libmeta">${REC?`<span class="tag">Record</span>`:`<span class="tag">${nq} items</span>`}${snn?`<span class="tag o">${snn} SNN</span>`:""}${ls_?`<span class="tag g">Sent ${ago(new Date(ls_).toISOString())}</span>`:""}</div></div>${ic("chev")}</div></div>`}).join("")
+    :`<div class="card empty" style="grid-column:1/-1">${ic("search")}<b>No inspections match “${esc(LIB.q)}”</b>Try a different word.</div>`}
+async function startInsp(num){
+  if(!(ls("inspector")||"").trim()){const n=await askName();if(!n)return}
+  const d=newDraft(num);await save(d,true);queuePing(d,"draft");go("#insp/"+d.id)}
+function askName(){return new Promise(res=>{const s=sheet(`<h3>Your name</h3><p class="muted">It shows on your reports and on the project Insights. Use your first and last name.</p>
+  <label class="f" for="nmIn">Full name</label><input class="t" id="nmIn" autocomplete="name" placeholder="e.g. Alex Smith"><div class="row2"><button class="btn g" id="nmNo">Cancel</button><button class="btn o" id="nmOk">Continue</button></div>`);
+  const i=s.querySelector("#nmIn");setTimeout(()=>i.focus(),150);
+  const ok=()=>{const n=i.value.trim().replace(/\s+/g," ");if(n.split(" ").length<2){toast("Please enter your first and last name",3500);return}ls("inspector",n);closeSheet();res(n)};
+  s.querySelector("#nmOk").onclick=ok;i.addEventListener("keydown",e=>{if(e.key==="Enter")ok()});s.querySelector("#nmNo").onclick=()=>{closeSheet();res(null)}})}
+async function delDraft(id){if(!await ask2("Delete this draft?","The unfinished inspection and its photos are removed from this phone. This cannot be undone.","Delete",true))return;const d=await dbGet("drafts",id);await dbDel("drafts",id);if(d)queuePing(d,"deleted");toast("Draft deleted");route()}
+/* ---------- status pings: lets Insights see inspections that are started but not sent (name, inspection, location and times only) ---------- */
+function pingMeta(d){const t=tabByNum(d.tab);const s=stats(d);
+  const progress=t.kind==="record"?`${Math.max(0,8-recProblems(d).length)}/8 fields`:`${s.rated}/${s.total} rated`;
+  return {name:(d.details.inspector||ls("inspector")||"").trim(),no:pad(t.num),title:t.short,location:d.details.location||"",started:new Date(d.created).toISOString(),ua:s.UA,ni:s.NI,snn:s.snnN,progress}}
+function getPings(){try{return JSON.parse(ls("pings")||"{}")}catch(e){return {}}}
+function queuePing(d,state,extra){if(state==="draft"&&!problems(d).length)state="finished";const p=getPings();p[d.id]={action:"status",uid:d.id,state,meta:pingMeta(d),...(extra||{})};ls("pings",JSON.stringify(p));d._pinged=Date.now();flushPings()}
+let PINGING=false;
+async function flushPings(){if(PINGING||!directOn()||navigator.onLine===false)return;PINGING=true;
+  try{const p=getPings();for(const uid of Object.keys(p)){try{const r=await relayPost({payload:p[uid]},false);if(r&&r.ok){const q=getPings();if(q[uid]&&q[uid].state===p[uid].state)delete q[uid];ls("pings",JSON.stringify(q))}}catch(e){break}}}finally{PINGING=false}}
+
+
+/* ---------- settings ---------- */
+const isManager=()=>!!ls("mgrPin");
+async function viewSettings(){setHeader("Settings","This phone only",{icon:"back",aria:"Back",fn:()=>history.length>1?history.back():go("#home")});
+  const th=ls("theme")||"auto";const hc=ls("contrast")==="high";
+  render(`<h2>Profile</h2><div class="card"><label class="f" for="sName">Your name (fills in as Inspector)</label><input class="t" id="sName" value="${esc(ls("inspector")||"")}" autocomplete="name">
+   <label class="f" for="sRec">Reports are sent to</label><input class="t" id="sRec" type="email" value="${esc(recipient())}">
+   <p class="muted">Set by the SHE Manager. Only change this if instructed.</p><button class="btn o w" onclick="saveSettings()">${ic("check","s")} Save</button></div>
+  <h2>Appearance</h2><div class="card"><div class="set">${ic("sun")}<div><b>Theme</b><span>Dark mode is easier on the eyes at night and saves battery.</span></div></div>
+   <div class="seg" role="group" aria-label="Theme">${[["auto","Auto"],["light","Light"],["dark","Dark"]].map(([k,l])=>`<button class="${th===k?"on":""}" onclick="setTheme('${k}')">${l}</button>`).join("")}</div>
+   <div class="set" style="margin-top:6px">${ic("sun")}<div><b>High contrast</b><span>Stronger text and borders for bright sunlight.</span></div><label class="switch"><input type="checkbox" ${hc?"checked":""} onchange="setContrast(this.checked)"><i></i></label></div></div>
+  <h2>Manager mode</h2><div class="card"><div class="set">${ic("lock")}<div><b>${isManager()?"On – this phone can verify actions and record MYOSH entries":"Off"}</b><span>For the SHE Manager. Needs the Manager PIN set in the relay.</span></div></div>
+   ${isManager()?`<button class="btn g w" onclick="mgrOff()">Turn off on this phone</button>`:`<label class="f" for="mPin">Manager PIN</label><input class="t" id="mPin" type="password" inputmode="numeric" autocomplete="off" maxlength="12"><button class="btn w" onclick="mgrOn()">${ic("lock","s")} Turn on</button>`}</div>
+  <h2>Connection</h2><div class="card"><div class="set">${ic("send")}<div><b>Direct send</b><span id="cState">${directOn()?"On – reports email automatically":"Not set up – reports are shared via Outlook"}</span></div></div>
+   <div class="set">${ic("layers")}<div><b>Project log</b><span id="rState">${directOn()?(v3()?"Connected – shared actions, Insights and MYOSH tracking":"Checking…"):"Not connected"}</span></div></div>
+   ${directOn()?`<button class="btn g w" onclick="testRelay()">${ic("refresh","s")} Test connection</button>`:""}</div>
+  <h2>Install on your phone</h2><div class="card"><ol class="steps"><li><b>iPhone:</b> open this page in Safari › Share › <i>Add to Home Screen</i>.</li><li><b>Android:</b> open in Chrome › ⋮ menu › <i>Install app</i>.</li><li>Open it once with coverage. After that it works with no signal – reports send when you are back in range.</li></ol></div>
+  <h2>Data on this phone</h2><div class="card"><div class="set">${ic("download")}<div><b>Back up my data</b><span>Drafts and sent history as a file – useful before changing phones.</span></div><button class="btn g s" onclick="backupData()">Back up</button></div></div>
+  <p class="foot">PARRON v${esc(CONFIG.appVersion)}<br>${esc(CONFIG.project)}</p>`);
+  if(directOn()&&!v3())relayVersion(true).then(()=>{const e=$("#rState");if(e)e.textContent=v3()?"Connected – shared actions, Insights and MYOSH tracking":"Relay v2 – update the relay script to share actions and MYOSH tracking"})}
+function saveSettings(){ls("inspector",$("#sName").value.trim().replace(/\s+/g," "));const r=$("#sRec").value.trim();
+  if(r&&r!==CONFIG.recipient)ls("recipientOverride",r);else lsDel("recipientOverride");
+  toast("Saved");go("#home")}
+function setTheme(k){if(k==="auto"){lsDel("theme");delete document.documentElement.dataset.theme}else{ls("theme",k);document.documentElement.dataset.theme=k}viewSettings()}
+function setContrast(on){if(on){ls("contrast","high");document.documentElement.dataset.contrast="high"}else{lsDel("contrast");delete document.documentElement.dataset.contrast}}
+async function mgrOn(){const p=$("#mPin").value.trim();if(!p){toast("Enter the PIN");return}
+  if(await relayVersion(true)<3){toast("The relay needs updating to v3 before Manager mode can be used",5000);return}
+  try{const r=await relayPost({payload:{action:"pin",pin:p}},false);if(r&&r.ok){ls("mgrPin",p);toast("Manager mode on");updateBadges();viewSettings()}else toast((r&&r.error)||"PIN not accepted",4000)}
+  catch(e){toast("No connection – try again with signal",4000)}}
+function mgrOff(){lsDel("mgrPin");toast("Manager mode off");updateBadges();viewSettings()}
+async function testRelay(){toast("Testing…",1500);const v=await relayVersion(true);
+  try{const r=await fetch(RELAY.url,{redirect:"follow"});const j=await r.json();toast(j.ok?`Connected · relay v${v} · ${j.emailsLeftToday} emails left today`:"Relay replied with an error",5000)}catch(e){toast("Could not reach the relay – check signal",4000)}
+  if(location.hash==="#settings")viewSettings()}
+async function backupData(){const data={app:"PARRON",v:CONFIG.appVersion,at:new Date().toISOString(),inspector:ls("inspector"),drafts:await dbAll("drafts"),sent:await dbAll("sent"),outbox:(await dbAll("outbox")).map(o=>({...o,payload:{...o.payload,pdf:undefined}}))};
+  downloadBlob(new Blob([JSON.stringify(data)],{type:"application/json"}),`PARRON-backup-${todayISO()}.json`);toast("Backup saved")}
