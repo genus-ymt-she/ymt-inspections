@@ -41,8 +41,9 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
    <button onclick="ACTF.f='overdue';go('#actions')" class="${st.overdue?"bad":""}"><b>${st.overdue}</b><span>Overdue</span></button>
    <button onclick="go('#insights')"><b>${sentMonth}</b><span>This month</span></button></div></section>`;
   h+=`<div class="tiles">
-   <button class="tile" onclick="go('#inspections')"><span class="ti" style="background:var(--info-soft);color:var(--brand-2)">${ic("clipboard","l")}</span><b>Inspection</b><span>${LIB_TABS().length} forms</span></button>
+   <button class="tile wide" onclick="go('#inspections')"><span class="ti" style="background:var(--info-soft);color:var(--info)">${ic("clipboard","l")}</span><span class="tw"><b>Inspection</b><small>${LIB_TABS().length} forms · browse by category</small></span>${ic("chev")}</button>
    <button class="tile" onclick="startInsp(24)"><span class="ti" style="background:var(--accent-soft);color:var(--accent)">${ic("eye","l")}</span><b>Task Observation</b><span>Observe a crew</span></button>
+   <button class="tile" onclick="startInsp(23)"><span class="ti" style="background:#EEE8FB;color:#6B47C9">${ic("users","l")}</span><b>Mentoring</b><span>Discussion record</span></button>
    <button class="tile" onclick="go('#report/hazard')"><span class="ti" style="background:var(--ua-soft);color:var(--ua)">${ic("alert","l")}</span><b>Hazard</b><span>Quick report</span></button>
    <button class="tile" onclick="go('#report/positive')"><span class="ti" style="background:var(--c-soft);color:var(--c)">${ic("star","l")}</span><b>Positive</b><span>Observation</span></button></div>`;
   if(ob.length)h+=`<div class="outbox">${ic("inbox")}<div><b>Outbox – ${ob.length} report${ob.length>1?"s":""} waiting to send</b><div class="muted" style="margin:4px 0 8px">${ob.map(o=>`${esc(o.title)} · ${esc(o.location)}`).join("<br>")}<br>They send automatically when the phone has signal${ob[0].lastError?` (last try: ${esc(ob[0].lastError)})`:""}.</div><button class="btn o s" onclick="flushOutbox(true)">${ic("send","s")} Send now</button></div></div>`;
