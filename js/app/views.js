@@ -41,7 +41,8 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
    <button onclick="ACTF.f='overdue';go('#actions')" class="${st.overdue?"bad":""}"><b>${st.overdue}</b><span>Overdue</span></button>
    <button onclick="go('#insights')"><b>${sentMonth}</b><span>This month</span></button></div></section>`;
   h+=`<div class="tiles">
-   <button class="tile" onclick="go('#inspections')"><span class="ti" style="background:var(--info-soft);color:var(--brand-2)">${ic("clipboard","l")}</span><b>Inspection</b><span>${TABS.length} forms</span></button>
+   <button class="tile" onclick="go('#inspections')"><span class="ti" style="background:var(--info-soft);color:var(--brand-2)">${ic("clipboard","l")}</span><b>Inspection</b><span>${LIB_TABS().length} forms</span></button>
+   <button class="tile" onclick="startInsp(24)"><span class="ti" style="background:var(--accent-soft);color:var(--accent)">${ic("eye","l")}</span><b>Task Observation</b><span>Observe a crew</span></button>
    <button class="tile" onclick="go('#report/hazard')"><span class="ti" style="background:var(--ua-soft);color:var(--ua)">${ic("alert","l")}</span><b>Hazard</b><span>Quick report</span></button>
    <button class="tile" onclick="go('#report/positive')"><span class="ti" style="background:var(--c-soft);color:var(--c)">${ic("star","l")}</span><b>Positive</b><span>Observation</span></button></div>`;
   if(ob.length)h+=`<div class="outbox">${ic("inbox")}<div><b>Outbox – ${ob.length} report${ob.length>1?"s":""} waiting to send</b><div class="muted" style="margin:4px 0 8px">${ob.map(o=>`${esc(o.title)} · ${esc(o.location)}`).join("<br>")}<br>They send automatically when the phone has signal${ob[0].lastError?` (last try: ${esc(ob[0].lastError)})`:""}.</div><button class="btn o s" onclick="flushOutbox(true)">${ic("send","s")} Send now</button></div></div>`;
@@ -62,19 +63,20 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   render(h);
   regRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home")viewHome()})}
 /* ---------- inspection library (own page: search + categories) ---------- */
-async function viewInspections(){const seq=ROUTE_SEQ;setHeader("Inspections",`${TABS.length} forms · pick one to start`,{icon:"back",aria:"Back",fn:()=>go("#home")});
+async function viewInspections(){const seq=ROUTE_SEQ;setHeader("Inspections",`${LIB_TABS().length} forms · pick one to start`,{icon:"back",aria:"Back",fn:()=>go("#home")});
   const sentAll=(await dbAll("sent")).sort((a,b)=>b.sentAt-a.sentAt);if(stale(seq))return;
   render(`<div class="search">${ic("search")}<input id="libq" type="search" placeholder="Search inspections, e.g. crane, permit, fire" value="${esc(LIB.q)}" autocomplete="off" aria-label="Search inspections"></div>
    <div class="chips scroll" id="libcats"></div><div class="lib" id="lib"></div>`);
   const q=$("#libq");q.addEventListener("input",()=>{LIB.q=q.value;renderLib(sentAll)});renderLib(sentAll)}
+const LIB_TABS=()=>TABS.filter(t=>!HOME_TILE_FORMS.includes(t.num));
 function catOf(t){const c=CATEGORIES.find(c=>c.nums.includes(t.num));return c?c.key:"other"}
 function renderLib(sentAll){const box=$("#lib");if(!box)return;const q=LIB.q.trim().toLowerCase();
   const last={};(sentAll||[]).forEach(s=>{const k=(s.title||"").slice(0,2);if(!last[k])last[k]=s.sentAt});
   const match=t=>!q||[t.title,t.short,t.scope,...allQ(t).map(x=>x.text)].join(" ").toLowerCase().includes(q);
   const cats=[{key:"all",label:"All"},...CATEGORIES];
-  $("#libcats").innerHTML=cats.map(c=>{const n=TABS.filter(t=>(c.key==="all"||catOf(t)===c.key)&&match(t)).length;return n||c.key==="all"?`<button class="chip ${LIB.cat===c.key?"on":""}" onclick="LIB.cat='${c.key}';renderLib(window._sent)">${esc(c.label)}<span class="c">${n}</span></button>`:""}).join("");
+  $("#libcats").innerHTML=cats.map(c=>{const n=LIB_TABS().filter(t=>(c.key==="all"||catOf(t)===c.key)&&match(t)).length;return n||c.key==="all"?`<button class="chip ${LIB.cat===c.key?"on":""}" onclick="LIB.cat='${c.key}';renderLib(window._sent)">${esc(c.label)}<span class="c">${n}</span></button>`:""}).join("");
   window._sent=sentAll;
-  const list=TABS.filter(t=>(LIB.cat==="all"||catOf(t)===LIB.cat)&&match(t));
+  const list=LIB_TABS().filter(t=>(LIB.cat==="all"||catOf(t)===LIB.cat)&&match(t));
   box.innerHTML=list.length?list.map(t=>{const REC=t.kind==="record";const nq=REC?0:allQ(t).length;const snn=REC?0:allQ(t).filter(x=>(x.snn||[]).length).length;const ls_=last[pad(t.num)];
     return `<div class="card tap" onclick="startInsp(${t.num})" role="button" tabindex="0" onkeydown="if(event.key==='Enter')startInsp(${t.num})"><div class="tab"><div class="n">${pad(t.num)}</div><div class="x"><b>${esc(t.short)}</b><span>${esc(t.scope)}</span>
       <div class="libmeta">${REC?`<span class="tag">Record</span>`:`<span class="tag">${nq} items</span>`}${snn?`<span class="tag o">${snn} SNN</span>`:""}${ls_?`<span class="tag g">Sent ${ago(new Date(ls_).toISOString())}</span>`:""}</div></div>${ic("chev")}</div></div>`}).join("")
