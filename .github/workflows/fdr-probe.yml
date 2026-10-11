@@ -1,0 +1,24 @@
+name: FDR probe
+on:
+  push:
+    branches: [claude/github-app-upgrade-9zm1in]
+    paths: [.github/workflows/fdr-probe.yml]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: HTTP endpoints
+        run: |
+          for u in https://reg.bom.gov.au/fwo/IDW14199.xml http://www.bom.gov.au/fwo/IDW14199.xml https://www.bom.gov.au/fwo/IDW14199.xml http://reg.bom.gov.au/fwo/IDW14199.xml; do
+            echo "$u -> $(curl -s -m 20 -o /dev/null -w '%{http_code}' -A 'Mozilla/5.0 (compatible; Google-Apps-Script)' "$u")"; done
+      - name: FTP list and scan
+        run: |
+          curl -s -m 60 --list-only ftp://ftp.bom.gov.au/anon/gen/fwo/ > list.txt || true
+          wc -l list.txt
+          grep -E '^IDW.*\.xml$' list.txt | tr '\n' ' '; echo
+          mkdir x; for f in $(grep -E '^IDW.*\.xml$' list.txt); do curl -s -m 30 -o x/$f ftp://ftp.bom.gov.au/anon/gen/fwo/$f; done
+          echo "== files containing fire_danger"
+          grep -l 'fire_danger' x/* || true
+          for f in $(grep -l 'fire_danger' x/* ); do echo "##### $f"; grep -o '<product-type>[^<]*\|<title>[^<]*' $f | head -3; grep -o '<area [^>]*type="fire-district"[^>]*>' $f | head -40; grep -o '<text type="fire_danger">[^<]*' $f | sort | uniq -c; done
+          echo "== IDW files mentioning fire-district"; grep -l 'fire-district' x/* || true
+          echo "== sample area for Central West / Badgingarra"; grep -il 'badgingarra\|dandaragan' x/* || true
