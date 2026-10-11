@@ -2,8 +2,9 @@
  * PARRON relay v3 – emails inspection reports, keeps the shared project log (Google Sheet) behind the
  * in-app Insights and Actions screens, emails people when an action is assigned to them (and reminds
  * them when it is overdue), sends an urgent alert for UA / Critical findings, logs quick hazard reports and
- * positive observations, archives report PDFs and photos to Google Drive, and sends the 6 pm daily summary
- * and the Monday weekly summary to the SHE Manager.
+ * positive observations, archives report PDFs and photos to Google Drive, sends the 6 pm daily summary
+ * and the Monday weekly summary to the SHE Manager, emails people their own repeating reminders (5 am),
+ * and supplies the official Fire Danger Rating (Bureau of Meteorology) for the home screen.
  *
  * FIRST TIME: paste this whole file in, Save, choose "setup" in the toolbar and click Run.
  *   Then Deploy > New deployment > Web app (Execute as: Me, Who has access: Anyone).
@@ -22,6 +23,11 @@ const ALLOWED = /@genus\.com\.au$/i;
 const TZ = 'Australia/Perth';
 const DIGEST_HOUR = 18;                       // daily summary between 6 and 7 pm Perth time
 const WEEKLY_HOUR = 7;                        // weekly summary every Monday between 7 and 8 am Perth time
+const REMINDER_HOUR = 5;                      // personal reminder emails between 5 and 6 am Perth time
+// Fire Danger Rating: Bureau of Meteorology forecast products tried in order (fire-district areas are read from
+// whichever responds). Choose the district once in the app (Settings > Fire Danger Rating, Manager mode).
+const FDR_PRODUCTS = ['IDW14199', 'IDW12300', 'IDW14100', 'IDW12400'];
+const FDR_DEFAULT_AREA = /Central West/i;
 const ARCHIVE_PDFS = true;                    // save a copy of every report PDF to Google Drive
 const MAX_PER_MINUTE = 90;                    // simple flood protection for the public web app link
 const APP_URL = 'https://genus-ymt-she.github.io/ymt-inspections/';   // link used in action emails
@@ -37,6 +43,7 @@ const FIND_HEAD = ['FID', 'Report ID', 'UID', 'Raised', 'Inspection date', 'Rais
   'Status', 'Owner', 'Due', 'Closed at', 'Closed by', 'Close-out note', 'Evidence link', 'Verified at', 'Verified by', 'Updated', 'History', 'Owner email', 'Notified'];
 const OBS_HEAD = ['Logged', 'Date', 'Month', 'Report ID', 'Type', 'Name', 'Location', 'Description', 'Category', 'Person / crew recognised',
   'Consequence', 'Likelihood', 'Risk score', 'Risk level', 'Immediate action', 'Status', 'Owner', 'Owner email', 'Due', 'Photo links'];
+const REM_HEAD = ['ID', 'Name', 'Email', 'Reminder', 'Repeat', 'Time', 'Created', 'Last sent', 'Active'];
 const ST = { spot: 'Closed on spot', open: 'Open', closed: 'Closed', verified: 'Verified' };
 
 /* ---------- one-off setup (safe to run again after every update) ---------- */
@@ -46,12 +53,16 @@ function setup() {
   ScriptApp.newTrigger('dailyDigest').timeBased().atHour(DIGEST_HOUR).everyDays(1).inTimezone(TZ).create();
   ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'weeklyDigest') ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('weeklyDigest').timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(WEEKLY_HOUR).inTimezone(TZ).create();
+  ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'remindersRun') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('remindersRun').timeBased().atHour(REMINDER_HOUR).everyDays(1).inTimezone(TZ).create();
   if (ARCHIVE_PDFS) folder_('PARRON – Reports');
   const pin = PropertiesService.getScriptProperties().getProperty('MANAGER_PIN');
   MailApp.sendEmail(TO, 'PARRON relay v3 is connected',
     'The PARRON relay is set up.\n\nProject log (Google Sheet): ' + ss.getUrl() +
     '\nDaily summary: every day between 6 and 7 pm (Perth time).' +
     '\nWeekly summary: every Monday between 7 and 8 am (Perth time).' +
+    '\nPersonal reminders: emailed between 5 and 6 am (Perth time).' +
+    '\nFire Danger Rating: ' + (fdrFetch_(true).today ? 'reading from the Bureau of Meteorology' : 'could not be read automatically – set it in the app (Manager mode) or choose the district') +
     '\nManager PIN: ' + (pin ? 'set' : 'NOT SET – add MANAGER_PIN under Project Settings > Script properties.'));
 }
 
@@ -60,8 +71,8 @@ function book_() {
   let ss, id = p.getProperty('SHEET_ID');
   if (id) { try { ss = SpreadsheetApp.openById(id); } catch (e) { ss = null; } }
   if (!ss) { ss = SpreadsheetApp.create('PARRON – Inspection Log (YMT)'); p.setProperty('SHEET_ID', ss.getId()); }
-  sheet_(ss, 'Sent', SENT_HEAD); sheet_(ss, 'Status', STAT_HEAD); sheet_(ss, 'Findings', FIND_HEAD); sheet_(ss, 'Observations', OBS_HEAD);
-  const s1 = ss.getSheetByName('Sheet1'); if (s1 && ss.getSheets().length > 4) ss.deleteSheet(s1);
+  sheet_(ss, 'Sent', SENT_HEAD); sheet_(ss, 'Status', STAT_HEAD); sheet_(ss, 'Findings', FIND_HEAD); sheet_(ss, 'Observations', OBS_HEAD); sheet_(ss, 'Reminders', REM_HEAD);
+  const s1 = ss.getSheetByName('Sheet1'); if (s1 && ss.getSheets().length > 5) ss.deleteSheet(s1);
   return ss;
 }
 function sheet_(ss, name, head) {
@@ -92,6 +103,8 @@ function doPost(e) {
     if (d.action === 'status') { status_(d); return out_({ ok: true }); }
     if (d.action === 'finding') return finding_(d);
     if (d.action === 'observation') return observation_(d);
+    if (d.action === 'reminder') return reminder_(d);
+    if (d.action === 'fdr') return fdrSet_(d);
     if (d.action === 'pin') return out_({ ok: pinOK_(d.pin), error: pinOK_(d.pin) ? '' : 'Incorrect PIN' });
     return send_(d);
   } catch (err) {
@@ -279,6 +292,7 @@ function upsert_(ss, uid, m, state, sentAt) {
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
+  if (p.action === 'weather') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_({ ok: true, fdr: fdrFetch_(false) }); }
   if (p.action !== 'dashboard') return out_({ ok: true, service: 'PARRON relay', v: 3, emailsLeftToday: MailApp.getRemainingDailyQuota() });
   if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' });
   const ss = book_(); const month = /^\d{4}-\d\d$/.test(p.month || '') ? p.month : Utilities.formatDate(new Date(), TZ, 'yyyy-MM');
@@ -347,6 +361,81 @@ function dailyDigest() {
       htmlBody: mailWrap_(late ? `${late} action${late > 1 ? 's are' : ' is'} overdue` : 'Action due tomorrow', 'REMINDER', L.map(actionCard_).join('')),
       body: L.map(f => `${f.action} – due ${f.due} – ${APP_URL}#actions/${encodeURIComponent(f.fid)}`).join('\n') }); } catch (err) {} });
   MailApp.sendEmail({ to: TO, subject: `PARRON daily summary ${Utilities.formatDate(now, TZ, 'dd/MM/yyyy')} – ${open.length} not sent, ${sentToday.length} sent, ${overdue.length} actions overdue`, htmlBody: html, body: 'Open in an HTML email client.', name: 'PARRON Site Inspections' });
+}
+
+/* ---------- personal repeating reminders (only the person's own email; created from My Day) ---------- */
+function reminder_(d) {
+  const sh = book_().getSheetByName('Reminders'); const H = idx_(REM_HEAD); const id = str_(d.id, 60);
+  if (!/^[\w-]{6,60}$/.test(id)) return out_({ ok: false, error: 'Bad reminder' });
+  const rows = rows_(sh); const i = rows.findIndex(r => String(r[0]) === id);
+  if (d.op === 'delete') { if (i >= 0) sh.getRange(i + 2, H.Active + 1).setValue('No'); return out_({ ok: true }); }
+  const email = email_(d.email); if (!email) return out_({ ok: false, error: 'Reminder emails need a @genus.com.au address – set your name in Settings' });
+  const rule = d.rule || {}; const repeat = JSON.stringify({ type: str_(rule.type, 12), dow: num_(rule.dow), dom: num_(rule.dom) });
+  const row = [id, clean_(d.name), email, str_(d.text, 300), repeat, str_(d.time, 5), i >= 0 ? rows[i][H.Created] : new Date(), i >= 0 ? rows[i][H['Last sent']] : '', 'Yes'];
+  if (i >= 0) sh.getRange(i + 2, 1, 1, REM_HEAD.length).setValues([row]); else sh.appendRow(row);
+  return out_({ ok: true });
+}
+function occurs_(rule, d) {
+  const dow = Number(Utilities.formatDate(d, TZ, 'u')) % 7, dom = Number(Utilities.formatDate(d, TZ, 'd'));
+  const last = new Date(Date.UTC(Number(Utilities.formatDate(d, TZ, 'yyyy')), Number(Utilities.formatDate(d, TZ, 'MM')), 0)).getUTCDate();
+  if (rule.type === 'daily') return true;
+  if (rule.type === 'weekdays') return dow >= 1 && dow <= 5;
+  if (rule.type === 'weekly') return dow === Number(rule.dow);
+  if (rule.type === 'monthly') return dom === Math.min(Number(rule.dom) || 1, last);
+  return false;
+}
+function remindersRun() {
+  const sh = book_().getSheetByName('Reminders'); const H = idx_(REM_HEAD); const now = new Date(); const today = Utilities.formatDate(now, TZ, 'yyyy-MM-dd');
+  rows_(sh).forEach((r, i) => {
+    if (r[H.Active] !== 'Yes' || !r[H.Email]) return;
+    let rule = {}; try { rule = JSON.parse(r[H.Repeat] || '{}'); } catch (e) { return; }
+    if (!occurs_(rule, now) || dstr_(r[H['Last sent']]).slice(0, 10) === today) return;
+    try {
+      MailApp.sendEmail({ to: r[H.Email], name: 'PARRON Site Inspections', subject: `Reminder: ${str_(r[H.Reminder], 120)}`,
+        htmlBody: `<div style="font-family:Arial,sans-serif;color:#1B2430;max-width:560px"><div style="background:#112B4E;color:#fff;padding:12px 14px;border-bottom:4px solid #EC7723"><div style="font-size:12px;color:#EC7723;font-weight:700">PARRON | REMINDER${r[H.Time] ? ' – ' + esc_(r[H.Time]) : ''}</div><div style="font-size:18px;font-weight:700">${esc_(r[H.Reminder])}</div></div>
+          <p style="font-size:13px;color:#5B6675">Your repeating reminder from My Day. <a href="${APP_URL}#myday">Open My Day</a> to tick it off or change it.</p></div>`,
+        body: `Reminder: ${r[H.Reminder]}\n${APP_URL}#myday` });
+      sh.getRange(i + 2, H['Last sent'] + 1).setValue("'" + today);
+    } catch (e) {}
+  });
+}
+
+/* ---------- Fire Danger Rating (Bureau of Meteorology, fire-district areas) ---------- */
+function fdrFetch_(fresh) {
+  const c = CacheService.getScriptCache(); const P = PropertiesService.getScriptProperties();
+  const today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+  let manual = null; try { manual = JSON.parse(P.getProperty('FDR_MANUAL') || 'null'); } catch (e) {}
+  let res = null; if (!fresh) { try { res = JSON.parse(c.get('fdr') || 'null'); } catch (e) {} }
+  if (!res) {
+    res = { areas: [], today: '', tomorrow: '', area: '', issued: '', source: '' };
+    const want = P.getProperty('FDR_AREA'); const urls = (P.getProperty('FDR_URL') ? [P.getProperty('FDR_URL')] : []).concat(...FDR_PRODUCTS.map(id => [`https://reg.bom.gov.au/fwo/${id}.xml`, `http://www.bom.gov.au/fwo/${id}.xml`]));
+    for (const u of urls) {
+      let xml = ''; try { const r = UrlFetchApp.fetch(u, { muteHttpExceptions: true, followRedirects: true, headers: { 'User-Agent': 'Mozilla/5.0 (PARRON site safety app)' } }); if (r.getResponseCode() !== 200) continue; xml = r.getContentText(); } catch (e) { continue; }
+      const areas = []; const re = /<area\b([^>]*)>([\s\S]*?)<\/area>/g; let m;
+      while ((m = re.exec(xml))) {
+        if (!/type="fire-district"/.test(m[1])) continue;
+        const name = (m[1].match(/description="([^"]+)"/) || [])[1] || ''; const per = {};
+        (m[2].match(/<forecast-period\b[^>]*index="(\d+)"[^>]*>[\s\S]*?<\/forecast-period>/g) || []).forEach(fp => {
+          const ix = (fp.match(/index="(\d+)"/) || [])[1]; const r2 = (fp.match(/<text type="fire_danger">([^<]+)<\/text>/) || [])[1]; if (r2) per[ix] = r2.trim(); });
+        areas.push({ name, today: per['0'] || '', tomorrow: per['1'] || '' });
+      }
+      if (!areas.length) continue;
+      const pick = areas.find(a => want && a.name === want) || areas.find(a => FDR_DEFAULT_AREA.test(a.name)) || areas[0];
+      res = { areas: areas.map(a => a.name), today: pick.today, tomorrow: pick.tomorrow, area: pick.name, issued: (xml.match(/<issue-time-local[^>]*>([^<]+)</) || [])[1] || '', source: 'Bureau of Meteorology' };
+      break;
+    }
+    try { c.put('fdr', JSON.stringify(res), 1800); } catch (e) {}
+  }
+  if (manual && manual.date === today && manual.rating) return Object.assign({}, res, { today: manual.rating, source: 'Set by ' + (manual.by || 'SHE Manager'), manual: true });
+  return res;
+}
+/* Manager PIN: set today's FDR by hand, or choose the BoM district */
+function fdrSet_(d) {
+  if (!pinOK_(d.pin)) return out_({ ok: false, error: 'Manager PIN needed' });
+  const P = PropertiesService.getScriptProperties();
+  if (d.area != null) { P.setProperty('FDR_AREA', str_(d.area, 120)); CacheService.getScriptCache().put('fdr', '', 1); }
+  if (d.rating != null) P.setProperty('FDR_MANUAL', JSON.stringify({ date: Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd'), rating: str_(d.rating, 20), by: clean_(d.by) }));
+  return out_({ ok: true, fdr: fdrFetch_(true) });
 }
 
 /* ---------- Monday weekly summary (SHE Manager only – forward as needed) ---------- */

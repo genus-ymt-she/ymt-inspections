@@ -160,9 +160,9 @@ test("positive observation is logged but creates no action", () => {
   assert.equal(j.obs[0].type, "positive"); assert.equal(j.findings.length, 0);
 });
 
-test("setup creates the daily and Monday weekly triggers", () => {
+test("setup creates the daily, Monday weekly and 5 am reminder triggers", () => {
   const r = createRelay(); r.ctx.setup();
-  assert.deepEqual(r.triggers.sort(), ["dailyDigest", "weeklyDigest"]);
+  assert.deepEqual(r.triggers.sort(), ["dailyDigest", "remindersRun", "weeklyDigest"]);
 });
 
 test("weekly summary goes only to the SHE Manager with activity per person", () => {
@@ -172,4 +172,61 @@ test("weekly summary goes only to the SHE Manager with activity per person", () 
   const w = r.mail.slice(before); assert.equal(w.length, 1);
   assert.equal(w[0].to, "darren.frizzell@genus.com.au"); assert.match(w[0].subject, /weekly summary/);
   assert.match(w[0].htmlBody, /Activity by person/); assert.match(w[0].htmlBody, /Test Inspector/); assert.doesNotMatch(w[0].htmlBody, /target/i);
+});
+
+const BOM_XML = `<?xml version="1.0"?><product><amoc><issue-time-local tz="WST">2026-10-11T16:20:00+08:00</issue-time-local></amoc><forecast>
+<area aac="WA_PW009" description="Central West" type="public-district"><forecast-period index="0"><text type="forecast">Sunny.</text></forecast-period></area>
+<area aac="WA_FW010" description="Lower West Inland" type="fire-district"><forecast-period index="0"><text type="fire_danger">Moderate</text></forecast-period><forecast-period index="1"><text type="fire_danger">High</text></forecast-period></area>
+<area aac="WA_FW007" description="Central West Inland" type="fire-district"><forecast-period index="0" start-time-local="2026-10-11T00:00:00+08:00"><text type="fire_danger">High</text></forecast-period><forecast-period index="1"><text type="fire_danger">Extreme</text></forecast-period></area>
+</forecast></product>`;
+
+test("Fire Danger Rating is read from the BoM fire-district areas (Central West by default)", () => {
+  const seen = [];
+  const r = createRelay({ fetch: (url) => { seen.push(url); return /IDW12300/.test(url) && url.startsWith("https") ? { body: BOM_XML } : null; } });
+  const j = r.get({ action: "weather", key: r.key });
+  assert.equal(j.ok, true);
+  assert.equal(j.fdr.area, "Central West Inland"); assert.equal(j.fdr.today, "High"); assert.equal(j.fdr.tomorrow, "Extreme");
+  assert.deepEqual(j.fdr.areas, ["Lower West Inland", "Central West Inland"]);
+  assert.equal(j.fdr.source, "Bureau of Meteorology");
+  assert.ok(seen.some(u => /IDW14199/.test(u)), "tries products in order");
+  assert.equal(r.get({ action: "weather", key: "bad" }).ok, false);
+});
+
+test("SHE Manager can choose the district or set today's FDR by hand (PIN)", () => {
+  const r = createRelay({ fetch: () => ({ body: BOM_XML }) });
+  assert.equal(r.post({ key: r.key, action: "fdr", area: "Lower West Inland", pin: "nope" }).ok, false);
+  let j = r.post({ key: r.key, action: "fdr", area: "Lower West Inland", pin: "2468" });
+  assert.equal(j.ok, true); assert.equal(j.fdr.area, "Lower West Inland"); assert.equal(j.fdr.today, "Moderate");
+  j = r.post({ key: r.key, action: "fdr", rating: "Extreme", by: "Darren Frizzell", pin: "2468" });
+  assert.equal(j.fdr.today, "Extreme"); assert.equal(j.fdr.manual, true); assert.match(j.fdr.source, /Darren/);
+  assert.equal(r.get({ action: "weather", key: r.key }).fdr.today, "Extreme");
+});
+
+test("FDR unavailable is reported cleanly when the BoM cannot be reached", () => {
+  const r = createRelay();
+  const j = r.get({ action: "weather", key: r.key });
+  assert.equal(j.ok, true); assert.equal(j.fdr.today, ""); assert.deepEqual(j.fdr.areas, []);
+});
+
+test("repeating reminders are saved and emailed only on the day they fall due", () => {
+  const r = createRelay();
+  const now = new Date(); const perth = new Date(now.getTime() + 8 * 3600e3);
+  const dom = perth.getUTCDate(); const dow = perth.getUTCDay();
+  assert.equal(r.post({ key: r.key, action: "reminder", id: "rem-abc123", name: "Darren Frizzell", email: "x@gmail.com", text: "Re-print SWMS", rule: { type: "monthly", dom } }).ok, false, "only genus emails");
+  assert.equal(r.post({ key: r.key, action: "reminder", id: "rem-abc123", name: "Darren Frizzell", email: "darren.frizzell@genus.com.au", text: "Re-print the SWMS", rule: { type: "monthly", dom }, time: "06:30" }).ok, true);
+  r.post({ key: r.key, action: "reminder", id: "rem-other1", name: "Darren Frizzell", email: "darren.frizzell@genus.com.au", text: "Not today", rule: { type: "weekly", dow: (dow + 3) % 7 } });
+  const before = r.mail.length; r.ctx.remindersRun();
+  const sent = r.mail.slice(before);
+  assert.equal(sent.length, 1); assert.match(sent[0].subject, /Re-print the SWMS/); assert.equal(sent[0].to, "darren.frizzell@genus.com.au");
+  r.ctx.remindersRun(); assert.equal(r.mail.length, before + 1, "not sent twice in one day");
+  r.post({ key: r.key, action: "reminder", id: "rem-abc123", op: "delete" });
+  assert.equal(r.sheet("Reminders").getRange(2, 9).getValue(), "No");
+});
+
+test("monthly reminder on the 31st falls on the last day of shorter months", () => {
+  const r = createRelay();
+  const d = new Date("2026-02-28T02:00:00Z"); // 28 Feb 2026, 10 am Perth
+  assert.equal(r.ctx.occurs_({ type: "monthly", dom: 31 }, d), true);
+  assert.equal(r.ctx.occurs_({ type: "monthly", dom: 27 }, d), false);
+  assert.equal(r.ctx.occurs_({ type: "weekdays" }, d), false, "Saturday");
 });
