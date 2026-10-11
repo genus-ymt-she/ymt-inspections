@@ -8,7 +8,7 @@ const CONFIG = {
   project: "J1084 – Parron Wind Farm Connection Assets – Yerramullah Terminal (YMT)",
   projectShort: "YMT – Yerramullah Terminal",
   jobNo: "J1084",
-  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "2.5"
+  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "2.6"
 };
 
 /* Safety Non-Negotiables (Genus) */

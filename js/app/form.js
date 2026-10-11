@@ -48,11 +48,11 @@ function showPh(id){getA("q",id).showp=true;save(CUR);refreshQ(id)}
 function ncHTML(kind,id,a){const k=`'${kind}','${id}'`;const rk=riskOf(a.cons,a.like);return `<div class="nc">
   <label class="f">What was found <span class="req">*</span></label><textarea class="t" placeholder="Describe the non-compliance – what, where, who" oninput="setF(${k},'finding',this.value)">${esc(a.finding||"")}</textarea>
   <label class="f">Proposed corrective action <span class="req">*</span></label><textarea class="t" placeholder="What needs to be done to fix it / stop it recurring" oninput="setF(${k},'action',this.value)">${esc(a.action||"")}</textarea>
-  ${riskHTML(kind,id,a)}
+  ${kind==="o"?riskHTML(kind,id,a):""}
   <label class="f">Closed at time of inspection? <span class="req">*</span></label>
   <div class="seg"><button class="${a.closed===true?"on":""}" onclick="setClosed(${k},true)">Yes – closed</button><button class="${a.closed===false?"on":""}" onclick="setClosed(${k},false)">No – open</button></div>
   ${a.closed===true?`<label class="f">Action taken on the spot <span class="req">*</span></label><textarea class="t" oninput="setF(${k},'taken',this.value)">${esc(a.taken||"")}</textarea>`:""}
-  ${a.closed===false?`${personPicker(`${kind}~${id}`,a.owner,a.ownerEmail,"ncOwner")}<div class="grid2"><div><label class="f">Due date${rk?` <span class="muted">· ${esc(rk.level)}: ${rk.days<1?"immediate":rk.days+" days"}</span>`:""}</label><input class="t" type="date" value="${esc(a.due||"")}" oninput="setF(${k},'due',this.value)"></div></div>`:""}
+  ${a.closed===false?`${personPicker(`${kind}~${id}`,a.owner,a.ownerEmail,"ncOwner")}<div class="grid2"><div><label class="f">Due date${(()=>{const sd=suggestDays(a,kind==="o");return (kind==="o"&&!rk)?"":` <span class="muted">· ${esc(sd.label)}: ${sd.days<1?"today":sd.days+" days"}</span>`})()}</label><input class="t" type="date" value="${esc(a.due||"")}" oninput="setF(${k},'due',this.value)"></div></div>`:""}
   <label class="f">Photos (optional)</label>${(a.photos||[]).length?`<div class="photos">${(a.photos||[]).map((p,i)=>`<div class="ph"><img src="${p}" onclick="zoomImg(this.src)" alt="Photo ${i+1}"><button onclick="delPhoto(${k},${i})" aria-label="Remove photo">${ic("x")}</button></div>`).join("")}</div>`:""}
   ${photoBtns(k)}</div>`}
 function riskHTML(kind,id,a){const kk=`'${kind}','${id}'`;const k=riskOf(a.cons,a.like);
@@ -142,7 +142,7 @@ function rate(id,r){const a=getA("q",id);a.r=(a.r===r?null:r);if(!a.r){delete CU
 function setA(id,f,v){getA("q",id)[f]=v;save(CUR)}
 function showCmt(id){const a=getA("q",id);a.showc=true;a.comment=a.comment||"";refreshQ(id)}
 function setF(kind,id,f,v){getA(kind,id)[f]=v;save(CUR);renderBar(CUR)}
-function setClosed(kind,id,v){const a=getA(kind,id);a.closed=v;if(v===false&&!a.due){const k=riskOf(a.cons,a.like);if(k)a.due=addDaysISO(Math.max(0,k.days))}save(CUR);kind==="q"?refreshQ(id):renderOthers()}
+function setClosed(kind,id,v){const a=getA(kind,id);a.closed=v;if(v===false&&!a.due&&(kind==="q"||riskOf(a.cons,a.like)))a.due=addDaysISO(Math.max(0,suggestDays(a,kind==="o").days));save(CUR);kind==="q"?refreshQ(id):renderOthers()}
 function delPhoto(kind,id,i){getA(kind,id).photos.splice(i,1);save(CUR);kind==="q"?refreshQ(id):renderOthers()}
 function addPhoto(kind,id,inp,src){const f=inp.files&&inp.files[0];if(!f)return;const d=CUR;const t=tabByNum(d.tab);
   const lab=kind==="q"?`Item ${id}`:`${pad(t.num)} Other hazard X${+id+1}`;
@@ -173,7 +173,7 @@ function viewReview(d){const t=tabByNum(d.tab);setHeader("Review & send",`${pad(
   {const nr=narrRows(d);if(nr.length)h+=`<h2>${esc(t.narrative?t.narrative.title:"Observation record")}</h2><div class="card"><dl class="kv">${nr.map(r=>`<dt>${esc(r[0])}</dt><dd style="white-space:pre-wrap">${esc(r[1])}</dd>`).join("")}</dl></div>`}
   h+=`<h2>Non-compliances <span class="cnt">${s.ncs.length}</span></h2>`;
   if(!s.ncs.length)h+=`<div class="card empty">${ic("circlecheck")}<b>No non-compliances recorded</b>Nice work – everything inspected met the standard.</div>`;
-  s.ncs.forEach(n=>{h+=`<div class="card ncsum ${n.r==="UA"?"ua":""}"><div class="libmeta" style="margin:0 0 6px"><span class="pill ${n.r==="UA"?"ua":"ni"}">${n.r}</span><b style="align-self:center">${esc(n.id)}</b>${riskChip(n.cons,n.like)}${n.snn.map(c=>snnBadge(c,1)).join("")}</div><div>${esc(n.text)}</div>
+  s.ncs.forEach(n=>{h+=`<div class="card ncsum ${n.r==="UA"?"ua":""}"><div class="libmeta" style="margin:0 0 6px"><span class="pill ${n.r==="UA"?"ua":"ni"}">${n.r}</span><b style="align-self:center">${esc(n.id)}</b>${n.hazard?riskChip(n.cons,n.like):riskChip(n.cons,n.like,true)}${n.snn.map(c=>snnBadge(c,1)).join("")}</div><div>${esc(n.text)}</div>
    <dl class="kv"><dt>Finding</dt><dd>${esc(n.finding||"—")}</dd><dt>Corrective action</dt><dd>${esc(n.action||"—")}</dd>
    <dt>Status</dt><dd>${n.closed===true?`<span class="pill spot">Closed at inspection</span> ${esc(n.taken||"")}`:n.closed===false?`<span class="pill open">Open</span>${n.owner?` ${esc(n.owner)}`:""}${n.ownerEmail?` <span class="muted">(${esc(n.ownerEmail)} – will be emailed)</span>`:""}${n.due?` · due ${fmtD(n.due)}`:""}`:"—"}</dd></dl>
    ${n.photos.length?`<div class="photos">${n.photos.map(u=>`<div class="ph"><img src="${u}" onclick="zoomImg(this.src)" alt=""></div>`).join("")}</div>`:""}</div>`});
