@@ -610,3 +610,4 @@ body.radio-on main{padding-bottom:180px}
 .rlist button.on .rn{color:var(--accent)}
 .rlist .rt{flex:1;min-width:0}.rlist .rt b{display:block;font-size:14px}.rlist .rt small{color:var(--muted)}
 .rlist em{font-style:normal;font-size:11px;font-weight:700;color:var(--muted);background:var(--surface-2);border-radius:999px;padding:3px 8px;flex:none}
+.tachips{margin:0 0 8px}.tachips .chip{min-height:40px}

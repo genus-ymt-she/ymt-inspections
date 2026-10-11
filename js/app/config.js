@@ -8,7 +8,7 @@ const CONFIG = {
   project: "J1084 – Parron Wind Farm Connection Assets – Yerramullah Terminal (YMT)",
   projectShort: "YMT – Yerramullah Terminal",
   jobNo: "J1084",
-  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "3.0"
+  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "3.0.1"
 };
 
 /* Site location for the home-screen weather (forecast for this point) and the Bureau of Meteorology
@@ -50,7 +50,8 @@ const RISK = {
 };
 
 /* Project team – people who use PARRON and can be assigned actions.
-   Picking a name fills in their email, so they are emailed the action automatically. Add or remove people here. */
+   Picking a name fills in their email, so they are emailed the action automatically. Add or remove people here.
+   ta: true = Trade Assistant (shown as quick-pick names on the Trade Assistants forms; no email needed). */
 const TEAM = [
   { name: "Darren Frizzell",  role: "SHE Manager",                  email: "darren.frizzell@genus.com.au" },
   { name: "Lee Allen",        role: "SHE Manager",                  email: "lee.allen@genus.com.au" },
@@ -63,7 +64,9 @@ const TEAM = [
   { name: "Paul Delaney",     role: "Civil Supervisor",             email: "paul.delaney@genus.com.au" },
   { name: "Cory Shotter",     role: "Senior Electrical Supervisor", email: "cory.shotter@genus.com.au" },
   { name: "Zane Patten",      role: "Electrical Supervisor",        email: "zane.patten@genus.com.au" },
-  { name: "Amie Smith",       role: "Project Admin",                email: "amie.smith@genus.com.au" }
+  { name: "Amie Smith",       role: "Project Admin",                email: "amie.smith@genus.com.au" },
+  { name: "Jayden Mullan",    role: "Trade Assistant",              email: "", ta: true },
+  { name: "Ben Herbert",      role: "Trade Assistant",              email: "", ta: true }
 ];
 
 /* Quick report – positive observation categories */
