@@ -118,3 +118,58 @@ test("setup sends a confirmation and reports missing PIN", () => {
   r.ctx.setup();
   assert.match(r.mail.at(-1).body, /NOT SET/);
 });
+
+test("UA or Critical finding sends an urgent alert to the SHE Manager and the supervisor", () => {
+  const r = createRelay();
+  r.post(report({ alert: { supervisorEmail: "matt.smith@genus.com.au" } }));
+  const a = r.mail.find(m => /^URGENT/.test(m.subject || ""));
+  assert.ok(a, "urgent alert sent");
+  assert.match(a.to, /darren\.frizzell@genus\.com\.au/); assert.match(a.to, /matt\.smith@genus\.com\.au/);
+  assert.match(a.htmlBody, /Kit empty/);
+});
+
+test("no urgent alert when findings are only NI below Critical", () => {
+  const r = createRelay();
+  r.post(report({ findings: [report().findings[0]] }));
+  assert.equal(r.mail.filter(m => /^URGENT/.test(m.subject || "")).length, 0);
+});
+
+test("hazard report is logged, emailed with photos, added to the action register and alerts if Critical", () => {
+  const r = createRelay();
+  const res = r.post({ key: r.key, action: "observation", uid: "o1", reportId: "YMT-HZ-20261011-1000-MS", subject: "Hazard report", html: "<p>h</p>", text: "h",
+    meta: { name: "Matt Smith", no: "HZ", title: "Hazard report", location: "Cowalla Rd" },
+    obs: { type: "hazard", description: "Unbunded fuel drum near drain", immediate: "Area barricaded" },
+    photos: [Buffer.from("jpg").toString("base64")],
+    findings: [{ fid: "YMT-HZ-20261011-1000-MS|HZ", item: "HZ", text: "Unbunded fuel drum near drain", rating: "UA", cons: 4, like: 4, score: 20, level: "Critical", finding: "Unbunded fuel drum near drain", action: "Bund the drum", status: "open", owner: "Paul Delaney", ownerEmail: "paul.delaney@genus.com.au", due: "2026-10-12" }] });
+  assert.equal(res.ok, true);
+  assert.equal(r.sheet("Observations").getLastRow(), 2);
+  const rep = r.mail.find(m => m.subject === "Hazard report"); assert.equal(rep.attachments.length, 1);
+  assert.ok(r.files.find(f => f.folder.includes("Observations")), "photo archived");
+  const j = r.get({ action: "dashboard", key: r.key });
+  assert.equal(j.obs.length, 1); assert.equal(j.obs[0].type, "hazard");
+  assert.equal(j.findings[0].status, "Open"); assert.equal(j.findings[0].no, "HZ");
+  assert.ok(r.mail.find(m => m.to === "paul.delaney@genus.com.au"), "owner emailed");
+  assert.ok(r.mail.find(m => /^URGENT/.test(m.subject || "")), "critical alert");
+});
+
+test("positive observation is logged but creates no action", () => {
+  const r = createRelay();
+  r.post({ key: r.key, action: "observation", uid: "o2", reportId: "YMT-PO-1", subject: "Positive observation", html: "<p>p</p>", text: "p",
+    meta: { name: "Anphin Thomas", location: "Laydown" }, obs: { type: "positive", description: "Crew stopped work for wind", category: "Speaking up / stop work", recognised: "Civil crew A" } });
+  const j = r.get({ action: "dashboard", key: r.key });
+  assert.equal(j.obs[0].type, "positive"); assert.equal(j.findings.length, 0);
+});
+
+test("setup creates the daily and Monday weekly triggers", () => {
+  const r = createRelay(); r.ctx.setup();
+  assert.deepEqual(r.triggers.sort(), ["dailyDigest", "weeklyDigest"]);
+});
+
+test("weekly summary goes only to the SHE Manager with targets per person", () => {
+  const r = createRelay();
+  r.post(report({ targets: { "Test Inspector": 2, "Matt Smith": 2 } }));
+  const before = r.mail.length; r.ctx.weeklyDigest();
+  const w = r.mail.slice(before); assert.equal(w.length, 1);
+  assert.equal(w[0].to, "darren.frizzell@genus.com.au"); assert.match(w[0].subject, /weekly summary/);
+  assert.match(w[0].htmlBody, /Test Inspector/); assert.match(w[0].htmlBody, /1 short/); assert.match(w[0].htmlBody, /Matt Smith/);
+});

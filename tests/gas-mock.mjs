@@ -54,13 +54,13 @@ function formatDate(d, tz, fmt) {
   const Y = t.getUTCFullYear(), M = t.getUTCMonth(), D = t.getUTCDate(), h = t.getUTCHours(), m = t.getUTCMinutes();
   const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  return fmt.replace("EEEE", days[t.getUTCDay()]).replace("MMMM", months[M]).replace("yyyy", Y).replace("MM", pad(M + 1)).replace("dd", pad(D)).replace(/\bd\b/, D).replace("HH", pad(h)).replace("mm", pad(m));
+  return fmt.replace("EEEE", days[t.getUTCDay()]).replace("MMMM", months[M]).replace("MMM", months[M].slice(0, 3)).replace("yyyy", Y).replace("MM", pad(M + 1)).replace("dd", pad(D)).replace(/\bd\b/, D).replace("HH", pad(h)).replace("mm", pad(m));
 }
 
 export function createRelay({ pin = "2468" } = {}) {
   const props = new Map(pin ? [["MANAGER_PIN", pin]] : []);
   const cache = new Map();
-  const mail = [], files = [];
+  const mail = [], files = [], triggers = [];
   let ss = null;
   const folders = new Map();
   const mkFolder = (name) => { const id = "f" + (folders.size + 1); const f = { id, name, subs: new Map(), getId: () => id,
@@ -75,7 +75,7 @@ export function createRelay({ pin = "2468" } = {}) {
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     MailApp: { sendEmail: (a, b, c) => mail.push(typeof a === "object" ? a : { to: a, subject: b, body: c }), getRemainingDailyQuota: () => 100 },
     DriveApp: { createFolder: mkFolder, getFolderById: id => { const f = folders.get(id); if (!f) throw new Error("no folder"); return f; } },
-    ScriptApp: { getProjectTriggers: () => [], deleteTrigger() {}, newTrigger: () => { const t = { timeBased: () => t, atHour: () => t, everyDays: () => t, inTimezone: () => t, create: () => t }; return t; } },
+    ScriptApp: { WeekDay: { MONDAY: 'MONDAY' }, getProjectTriggers: () => [], deleteTrigger() {}, newTrigger: (fn) => { const t = { fn, timeBased: () => t, atHour: () => t, everyDays: () => t, onWeekDay: () => t, inTimezone: () => t, create: () => (triggers.push(fn), t) }; return t; } },
     Utilities: { formatDate, base64Decode: s => Buffer.from(s, "base64"), newBlob: (bytes, type, name) => ({ getBytes: () => bytes, getName: () => name, type }) },
     ContentService: { MimeType: { JSON: "json" }, createTextOutput: s => ({ content: s, setMimeType() { return this; } }) },
   };
@@ -83,5 +83,5 @@ export function createRelay({ pin = "2468" } = {}) {
   vm.runInContext(fs.readFileSync(path.join(here, "..", "PARRON_Relay_Code.gs"), "utf8"), ctx);
   const post = (obj) => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(obj) } }).content);
   const get = (params) => JSON.parse(ctx.doGet({ parameter: params }).content);
-  return { ctx, post, get, mail, files, props, cache, sheet: n => ss && ss.getSheetByName(n), key: "prn-ymt-7Qk2vX9m" };
+  return { ctx, post, get, mail, files, triggers, props, cache, sheet: n => ss && ss.getSheetByName(n), key: "prn-ymt-7Qk2vX9m" };
 }

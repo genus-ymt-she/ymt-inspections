@@ -107,6 +107,7 @@ await step("send directly through the relay (findings reach the log)", async () 
   const rep = relay.mail.find(m => m.attachments); if (!/Risk/.test(rep.htmlBody)) throw new Error("email lacks risk column");
   if (!/High 15/.test(rep.htmlBody)) throw new Error("Genus matrix rank not in email");
   const asg = relay.mail.find(m => m.to === "zane.patten@genus.com.au"); if (!asg) throw new Error("assignee not emailed");
+  if (!relay.mail.find(m => /^URGENT/.test(m.subject || ""))) throw new Error("no urgent alert for the UA finding");
   globalThis.ACTION_LINK = asg.htmlBody.match(/href="[^"]*(#actions\/[^"]+)"/)[1];
 });
 await step("action register shows the open action", async () => {
@@ -140,6 +141,37 @@ await step("Insights renders KPIs and charts", async () => {
   await page.evaluate(() => document.querySelectorAll(".chart")[2].scrollIntoView()); await settle(page); await shot(page, "08-insights-charts");
   const txt = await page.evaluate(() => safetySummaryText(DASH.j)); if (!/1 site inspection was completed/.test(txt)) throw new Error("summary text: " + txt.slice(0, 120));
 });
+await step("quick hazard report (Critical) goes to the register and alerts", async () => {
+  const before = relay.mail.length;
+  await page.evaluate(() => go("#report/hazard")); await page.waitForSelector("#obLoc");
+  await page.fill("#obLoc", "Cowalla Road entry");
+  await page.fill("#app textarea >> nth=0", "Unbunded fuel drum next to the table drain");
+  await page.click(".riskbox .rscale >> nth=0 >> button >> nth=3"); // Severe
+  await page.click(".riskbox .rscale >> nth=1 >> button >> nth=3"); // Likely -> Critical 20
+  await page.click("text=No – needs action");
+  await page.fill("#app textarea >> nth=2", "Move drum into bunded storage");
+  await page.selectOption(".pp select", "Paul Delaney");
+  await settle(page); await shot(page, "09-hazard-report");
+  await page.click("text=Send hazard report"); await page.waitForFunction(() => location.hash === "#home" || location.hash === "", null, { timeout: 20000 });
+  const sent = relay.mail.slice(before);
+  if (!sent.find(m => /^URGENT/.test(m.subject || ""))) throw new Error("no urgent alert for Critical hazard");
+  if (!sent.find(m => m.to === "paul.delaney@genus.com.au")) throw new Error("owner not emailed");
+  const j = relay.get({ action: "dashboard", key: relay.key });
+  if (!j.findings.find(f => f.no === "HZ" && f.level === "Critical")) throw new Error("hazard not on register");
+});
+await step("positive observation is logged", async () => {
+  await page.evaluate(() => go("#report/positive")); await page.waitForSelector("#obLoc");
+  await page.fill("#obLoc", "Laydown area 2"); await page.fill("#app textarea >> nth=0", "Crew stopped work when wind exceeded the lift plan limit");
+  await page.click(".chip >> text=Speaking up / stop work");
+  await page.click("text=Send observation"); await page.waitForFunction(() => location.hash === "#home" || location.hash === "", null, { timeout: 20000 });
+  const j = relay.get({ action: "dashboard", key: relay.key });
+  if (j.obs.length !== 2) throw new Error("observations logged: " + j.obs.length);
+});
+await step("Insights shows lead indicators and targets", async () => {
+  await page.evaluate(() => { REG.at = 0; go("#insights"); }); await page.waitForSelector(".tgt");
+  const t = await page.textContent("#dbody"); if (!/HAZARD REPORTS\s*1/.test(t) || !/POSITIVE OBS\s*1/.test(t)) throw new Error("lead indicators missing");
+  await page.evaluate(() => document.querySelector(".tgt").scrollIntoView({ block: "center" })); await settle(page); await shot(page, "10-targets");
+});
 await step("monthly HSE summary PDF builds", async () => {
   const n = await page.evaluate(() => buildMonthlyPDF(DASH.j).size); if (n < 15000) throw new Error("monthly pdf bytes " + n); console.log("      monthly pdf bytes", n);
 });
@@ -149,10 +181,10 @@ await step("CSV exports", async () => {
 });
 if (SHOTS) {
   await step("dark mode + desktop screenshots", async () => {
-    const d = await newPage({ dark: true, hash: "#home" }); await d.waitForSelector(".hero"); await settle(d); await shot(d, "10-home-dark");
-    await d.evaluate(() => go("#insights")); await d.waitForSelector(".chart svg"); await settle(d); await shot(d, "11-insights-dark");
-    const w = await newPage({ viewport: { width: 1280, height: 860 }, hash: "#insights" }); await w.waitForSelector(".chart svg"); await settle(w); await shot(w, "12-insights-desktop");
-    await w.evaluate(() => go("#home")); await w.waitForSelector("#lib .card"); await settle(w); await shot(w, "13-home-desktop");
+    const d = await newPage({ dark: true, hash: "#home" }); await d.waitForSelector(".hero"); await settle(d); await shot(d, "11-home-dark");
+    await d.evaluate(() => go("#insights")); await d.waitForSelector(".chart svg"); await settle(d); await shot(d, "12-insights-dark");
+    const w = await newPage({ viewport: { width: 1280, height: 860 }, hash: "#insights" }); await w.waitForSelector(".chart svg"); await settle(w); await shot(w, "13-insights-desktop");
+    await w.evaluate(() => go("#home")); await w.waitForSelector("#lib .card"); await settle(w); await shot(w, "14-home-desktop");
     fs.writeFileSync(path.join(out, "monthly.pdf"), Buffer.from(await page.evaluate(async () => { const b = buildMonthlyPDF(DASH.j); return Array.from(new Uint8Array(await b.arrayBuffer())); })));
   });
 }

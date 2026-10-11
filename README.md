@@ -14,9 +14,12 @@ email, the shared project log (Google Sheet) and the PDF archive (Google Drive).
 | **Inspect** | 22 checklist inspections + discussion record, C / UA / NI / N/A ratings, SNN-linked items, EXIF-verified time-stamped photos, voice mode, signature sign-off, branded PDF |
 | **Risk** | Genus Risk Matrix on every finding (Minor → Catastrophic × Rare → Almost certain, ranked 1–25, Low / Medium / High / Critical) with the Genus risk action and a suggested due date |
 | **Actions** | Project-wide corrective action register. The responsible person is **emailed the action** with a link to close it out, and reminded when it is due or overdue. Close-out with photo evidence, SHE Manager emailed to verify (Manager PIN), re-open / reassign, full history, CSV export |
+| **Quick reports** | 30-second hazard report (Genus risk rating, photos, assign and email an action) and positive observation, for lead indicators |
+| **Urgent alert** | Any UA or Critical finding emails the SHE Manager and the inspection supervisor immediately |
 | **Insights** | KPIs with month-on-month change, 6-month trend, findings by type, risk profile, repeat findings, team activity |
 | **Monthly report** | One-tap Monthly HSE Summary PDF and auto-written *2.1 Safety Summary* text for the project monthly report |
-| **Daily summary** | 6 pm email: unsent forms, overdue actions, items awaiting verification |
+| **Targets** | Weekly inspection target per person (`TEAM` in config.js), shown this week / this month on Insights |
+| **Summaries** | 6 pm daily email, plus a Monday weekly summary to the SHE Manager (inspections vs targets, findings, hazard / positive reports, open, overdue and Critical actions) |
 
 ## Project structure
 
@@ -42,10 +45,11 @@ docs/DEPLOY.md             deployment and relay update guide
 Everything a SHE Manager normally changes is in **`js/app/config.js`**:
 
 - `CONFIG` – project name, job number, document prefix, report recipient
-- `TEAM` – the project team (name, role, email). People pick themselves on first use, and actions are
+- `TEAM` – the project team (name, role, email, weekly inspection target). People pick themselves on first use, and actions are
   assigned by picking a name, which emails that person automatically
 - `RISK` – the Genus Risk Matrix (taken from the Genus JHA): descriptors, ranked cells, bands, colours,
   risk actions and the suggested close-out days used for due dates
+- `OBS_CATEGORIES` – positive observation categories
 - `CATEGORIES` – how inspections are grouped in the library
 
 After editing, bump `const C = "parron-v…"` in `sw.js` so phones pick up the change.

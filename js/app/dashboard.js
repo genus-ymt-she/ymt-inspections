@@ -36,6 +36,17 @@ function hbars(rows,max){max=max||Math.max(1,...rows.map(r=>r.parts.reduce((a,p)
   return rows.map(r=>{const tot=r.parts.reduce((a,p)=>a+p.n,0);return `<div class="hbar"><span class="lb" title="${esc(r.label)}">${esc(r.label)}</span><span class="tr">${r.parts.map(p=>`<i style="width:${p.n/max*100}%;background:${p.col}" title="${esc(p.label)}: ${p.n}"></i>`).join("")}</span><span class="vl">${tot}</span></div>`}).join("")}
 function delta(cur,prev,suffix,goodUp){if(cur==null||prev==null||prev===0&&cur===0)return "";const d=Math.round((cur-prev)*10)/10;if(!d)return `<span>no change</span>`;
   const good=goodUp?d>0:d<0;return `<span class="${good?"up":"dn"}">${d>0?"▲":"▼"} ${Math.abs(d)}${suffix||""}</span> vs last month`}
+/* inspection targets: TEAM[].target per week; records (discussion forms) do not count */
+const RECORD_NOS=()=>new Set(TABS.filter(t=>t.kind==="record").map(t=>pad(t.num)));
+function weekStart(){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
+function monthWeeks(month){const [y,m]=month.split("-").map(Number);const now=new Date();const dim=new Date(y,m,0).getDate();
+  const days=(y===now.getFullYear()&&m===now.getMonth()+1)?now.getDate():dim;return Math.max(1,Math.round(days/7*10)/10)}
+function targetRows(j){const rec=RECORD_NOS();const isInsp=x=>!rec.has(String(x.no));const ws=weekStart().getTime();
+  const wk=(j.recent||[]).filter(x=>isInsp(x)&&new Date(x.sentAt).getTime()>=ws);const mo=(j.sent||[]).filter(isInsp);const mw=monthWeeks(j.month);
+  return TEAM.filter(p=>+p.target>0).map(p=>{const k=nameKey(p.name);const w=wk.filter(x=>nameKey(x.name)===k).length,m=mo.filter(x=>nameKey(x.name)===k).length;
+    return {name:p.name,role:p.role,target:+p.target,week:w,month:m,monthTarget:Math.round(p.target*mw)}})}
+function tgtBar(done,target){const pct=target?Math.min(1,done/target):0;const col=done>=target?"var(--c)":pct>=.5?"var(--ni)":"var(--ua)";
+  return `<span class="tr"><i style="width:${Math.max(pct*100,done?6:0)}%;background:${col}"></i></span>`}
 function dashData(j){const key=nameKey;const P=DASH.person;const mine=x=>!P||key(x.name)===P;const isNow=j.month===monthKey(new Date());
   const inMonth=x=>isNow||String(x.started).slice(0,7)===j.month;
   const inprog=j.open.filter(x=>mine(x)&&inMonth(x)&&x.state==="draft").sort((a,b)=>key(a.name).localeCompare(key(b.name))||String(a.started).localeCompare(String(b.started)));
@@ -76,6 +87,23 @@ function renderDash(j,cached){DASH.j=j;const key=nameKey;const disp={};
     const since=new Date();since.setDate(since.getDate()-90);const rep={};(j.findings||[]).filter(f=>new Date(f.raised)>=since).forEach(f=>{const k=f.item;const o=rep[k]=rep[k]||{n:0,text:f.text,title:f.title,locs:new Set()};o.n++;o.locs.add(f.location)});
     const repL=Object.entries(rep).filter(([,o])=>o.n>1).sort((a,b)=>b[1].n-a[1].n).slice(0,8);
     h+=`<div class="chart"><h3>Repeat findings</h3><div class="sub">Same checklist item failed more than once · last 90 days</div>${repL.length?`<table class="table"><tr><th>Item</th><th>Requirement</th><th class="right">Times</th></tr>${repL.map(([k,o])=>`<tr><td><b>${esc(k)}</b></td><td>${esc(o.text)}<div class="muted">${esc([...o.locs].filter(Boolean).slice(0,3).join(", "))}</div></td><td class="right"><b>${o.n}</b></td></tr>`).join("")}</table>`:`<div class="empty" style="padding:14px">${ic("circlecheck")}<b>No repeat findings</b></div>`}</div>`}
+  // inspection targets
+  {const T=targetRows(j);const isNow=j.month===monthKey(new Date());
+   if(T.length){const met=T.filter(r=>isNow?r.week>=r.target:r.month>=r.monthTarget).length;
+    h+=`<div class="chart"><h3>Inspection targets</h3><div class="sub">${isNow?`This week (since Monday) · ${met} of ${T.length} people on target`:`${esc(monthLabel(j.month))} · ${met} of ${T.length} people met target`}</div>
+     ${T.map(r=>isNow?`<div class="tgt"><span class="lb" title="${esc(r.role)}">${esc(r.name)}</span>${tgtBar(r.week,r.target)}<span class="vl">${r.week} / ${r.target}</span></div>`
+       :`<div class="tgt"><span class="lb">${esc(r.name)}</span>${tgtBar(r.month,r.monthTarget)}<span class="vl">${r.month} / ${r.monthTarget}</span></div>`).join("")}
+     ${isNow?`<div class="muted" style="margin-top:8px">This month so far: ${T.reduce((a,r)=>a+r.month,0)} inspections against a pro-rata target of ${T.reduce((a,r)=>a+r.monthTarget,0)}.</div>`:""}</div>`}}
+  // lead indicators
+  {const O=(j.obs||[]).filter(o=>String(o.at).slice(0,7)===j.month&&(!D.P||nameKey(o.name)===D.P));const hz=O.filter(o=>o.type==="hazard"),po=O.filter(o=>o.type==="positive");
+   if(j.v>=3){const by={};O.forEach(o=>{const k=o.name||"(no name)";by[k]=(by[k]||0)+1});
+    h+=`<div class="chart"><h3>Lead indicators</h3><div class="sub">Hazard reports and positive observations · ${esc(monthLabel(j.month))}</div>
+     <div class="kpis" style="margin-bottom:8px"><div class="kpi" style="--kc:var(--accent)"><div class="l">${ic("alert","s")} HAZARD REPORTS</div><div class="v">${hz.length}</div><div class="d">${hz.filter(o=>o.level==="Critical"||o.level==="High").length} high / critical</div></div>
+     <div class="kpi" style="--kc:var(--c)"><div class="l">${ic("star","s")} POSITIVE OBS</div><div class="v">${po.length}</div><div class="d">good practice recognised</div></div></div>
+     ${O.length?hbars(Object.keys(by).sort((a,b)=>by[b]-by[a]).slice(0,6).map(k=>({label:k,parts:[{label:"Hazard",n:hz.filter(o=>(o.name||"(no name)")===k).length,col:"var(--accent)"},{label:"Positive",n:po.filter(o=>(o.name||"(no name)")===k).length,col:"var(--c)"}]})))
+       +`<div class="legend"><span><i style="background:var(--accent)"></i>Hazard</span><span><i style="background:var(--c)"></i>Positive</span></div>`
+       +`<table class="table" style="margin-top:10px"><tr><th>Latest</th><th>Location</th></tr>${O.slice(-5).reverse().map(o=>`<tr><td>${o.type==="hazard"?`<span class="tag r">Hazard</span>`:`<span class="tag g">Positive</span>`} ${esc(String(o.description||"").slice(0,90))}<div class="muted">${esc(o.name||"")} · ${fmtD(String(o.at).slice(0,10))}</div></td><td>${esc(o.location||"")}</td></tr>`).join("")}</table>`
+       :`<div class="empty" style="padding:12px">${ic("star")}<b>None yet this month</b>Use “Report a hazard” or “Positive observation” on the home screen.</div>`}</div>`}}
   h+=`</div>`;
   // people
   const people={};D.done.forEach(x=>{const k=key(x.name)||"(no name)";(people[k]=people[k]||[]).push(x)});

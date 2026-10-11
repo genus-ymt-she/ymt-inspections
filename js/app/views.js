@@ -7,12 +7,13 @@ window.addEventListener("hashchange",route);
 function go(h){if(location.hash===h)route();else location.hash=h}
 async function route(){const seq=++ROUTE_SEQ;const h=location.hash||"#home";const [v,id]=h.slice(1).split("/");window.scrollTo(0,0);closeSheet();
   if(v!=="insp"){const b=document.getElementById("bar");if(b)b.remove()}
-  document.body.classList.toggle("task",v==="insp"||v==="review");setNav(v);
+  document.body.classList.toggle("task",v==="insp"||v==="review"||v==="report");setNav(v);
   if(v==="insp"){const d=await dbGet("drafts",id);if(!d)return go("#home");CUR=d;return viewInsp(d)}
   if(v==="review"){const d=await dbGet("drafts",id);if(!d)return go("#home");CUR=d;return viewReview(d)}
   CUR=null;
   if(v==="settings")return viewSettings();
   if(v==="dash"||v==="insights")return viewDash();
+  if(v==="report")return viewReport(id||"hazard");
   if(v==="actions")return viewActions(id?decodeURIComponent(id):"");
   return viewHome()}
 function setNav(v){const m={home:"home","":"home",insights:"insights",dash:"insights",actions:"actions"};const k=m[v]||"";
@@ -38,6 +39,8 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
    <button onclick="go('#actions')" class="${mine.length?"warn":""}"><b>${mine.length}</b><span>My actions</span></button>
    <button onclick="ACTF.f='overdue';go('#actions')" class="${st.overdue?"bad":""}"><b>${st.overdue}</b><span>Overdue</span></button>
    <button onclick="go('#insights')"><b>${sentMonth}</b><span>This month</span></button></div></section>`;
+  h+=`<div class="qr"><button class="card tap" onclick="go('#report/hazard')"><span class="qi" style="background:var(--ua-soft);color:var(--ua)">${ic("alert")}</span><b>Report a hazard</b><span>30-second report with photo</span></button>
+   <button class="card tap" onclick="go('#report/positive')"><span class="qi" style="background:var(--c-soft);color:var(--c)">${ic("star")}</span><b>Positive observation</b><span>Recognise good practice</span></button></div>`;
   if(ob.length)h+=`<div class="outbox">${ic("inbox")}<div><b>Outbox – ${ob.length} report${ob.length>1?"s":""} waiting to send</b><div class="muted" style="margin:4px 0 8px">${ob.map(o=>`${esc(o.title)} · ${esc(o.location)}`).join("<br>")}<br>They send automatically when the phone has signal${ob[0].lastError?` (last try: ${esc(ob[0].lastError)})`:""}.</div><button class="btn o s" onclick="flushOutbox(true)">${ic("send","s")} Send now</button></div></div>`;
   {const sod=new Date();sod.setHours(0,0,0,0);const stale=drafts.filter(d=>d.created<sod.getTime());
    if(stale.length)h+=`<div class="alert red">${ic("clock")}<div><b>${stale.length} unsent inspection${stale.length>1?"s":""} started before today.</b> Finish and send ${stale.length>1?"them":"it"} – or delete if no longer needed.</div></div>`}

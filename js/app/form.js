@@ -10,7 +10,7 @@ function viewInsp(d){const t=tabByNum(d.tab);if(t.kind==="record")return viewRec
    <div><label class="f">Date & time</label><input class="t" type="datetime-local" data-d="datetime" value="${esc(D.datetime)}"></div>
    ${hide.includes("crew")?"":`<div><label class="f">Contractor / crew</label><input class="t" data-d="crew" value="${esc(D.crew)}"></div>`}
    <div><label class="f">Inspector name <span class="req">*</span></label><input class="t" data-d="inspector" value="${esc(D.inspector)}" autocomplete="name"></div>
-   ${hide.includes("supervisor")?"":`<div><label class="f">Supervisor / person in charge</label><input class="t" data-d="supervisor" value="${esc(D.supervisor)}"></div>`}`;
+   ${hide.includes("supervisor")?"":`<div><label class="f">Supervisor / person in charge</label><input class="t" data-d="supervisor" list="teamnames" value="${esc(D.supervisor)}" autocomplete="off"><datalist id="teamnames">${TEAM.map(p=>`<option value="${esc(p.name)}">${esc(p.role)}</option>`).join("")}</datalist></div>`}`;
   (t.extra||[]).forEach(l=>{const ty=(t.extraTypes||{})[l];h+=`<div><label class="f">${esc(l.replace(/:$/,""))}</label><input class="t" ${ty?`type="${ty}"`:""} ${ty==="number"?'inputmode="numeric"':""} data-x="${esc(l)}" value="${esc(D.extra[l]||"")}"></div>`});
   h+=`</div></div>`;
   if(t.checks){const C=t.checks;D.checks=D.checks||{};

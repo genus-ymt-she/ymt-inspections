@@ -30,7 +30,7 @@ async function sendDirect(){const d=CUR;const b=$("#bShare");if(!PDFFILE){toast(
   try{const t=tabByNum(d.tab);const s=stats(d);
     const REC=t.kind==="record";const findings=findingsOf(d),report=reportFacts(d);findings.forEach(f=>rememberContact(f.owner,f.ownerEmail));
     const item={id:d.id,queuedAt:Date.now(),tries:0,title:`${pad(t.num)} – ${t.short}`,reportId:reportId(d),location:d.details.location,ua:REC?0:s.UA,ni:REC?0:s.NI,snn:REC?0:s.snnN,no:pad(t.num),inspector:d.details.inspector,findings,report,
-      payload:{uid:d.id,meta:pingMeta(d),reportId:reportId(d),to:recipient(),subject:subject(d),text:bodyText(d),html:htmlBody(d),filename:fileName(d),pdf:await blobToB64(PDFFILE),report,findings}};
+      payload:{uid:d.id,meta:pingMeta(d),reportId:reportId(d),to:recipient(),subject:subject(d),text:bodyText(d),html:htmlBody(d),filename:fileName(d),pdf:await blobToB64(PDFFILE),report,findings,alert:alertInfo(d),targets:teamTargets()}};
     await dbPut("outbox",item);await dbDel("drafts",d.id);{const q=getPings();if(q[d.id]){q[d.id].state="outbox";ls("pings",JSON.stringify(q))}else queuePing(d,"outbox")}
     const r=await sendItem(item);
     if(r.ok){toast("✓ Report sent to the SHE Manager",4500)}else toast("No connection – report saved in the Outbox and will send automatically",6500);
