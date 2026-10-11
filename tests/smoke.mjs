@@ -44,17 +44,17 @@ const shot = async (page, name) => { if (SHOTS) await page.screenshot({ path: pa
 const settle = page => page.waitForTimeout(450);
 
 const page = await newPage();
-await step("home shows hero and the four tiles (no long list)", async () => {
+await step("home shows hero and the five tiles (no long list)", async () => {
   await page.waitForSelector(".hero"); await page.waitForSelector(".tiles .tile");
   if (await page.$("#lib")) throw new Error("inspection list should not be on home");
-  const n = await page.$$eval(".tiles .tile", e => e.length); if (n !== 4) throw new Error("tiles: " + n);
-  const labels = await page.$$eval(".tiles .tile b", e => e.map(x => x.textContent).join("|")); if (labels !== "Inspection|Task Observation|Hazard|Positive") throw new Error("tiles: " + labels);
+  const n = await page.$$eval(".tiles .tile", e => e.length); if (n !== 5) throw new Error("tiles: " + n);
+  const labels = await page.$$eval(".tiles .tile b", e => e.map(x => x.textContent).join("|")); if (labels !== "Inspection|Task Observation|Mentoring|Hazard|Positive") throw new Error("tiles: " + labels);
   await settle(page); await shot(page, "01-home");
 });
 await step("Inspection tile opens the list with category chips", async () => {
   await page.click(".tile >> text=Inspection"); await page.waitForSelector("#lib .card");
-  const n = await page.$$eval("#lib .card", e => e.length); if (n !== 26) throw new Error("library cards: " + n);
-  const nums = await page.$$eval("#lib .card .n", e => e.map(x => x.textContent)); if (nums.includes("24")) throw new Error("24 should not be in the list"); if (nums.slice(22, 25).join(",") !== "25,26,27") throw new Error("order: " + nums.join(","));
+  const n = await page.$$eval("#lib .card", e => e.length); if (n !== 25) throw new Error("library cards: " + n);
+  const nums = await page.$$eval("#lib .card .n", e => e.map(x => x.textContent)); if (nums.includes("24") || nums.includes("23")) throw new Error("24 / 23 should not be in the list"); if (nums.slice(22, 25).join(",") !== "25,26,27") throw new Error("order: " + nums.join(","));
   await settle(page); await shot(page, "01b-inspections");
   await page.click("#libcats >> text=Fire, chemicals & environment"); await settle(page);
   const env = await page.$$eval("#lib .card .n", e => e.map(x => x.textContent)); if (!env.includes("25") || !env.includes("27")) throw new Error("env category: " + env);
@@ -72,6 +72,11 @@ await step("library search filters templates", async () => {
   await page.fill("#libq", "crane"); await settle(page);
   const n = await page.$$eval("#lib .card", e => e.length); if (n < 1 || n > 6) throw new Error("search results: " + n);
   await page.fill("#libq", ""); await settle(page);
+});
+await step("Mentoring tile opens the discussion record", async () => {
+  await page.evaluate(() => go("#home")); await page.waitForSelector(".tiles .tile"); await page.click(".tile >> text=Mentoring");
+  await page.waitForFunction(() => location.hash.startsWith("#insp/") && CUR && CUR.tab === 23);
+  await page.evaluate(async () => { await dbDel("drafts", CUR.id); go("#home"); });
 });
 await step("inspection 24 – observation record is required, shown in review, email and PDF", async () => {
   await page.evaluate(() => go("#home")); await page.waitForSelector(".tiles .tile"); await page.click(".tile >> text=Task Observation"); await page.waitForSelector("#narr textarea");
