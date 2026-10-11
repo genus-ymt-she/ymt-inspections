@@ -1,0 +1,15 @@
+name: YouTube probe
+on:
+  push:
+    branches: [claude/github-app-upgrade-9zm1in]
+    paths: [.github/workflows/yt-probe.yml]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: |
+          for id in nM4okRvCg2g 1p_BvaHsgGg Nnjh-zp6pP4 DbTG9YTbdc0 xtiuyFbFtD8 6pKPNnk-JhE nm6DO_7px1I CnVf1ZoCJSo 2a4gyJsY0mc Jjd1mfhIVEk zeV_POB16f8 Q8P_xTBpAcY MmZexg8sxyk wBl2QGAIx1s lx2fZU5USus F4gUkN4Ohho ZrEnVO6X2vs h9JZWhjQDvc u-80T2Ve-c0 Ahq4blDfU5s PE1lzqJCeJ0 vVJYBPQyFTQ Y43XLVqjytQ XXNF4KoVyoU MwRNvpGydzw 87IQhui_Yy8 RYr96YYEaZY 1vF84LABHm0 BqGArXHDOKY xNhn1KOqq8g 54LEywabkl4 kEM1ri_W4F8 d8bWGGA-5HM DybxktI19YQ; do
+            code=$(curl -s -m 15 -o o.json -w '%{http_code}' "https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=$id&format=json")
+            echo "$id $code $(python3 -c "import json;d=json.load(open('o.json'));print(d.get('title'),'|',d.get('author_name'))" 2>/dev/null)"
+          done
