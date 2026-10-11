@@ -47,6 +47,11 @@ async function buildPDF(d){if(PDFBLOB)return PDFBLOB;if(tabByNum(d.tab).kind==="
   // NC table
   const sectionTitle=(txt)=>{doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(...NAVY);doc.text(txt,M,y+4);doc.setDrawColor(...ORG);doc.setLineWidth(.6);doc.line(M,y+5.5,W-M,y+5.5);doc.setLineWidth(.2);y+=8};
   if(y>250){doc.addPage();y=16}
+  {const nr=narrRows(d);if(nr.length){sectionTitle(PDFSAFE((t.narrative?t.narrative.title:"Observation record").toUpperCase()));
+    doc.autoTable({startY:y,margin:{left:M,right:M,top:16,bottom:16},theme:"grid",body:nr.map(r=>[PDFSAFE(r[0]),PDFSAFE(r[1])]),
+      styles:{font:"helvetica",fontSize:8,cellPadding:1.8,lineColor:[200,206,214],lineWidth:.2,textColor:20,valign:"top"},columnStyles:{0:{fontStyle:"bold",fillColor:GREY,textColor:NAVY,cellWidth:52}},
+      didParseCell:c=>{if(c.section==="body"&&c.column.index===1&&/^Overall/.test(nr[c.row.index][0])){c.cell.styles.fontStyle="bold";c.cell.styles.textColor=hex(/^No/.test(c.cell.raw)?"#C62828":/improve/i.test(c.cell.raw)?"#9A6700":"#2E7D32")}}});
+    y=doc.lastAutoTable.finalY+5;if(y>250){doc.addPage();y=16}}}
   sectionTitle(`NON-COMPLIANCES & CORRECTIVE ACTIONS (${s.ncs.length})`);
   const ICO=7.5,IG=1.2;
   if(s.ncs.length){doc.autoTable({startY:y,margin:{left:M,right:M,top:16,bottom:16},

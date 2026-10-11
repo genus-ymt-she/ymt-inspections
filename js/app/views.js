@@ -13,10 +13,11 @@ async function route(){const seq=++ROUTE_SEQ;const h=location.hash||"#home";cons
   CUR=null;
   if(v==="settings")return viewSettings();
   if(v==="dash"||v==="insights")return viewDash();
+  if(v==="inspections")return viewInspections();
   if(v==="report")return viewReport(id||"hazard");
   if(v==="actions")return viewActions(id?decodeURIComponent(id):"");
   return viewHome()}
-function setNav(v){const m={home:"home","":"home",insights:"insights",dash:"insights",actions:"actions"};const k=m[v]||"";
+function setNav(v){const m={home:"home","":"home",inspections:"home",insights:"insights",dash:"insights",actions:"actions"};const k=m[v]||"";
   document.querySelectorAll("#tabs a").forEach(a=>{const on=a.dataset.t===k;a.classList.toggle("on",on);if(on)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
 function setHeader(title,sub,btn){$("#hTitle").textContent=title;$("#hSub").textContent=sub;const b=$("#hBtn");
   if(btn){b.innerHTML=(btn.icon?ic(btn.icon):"")+(btn.label?`<span>${esc(btn.label)}</span>`:"");b.setAttribute("aria-label",btn.aria||btn.label||"");b.onclick=btn.fn;b.classList.remove("hide")}else b.classList.add("hide")}
@@ -39,8 +40,10 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
    <button onclick="go('#actions')" class="${mine.length?"warn":""}"><b>${mine.length}</b><span>My actions</span></button>
    <button onclick="ACTF.f='overdue';go('#actions')" class="${st.overdue?"bad":""}"><b>${st.overdue}</b><span>Overdue</span></button>
    <button onclick="go('#insights')"><b>${sentMonth}</b><span>This month</span></button></div></section>`;
-  h+=`<div class="qr"><button class="card tap" onclick="go('#report/hazard')"><span class="qi" style="background:var(--ua-soft);color:var(--ua)">${ic("alert")}</span><b>Report a hazard</b><span>30-second report with photo</span></button>
-   <button class="card tap" onclick="go('#report/positive')"><span class="qi" style="background:var(--c-soft);color:var(--c)">${ic("star")}</span><b>Positive observation</b><span>Recognise good practice</span></button></div>`;
+  h+=`<div class="tiles">
+   <button class="tile" onclick="go('#inspections')"><span class="ti" style="background:var(--info-soft);color:var(--brand-2)">${ic("clipboard","l")}</span><b>Inspection</b><span>${TABS.length} forms</span></button>
+   <button class="tile" onclick="go('#report/hazard')"><span class="ti" style="background:var(--ua-soft);color:var(--ua)">${ic("alert","l")}</span><b>Hazard</b><span>Quick report</span></button>
+   <button class="tile" onclick="go('#report/positive')"><span class="ti" style="background:var(--c-soft);color:var(--c)">${ic("star","l")}</span><b>Positive</b><span>Observation</span></button></div>`;
   if(ob.length)h+=`<div class="outbox">${ic("inbox")}<div><b>Outbox – ${ob.length} report${ob.length>1?"s":""} waiting to send</b><div class="muted" style="margin:4px 0 8px">${ob.map(o=>`${esc(o.title)} · ${esc(o.location)}`).join("<br>")}<br>They send automatically when the phone has signal${ob[0].lastError?` (last try: ${esc(ob[0].lastError)})`:""}.</div><button class="btn o s" onclick="flushOutbox(true)">${ic("send","s")} Send now</button></div></div>`;
   {const sod=new Date();sod.setHours(0,0,0,0);const stale=drafts.filter(d=>d.created<sod.getTime());
    if(stale.length)h+=`<div class="alert red">${ic("clock")}<div><b>${stale.length} unsent inspection${stale.length>1?"s":""} started before today.</b> Finish and send ${stale.length>1?"them":"it"} – or delete if no longer needed.</div></div>`}
@@ -51,17 +54,19 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
       h+=`<div class="card tap draft" onclick="go('#insp/${d.id}')"><div class="tab">${ring(p)}<div class="x"><b>${pad(t.num)} · ${esc(t.short)}</b><span>${esc(d.details.location||"No location yet")} · ${fmtDT(d.details.datetime)}</span>
         ${s?`<div class="libmeta"><span class="tag">${s.rated}/${s.total} rated</span>${s.UA?`<span class="tag r">${s.UA} UA</span>`:""}${s.NI?`<span class="tag o">${s.NI} NI</span>`:""}</div>`:""}</div>
         <button class="iconbtn" aria-label="Delete draft" onclick="event.stopPropagation();delDraft('${d.id}')">${ic("trash")}</button></div></div>`})}
-  h+=`<h2>Start an inspection <span class="cnt">${TABS.length}</span></h2>
-   <div class="search">${ic("search")}<input id="libq" type="search" placeholder="Search inspections, e.g. crane, permit, fire" value="${esc(LIB.q)}" autocomplete="off" aria-label="Search inspections"></div>
-   <div class="chips scroll" id="libcats"></div><div class="lib" id="lib"></div>`;
   const recent=sentAll.slice(0,5);
   if(recent.length){h+=`<h2>Recently sent <span class="cnt">${sentAll.length}</span></h2>`;
     recent.forEach(s=>{h+=`<div class="card flat"><div class="tab"><div class="n" style="background:var(--c)">${ic("check")}</div><div class="x"><b>${esc(s.title)}</b><span>${esc(s.reportId)} · ${esc(s.location)} · ${new Date(s.sentAt).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}</span>
       <div class="libmeta">${s.ua?`<span class="tag r">${s.ua} UA</span>`:""}${s.ni?`<span class="tag o">${s.ni} NI</span>`:""}${s.snn?`<span class="tag o">${s.snn} SNN</span>`:""}${!s.ua&&!s.ni&&s.ua!==undefined?`<span class="tag g">No findings</span>`:""}${s.via?`<span class="tag g">${ic("check","s")} Emailed</span>`:""}</div></div></div></div>`})}
   h+=`<p class="foot">PARRON v${esc(CONFIG.appVersion)} · Proactive Assessment, Reporting, Risk &amp; Observation Network<br>Works offline · Data stays on this phone until you send it</p>`;
   render(h);
-  const q=$("#libq");q.addEventListener("input",()=>{LIB.q=q.value;renderLib(sentAll)});renderLib(sentAll);
-  regRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home"&&!document.activeElement?.matches("#libq"))viewHome()})}
+  regRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home")viewHome()})}
+/* ---------- inspection library (own page: search + categories) ---------- */
+async function viewInspections(){const seq=ROUTE_SEQ;setHeader("Inspections",`${TABS.length} forms · pick one to start`,{icon:"back",aria:"Back",fn:()=>go("#home")});
+  const sentAll=(await dbAll("sent")).sort((a,b)=>b.sentAt-a.sentAt);if(stale(seq))return;
+  render(`<div class="search">${ic("search")}<input id="libq" type="search" placeholder="Search inspections, e.g. crane, permit, fire" value="${esc(LIB.q)}" autocomplete="off" aria-label="Search inspections"></div>
+   <div class="chips scroll" id="libcats"></div><div class="lib" id="lib"></div>`);
+  const q=$("#libq");q.addEventListener("input",()=>{LIB.q=q.value;renderLib(sentAll)});renderLib(sentAll)}
 function catOf(t){const c=CATEGORIES.find(c=>c.nums.includes(t.num));return c?c.key:"other"}
 function renderLib(sentAll){const box=$("#lib");if(!box)return;const q=LIB.q.trim().toLowerCase();
   const last={};(sentAll||[]).forEach(s=>{const k=(s.title||"").slice(0,2);if(!last[k])last[k]=s.sentAt});

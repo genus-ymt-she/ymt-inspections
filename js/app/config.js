@@ -8,7 +8,7 @@ const CONFIG = {
   project: "J1084 – Parron Wind Farm Connection Assets – Yerramullah Terminal (YMT)",
   projectShort: "YMT – Yerramullah Terminal",
   jobNo: "J1084",
-  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "2.3"
+  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "2.4"
 };
 
 /* Safety Non-Negotiables (Genus) */
@@ -64,12 +64,12 @@ const OBS_CATEGORIES = ["Above-standard practice", "Speaking up / stop work", "E
 
 /* Inspection library groups (template numbers). Anything not listed shows under "Other". */
 const CATEGORIES = [
-  { key: "site",   label: "Site & people",          nums: [1, 2, 3] },
+  { key: "site",   label: "Site & people",          nums: [1, 2, 3, 24] },
   { key: "plan",   label: "Planning & permits",     nums: [4, 5, 6] },
   { key: "elec",   label: "Electrical",             nums: [7, 8] },
   { key: "height", label: "Heights & lifting",      nums: [9, 10, 11, 12] },
-  { key: "plant",  label: "Plant & traffic",        nums: [13, 14, 21] },
+  { key: "plant",  label: "Plant & traffic",        nums: [13, 14, 21, 26] },
   { key: "ground", label: "Ground & hot work",      nums: [15, 16] },
-  { key: "env",    label: "Fire, chemicals & environment", nums: [17, 18, 19, 20, 22] },
+  { key: "env",    label: "Fire, chemicals & environment", nums: [17, 18, 19, 20, 22, 25, 27] },
   { key: "rec",    label: "Records",                nums: [23] }
 ];

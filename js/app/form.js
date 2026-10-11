@@ -22,13 +22,18 @@ function viewInsp(d){const t=tabByNum(d.tab);if(t.kind==="record")return viewRec
   if(t.note)h+=`<div class="alert org">${ic("alert")}<div>${esc(t.note)}</div></div>`;
   if(t.image)h+=`<div class="card tgs"><div class="lock">${esc(t.imageTitle||"Reference")}</div><img src="${t.image}" alt="${esc(t.imageTitle||"")}" onclick="zoomImg(this.src,true)"><div class="muted" style="margin-top:6px">Tap the plan to enlarge.</div></div>`;
   t.sections.forEach(s=>{h+=`<div class="sec">${esc(s.name)}</div>`;s.q.forEach(q=>{h+=qHTML(d,q)})});
+  if(t.narrative){D.narr=D.narr||{};h+=`<div class="sec">${esc(t.narrative.title)}</div><div class="card" id="narr">${t.narrative.fields.map(f=>`<label class="f">${esc(f.label)}${f.req?' <span class="req">*</span>':""}</label>${f.hint?`<div class="muted" style="margin:-2px 0 6px">${esc(f.hint)}</div>`:""}<textarea class="t" rows="4" data-n="${f.key}">${esc(D.narr[f.key]||"")}</textarea>`).join("")}
+    ${t.overall?`<label class="f" style="margin-top:16px">${esc(t.overall.label)}${t.overall.req?' <span class="req">*</span>':""}</label><div class="chips ovr" id="ovr">${overallHTML(d)}</div>`:""}</div>`}
   h+=`<div class="sec">Other hazards identified</div><div id="others"></div>
   <button class="addph" style="width:100%" onclick="addOther()">${ic("plus","s")} Add a hazard not covered above</button>`;
   render(h);renderOthers();
   document.querySelectorAll("[data-d]").forEach(el=>el.addEventListener("input",()=>{d.details[el.dataset.d]=el.value;if(el.dataset.d==="inspector"&&!ls("inspector"))ls("inspector",el.value.trim());save(d)}));
+  document.querySelectorAll("[data-n]").forEach(el=>el.addEventListener("input",()=>{(d.details.narr=d.details.narr||{})[el.dataset.n]=el.value;save(d)}));
   document.querySelectorAll("[data-x]").forEach(el=>el.addEventListener("input",()=>{d.details.extra[el.dataset.x]=el.value;save(d)}));
   document.querySelectorAll("[data-c]").forEach(el=>el.addEventListener("input",()=>{(d.details.checks=d.details.checks||{})[el.dataset.c]=el.value;save(d)}));
   renderBar(d)}
+function overallHTML(d){const t=tabByNum(d.tab);return t.overall.options.map((o,i)=>`<button class="chip ${d.details.overall===o?"on":""} ${/^No/.test(o)?"bad":/improve/i.test(o)?"mid":"good"}" onclick="setOverall(${i})">${esc(o)}</button>`).join("")}
+function setOverall(i){const t=tabByNum(CUR.tab);CUR.details.overall=t.overall.options[i];save(CUR);const e=$("#ovr");if(e)e.innerHTML=overallHTML(CUR);renderBar(CUR)}
 function zoomImg(src,wide){const z=document.createElement("div");z.className="zoom"+(wide?" wide":"");z.innerHTML=`<div class="zb"><button class="btn s g" onclick="this.closest('.zoom').classList.toggle('wide')">Zoom</button><button class="btn s" onclick="this.closest('.zoom').remove()">${ic("x","s")} Close</button></div><img src="${src}" alt="">`;document.body.appendChild(z)}
 function qHTML(d,q){const a=d.answers[q.id]||{};const cls=a.r?`r-${a.r}`:"unrated";
   return `<div class="q ${cls}" id="q-${q.id.replace(".","_")}"><div class="head"><div class="id">${q.id}</div><div class="txt">${esc(q.text)}</div></div>
@@ -165,6 +170,7 @@ function viewReview(d){const t=tabByNum(d.tab);setHeader("Review & send",`${pad(
   logWarnings(d).forEach(w=>{h+=`<div class="alert red">${ic("alert")}<div><b>${esc(w)}</b></div></div>`});
   if(t.checks&&!p.length){const dn=checkDone(d);const miss=t.checks.cols.filter((c,i)=>!dn[i]);if(miss.length)h+=`<div class="alert org">${ic("clock")}<div><b>${esc(miss.join(" and "))} check not recorded yet.</b> If it still needs doing, go back and send after it is complete.</div></div>`}
   if(p.length)h+=`<div class="alert red">${ic("alert")}<div><b>Not ready to send</b><ul>${p.map(x=>`<li>${esc(x)}</li>`).join("")}</ul><button class="btn s" style="margin-top:10px" onclick="go('#insp/${d.id}')">${ic("back","s")} Back to inspection</button></div></div>`;
+  {const nr=narrRows(d);if(nr.length)h+=`<h2>${esc(t.narrative?t.narrative.title:"Observation record")}</h2><div class="card"><dl class="kv">${nr.map(r=>`<dt>${esc(r[0])}</dt><dd style="white-space:pre-wrap">${esc(r[1])}</dd>`).join("")}</dl></div>`}
   h+=`<h2>Non-compliances <span class="cnt">${s.ncs.length}</span></h2>`;
   if(!s.ncs.length)h+=`<div class="card empty">${ic("circlecheck")}<b>No non-compliances recorded</b>Nice work – everything inspected met the standard.</div>`;
   s.ncs.forEach(n=>{h+=`<div class="card ncsum ${n.r==="UA"?"ua":""}"><div class="libmeta" style="margin:0 0 6px"><span class="pill ${n.r==="UA"?"ua":"ni"}">${n.r}</span><b style="align-self:center">${esc(n.id)}</b>${riskChip(n.cons,n.like)}${n.snn.map(c=>snnBadge(c,1)).join("")}</div><div>${esc(n.text)}</div>

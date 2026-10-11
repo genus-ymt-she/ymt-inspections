@@ -20,6 +20,8 @@ function ncComplete(a){if(!a.finding||!a.finding.trim())return false;if(!a.actio
   if(a.closed===true)return !!(a.taken&&a.taken.trim());return a.closed===false}
 function problems(d){const p=[];const t=tabByNum(d.tab);if(t.kind==="record")return recProblems(d);
   if(!d.details.location.trim())p.push("Inspection location / work front");
+  if(t.narrative)t.narrative.fields.forEach(f=>{if(f.req&&!((d.details.narr||{})[f.key]||"").trim())p.push(`Observation record – ${f.label}`)});
+  if(t.overall&&t.overall.req&&!d.details.overall)p.push(t.overall.label);
   if(!d.details.inspector.trim())p.push("Inspector name");
   const un=allQ(t).filter(q=>!(d.answers[q.id]&&d.answers[q.id].r));if(un.length)p.push(`${un.length} item(s) not rated`);
   const inc=nonCompliances(d).filter(n=>!ncComplete(n));if(inc.length)p.push(`${inc.length} non-compliance(s) missing finding / corrective action / risk rating / closed status`);
@@ -59,3 +61,8 @@ function findingsOf(d){const t=tabByNum(d.tab);if(t.kind==="record")return [];co
     owner:n.closed?"":(n.owner||""),ownerEmail:n.closed?"":String(n.ownerEmail||"").trim().toLowerCase(),due:n.closed?"":(n.due||""),taken:n.taken||""}})}
 function reportFacts(d){const t=tabByNum(d.tab);const s=t.kind==="record"?null:stats(d);
   return {c:s?s.C:"",na:s?s.NA:"",pct:s&&s.pct!==null?s.pct:"",inspDate:String(d.details.datetime||"").slice(0,16),crew:d.details.crew||"",supervisor:d.details.supervisor||""}}
+
+/* written observation record (e.g. 24 Task Observation): [label, text] pairs that have content, plus the overall answer */
+function narrRows(d){const t=tabByNum(d.tab);const n=d.details.narr||{};const rows=[];
+  if(t.narrative)t.narrative.fields.forEach(f=>{const v=(n[f.key]||"").trim();if(v)rows.push([f.label,v])});
+  if(t.overall&&d.details.overall)rows.push([t.overall.label.replace(/^Overall – /,"Overall – "),d.details.overall]);return rows}
