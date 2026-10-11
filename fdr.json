@@ -1,0 +1,1086 @@
+{
+ "source": "Bureau of Meteorology",
+ "product": "IDW15100",
+ "issued": "2026-10-12T04:35:00+08:00",
+ "next": "2026-10-12T16:10:00+08:00",
+ "districts": {
+  "North Kimberley": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 22
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 21
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 21
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 19
+   }
+  ],
+  "Dampier Derby Coast": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 21
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 19
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 22
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 22
+   }
+  ],
+  "South Kimberley Coast": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 14
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 13
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 15
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 15
+   }
+  ],
+  "Kimberley Inland North": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 22
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 21
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "High",
+    "fbi": 24
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 22
+   }
+  ],
+  "Kimberley Inland South": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 16
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 14
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 16
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 16
+   }
+  ],
+  "North Interior": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 22
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 17
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 17
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 20
+   }
+  ],
+  "Central Pilbara": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 23
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 22
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "High",
+    "fbi": 25
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "High",
+    "fbi": 24
+   }
+  ],
+  "Hedland": [
+   {
+    "date": "2026-10-12",
+    "rating": "High",
+    "fbi": 31
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "High",
+    "fbi": 28
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "High",
+    "fbi": 28
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "High",
+    "fbi": 28
+   }
+  ],
+  "Burrup": [
+   {
+    "date": "2026-10-12",
+    "rating": "High",
+    "fbi": 38
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "High",
+    "fbi": 38
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "High",
+    "fbi": 35
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "High",
+    "fbi": 35
+   }
+  ],
+  "Ashburton Inland": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 22
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 22
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "High",
+    "fbi": 26
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 21
+   }
+  ],
+  "Ashburton Coast": [
+   {
+    "date": "2026-10-12",
+    "rating": "High",
+    "fbi": 25
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 23
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "High",
+    "fbi": 26
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 22
+   }
+  ],
+  "Exmouth Gulf Coast": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 22
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 22
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 22
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 22
+   }
+  ],
+  "West Interior": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 21
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 19
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 19
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 23
+   }
+  ],
+  "Gascoyne Inland": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 19
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 20
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "High",
+    "fbi": 24
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 23
+   }
+  ],
+  "South Murchison": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 19
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 20
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 21
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 22
+   }
+  ],
+  "Gascoyne Coast": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 19
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 20
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 23
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 19
+   }
+  ],
+  "Mid West": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 20
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 23
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "High",
+    "fbi": 30
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 20
+   }
+  ],
+  "North Midlands": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 18
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 22
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "High",
+    "fbi": 28
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 21
+   }
+  ],
+  "Lesueur": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 15
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 16
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "High",
+    "fbi": 26
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "No Rating",
+    "fbi": 10
+   }
+  ],
+  "Watheroo": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 14
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 15
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 21
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 14
+   }
+  ],
+  "Central Interior": [
+   {
+    "date": "2026-10-12",
+    "rating": "High",
+    "fbi": 38
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 20
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 18
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 21
+   }
+  ],
+  "South Interior": [
+   {
+    "date": "2026-10-12",
+    "rating": "High",
+    "fbi": 29
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "High",
+    "fbi": 25
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 21
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 17
+   }
+  ],
+  "Eucla": [
+   {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 11
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 12
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "No Rating",
+    "fbi": 11
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "No Rating",
+    "fbi": 11
+   }
+  ],
+  "North Goldfields": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 16
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 16
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 14
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 15
+   }
+  ],
+  "South Goldfields": [
+   {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 8
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "No Rating",
+    "fbi": 8
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "No Rating",
+    "fbi": 10
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "No Rating",
+    "fbi": 10
+   }
+  ],
+  "Karroun": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 13
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 15
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 17
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 16
+   }
+  ],
+  "Lockwood": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 14
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 15
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 19
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 18
+   }
+  ],
+  "Mortlock": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 17
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 18
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 22
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 19
+   }
+  ],
+  "Avon": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 15
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 16
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 20
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 17
+   }
+  ],
+  "Swan Inland North": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 18
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 20
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "High",
+    "fbi": 27
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 18
+   }
+  ],
+  "Swan Coastal North": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 13
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 14
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "High",
+    "fbi": 24
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "No Rating",
+    "fbi": 10
+   }
+  ],
+  "Perth Inner": [
+   {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 7
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "No Rating",
+    "fbi": 8
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "No Rating",
+    "fbi": 9
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "No Rating",
+    "fbi": 7
+   }
+  ],
+  "Swan Inland South": [
+   {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 10
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 12
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 17
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 12
+   }
+  ],
+  "Swan Coastal South": [
+   {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 11
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 12
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 19
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "No Rating",
+    "fbi": 11
+   }
+  ],
+  "Rottnest": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 22
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "No Rating",
+    "fbi": 10
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 22
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "No Rating",
+    "fbi": 1
+   }
+  ],
+  "Brockman": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 12
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 13
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 18
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 13
+   }
+  ],
+  "Geographe": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 12
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 12
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 14
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 13
+   }
+  ],
+  "Blackwood": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 12
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 12
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 17
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 13
+   }
+  ],
+  "Capes": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 12
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 13
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 18
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 13
+   }
+  ],
+  "Southern Forests": [
+   {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 8
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "No Rating",
+    "fbi": 11
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 16
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 12
+   }
+  ],
+  "Roe": [
+   {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 11
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "No Rating",
+    "fbi": 11
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 15
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 14
+   }
+  ],
+  "Arthur": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 12
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 13
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 19
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 15
+   }
+  ],
+  "Lakes": [
+   {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 13
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "Moderate",
+    "fbi": 13
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 18
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 16
+   }
+  ],
+  "Stirling North": [
+   {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 10
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "No Rating",
+    "fbi": 11
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 15
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "Moderate",
+    "fbi": 13
+   }
+  ],
+  "Stirling West": [
+   {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 7
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "No Rating",
+    "fbi": 9
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 14
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "No Rating",
+    "fbi": 10
+   }
+  ],
+  "Stirling Coast": [
+   {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 8
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "No Rating",
+    "fbi": 11
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 14
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "No Rating",
+    "fbi": 11
+   }
+  ],
+  "Fitzgerald": [
+   {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 9
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "No Rating",
+    "fbi": 10
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 14
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "No Rating",
+    "fbi": 11
+   }
+  ],
+  "Esperance Coast": [
+   {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 8
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "No Rating",
+    "fbi": 10
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 12
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "No Rating",
+    "fbi": 9
+   }
+  ],
+  "Esperance Inland": [
+   {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 9
+   },
+   {
+    "date": "2026-10-13",
+    "rating": "No Rating",
+    "fbi": 9
+   },
+   {
+    "date": "2026-10-14",
+    "rating": "Moderate",
+    "fbi": 13
+   },
+   {
+    "date": "2026-10-15",
+    "rating": "No Rating",
+    "fbi": 10
+   }
+  ]
+ }
+}
