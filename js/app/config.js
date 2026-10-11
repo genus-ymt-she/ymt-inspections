@@ -8,7 +8,7 @@ const CONFIG = {
   project: "J1084 – Parron Wind Farm Connection Assets – Yerramullah Terminal (YMT)",
   projectShort: "YMT – Yerramullah Terminal",
   jobNo: "J1084",
-  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "2.1"
+  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "2.2"
 };
 
 /* Safety Non-Negotiables (Genus) */
@@ -42,6 +42,22 @@ const RISK = {
     { key: "Critical", max: 25, color: "#E00000", ink: "#FFFFFF", days: 0,  response: "Immediate action – stop the activity / task and implement controls that reduce the risk to at least High." }
   ]
 };
+
+/* Project team – people who use PARRON and can be assigned actions.
+   Picking a name fills in their email, so they are emailed the action automatically. Add or remove people here. */
+const TEAM = [
+  { name: "Darren Frizzell",  role: "SHE Manager",                  email: "darren.frizzell@genus.com.au" },
+  { name: "Lee Allen",        role: "SHE Manager",                  email: "lee.allen@genus.com.au" },
+  { name: "Nicola Rucci",     role: "Senior SHE Advisor",           email: "nicola.rucci@genus.com.au" },
+  { name: "Anphin Thomas",    role: "SHE Advisor",                  email: "anphin.thomas@genus.com.au" },
+  { name: "Steve Armitage",   role: "Project Director",             email: "steve.armitage@genus.com.au" },
+  { name: "Gary Armitage",    role: "Construction Manager",         email: "gary.armitage@genus.com.au" },
+  { name: "Joey Ryan",        role: "Grad Project Manager",         email: "joey.ryan@genus.com.au" },
+  { name: "Matt Smith",       role: "Senior Civil Supervisor",      email: "matt.smith@genus.com.au" },
+  { name: "Paul Delaney",     role: "Civil Supervisor",             email: "paul.delaney@genus.com.au" },
+  { name: "Cory Shotty",      role: "Senior Electrical Supervisor", email: "cory.shotter@genus.com.au" },
+  { name: "Zane Patten",      role: "Electrical Supervisor",        email: "zane.patten@genus.com.au" }
+];
 
 /* Inspection library groups (template numbers). Anything not listed shows under "Other". */
 const CATEGORIES = [

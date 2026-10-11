@@ -42,7 +42,7 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   {const sod=new Date();sod.setHours(0,0,0,0);const stale=drafts.filter(d=>d.created<sod.getTime());
    if(stale.length)h+=`<div class="alert red">${ic("clock")}<div><b>${stale.length} unsent inspection${stale.length>1?"s":""} started before today.</b> Finish and send ${stale.length>1?"them":"it"} – or delete if no longer needed.</div></div>`}
   if(!recipientOK())h+=`<div class="alert red">${ic("alert")}<div><b>Report recipient not set.</b> Set it under Settings.</div></div>`;
-  if(!me)h+=`<div class="alert blue">${ic("user")}<div>Add your name under <a href="#settings">Settings</a> so it fills in on every report.</div></div>`;
+  if(!me)h+=`<div class="alert blue">${ic("user")}<div><b>Who are you?</b> Pick your name once so it fills in on every report and your actions show here.<br><button class="btn o s" style="margin-top:8px" onclick="askName().then(()=>viewHome())">Pick my name</button></div></div>`;
   if(drafts.length){h+=`<h2 id="drafts">Continue <span class="cnt">${drafts.length}</span></h2>`;
     drafts.forEach(d=>{const t=tabByNum(d.tab);const REC=t.kind==="record";const s=REC?null:stats(d);const p=REC?Math.max(0,8-recProblems(d).length)/8:(s.total?s.rated/s.total:0);
       h+=`<div class="card tap draft" onclick="go('#insp/${d.id}')"><div class="tab">${ring(p)}<div class="x"><b>${pad(t.num)} · ${esc(t.short)}</b><span>${esc(d.details.location||"No location yet")} · ${fmtDT(d.details.datetime)}</span>
@@ -74,11 +74,15 @@ function renderLib(sentAll){const box=$("#lib");if(!box)return;const q=LIB.q.tri
 async function startInsp(num){
   if(!(ls("inspector")||"").trim()){const n=await askName();if(!n)return}
   const d=newDraft(num);await save(d,true);queuePing(d,"draft");go("#insp/"+d.id)}
-function askName(){return new Promise(res=>{const s=sheet(`<h3>Your name</h3><p class="muted">It shows on your reports and on the project Insights. Use your first and last name.</p>
-  <label class="f" for="nmIn">Full name</label><input class="t" id="nmIn" autocomplete="name" placeholder="e.g. Alex Smith"><div class="row2"><button class="btn g" id="nmNo">Cancel</button><button class="btn o" id="nmOk">Continue</button></div>`);
-  const i=s.querySelector("#nmIn");setTimeout(()=>i.focus(),150);
-  const ok=()=>{const n=i.value.trim().replace(/\s+/g," ");if(n.split(" ").length<2){toast("Please enter your first and last name",3500);return}ls("inspector",n);closeSheet();res(n)};
-  s.querySelector("#nmOk").onclick=ok;i.addEventListener("keydown",e=>{if(e.key==="Enter")ok()});s.querySelector("#nmNo").onclick=()=>{closeSheet();res(null)}})}
+function setMe(name,email){ls("inspector",name);if(email)ls("myEmail",email.toLowerCase());else lsDel("myEmail");updateBadges()}
+function askName(){return new Promise(res=>{const s=sheet(`<h3>Who are you?</h3><p class="muted">Your name goes on your reports, and actions assigned to you show under <b>My actions</b>. You only do this once.</p>
+  <div class="who">${TEAM.map((p,i)=>`<button class="card tap" data-i="${i}"><b>${esc(p.name)}</b><span>${esc(p.role)}</span></button>`).join("")}</div>
+  <details style="margin-top:10px"><summary class="muted" style="cursor:pointer;min-height:40px;display:flex;align-items:center">I'm not on this list</summary>
+  <label class="f" for="nmIn">Full name</label><input class="t" id="nmIn" autocomplete="name" placeholder="e.g. Alex Smith"><button class="btn o w" id="nmOk">Continue</button></details>`);
+  s.querySelectorAll(".who button").forEach(b=>b.onclick=()=>{const p=TEAM[+b.dataset.i];setMe(p.name,p.email);closeSheet();toast(`Welcome, ${firstName(p.name)}`);res(p.name)});
+  const i=s.querySelector("#nmIn");
+  const ok=()=>{const n=i.value.trim().replace(/\s+/g," ");if(n.split(" ").length<2){toast("Please enter your first and last name",3500);return}setMe(n,"");closeSheet();res(n)};
+  s.querySelector("#nmOk").onclick=ok;i.addEventListener("keydown",e=>{if(e.key==="Enter")ok()})})}
 async function delDraft(id){if(!await ask2("Delete this draft?","The unfinished inspection and its photos are removed from this phone. This cannot be undone.","Delete",true))return;const d=await dbGet("drafts",id);await dbDel("drafts",id);if(d)queuePing(d,"deleted");toast("Draft deleted");route()}
 /* ---------- status pings: lets Insights see inspections that are started but not sent (name, inspection, location and times only) ---------- */
 function pingMeta(d){const t=tabByNum(d.tab);const s=stats(d);
@@ -95,8 +99,7 @@ async function flushPings(){if(PINGING||!directOn()||navigator.onLine===false)re
 const isManager=()=>!!ls("mgrPin");
 async function viewSettings(){setHeader("Settings","This phone only",{icon:"back",aria:"Back",fn:()=>history.length>1?history.back():go("#home")});
   const th=ls("theme")||"auto";const hc=ls("contrast")==="high";
-  render(`<h2>Profile</h2><div class="card"><label class="f" for="sName">Your name (fills in as Inspector)</label><input class="t" id="sName" value="${esc(ls("inspector")||"")}" autocomplete="name">
-   <label class="f" for="sEm">Your email <span class="muted">· actions assigned to this email show under “Mine”</span></label><input class="t" id="sEm" type="email" inputmode="email" value="${esc(ls("myEmail")||"")}" autocomplete="email">
+  render(`<h2>Profile</h2><div class="card"><div class="set">${ic("user")}<div><b>${esc(ls("inspector")||"Not set")}</b><span>${esc((teamBy(ls("inspector"))||{}).role||ls("myEmail")||"Tap Change to pick your name")}</span></div><button class="btn g s" onclick="askName().then(()=>viewSettings())">Change</button></div>
    <label class="f" for="sRec">Reports are sent to</label><input class="t" id="sRec" type="email" value="${esc(recipient())}">
    <p class="muted">Set by the SHE Manager. Only change this if instructed.</p><button class="btn o w" onclick="saveSettings()">${ic("check","s")} Save</button></div>
   <h2>Appearance</h2><div class="card"><div class="set">${ic("sun")}<div><b>Theme</b><span>Dark mode is easier on the eyes at night and saves battery.</span></div></div>
@@ -111,7 +114,7 @@ async function viewSettings(){setHeader("Settings","This phone only",{icon:"back
   <h2>Data on this phone</h2><div class="card"><div class="set">${ic("download")}<div><b>Back up my data</b><span>Drafts and sent history as a file – useful before changing phones.</span></div><button class="btn g s" onclick="backupData()">Back up</button></div></div>
   <p class="foot">PARRON v${esc(CONFIG.appVersion)}<br>${esc(CONFIG.project)}</p>`);
   if(directOn()&&!v3())relayVersion(true).then(()=>{const e=$("#rState");if(e)e.textContent=v3()?"Connected – shared actions, action emails and Insights":"Relay v2 – update the relay script to share actions and send action emails"})}
-function saveSettings(){ls("inspector",$("#sName").value.trim().replace(/\s+/g," "));ls("myEmail",$("#sEm").value.trim().toLowerCase());const r=$("#sRec").value.trim();
+function saveSettings(){const r=$("#sRec").value.trim();
   if(r&&r!==CONFIG.recipient)ls("recipientOverride",r);else lsDel("recipientOverride");
   toast("Saved");go("#home")}
 function setTheme(k){if(k==="auto"){lsDel("theme");delete document.documentElement.dataset.theme}else{ls("theme",k);document.documentElement.dataset.theme=k}viewSettings()}

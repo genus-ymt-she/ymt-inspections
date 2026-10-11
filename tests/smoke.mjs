@@ -49,6 +49,14 @@ await step("home renders hero, library and categories", async () => {
   const n = await page.$$eval("#lib .card", e => e.length); if (n < 20) throw new Error("library cards: " + n);
   await settle(page); await shot(page, "01-home");
 });
+await step("first run: pick your name from the team list", async () => {
+  const p0 = await newPage({ name: "" }); await p0.click("text=Pick my name"); await p0.waitForSelector(".who button");
+  await settle(p0); await shot(p0, "00-who-are-you");
+  await p0.click(".who button >> text=Matt Smith");
+  const me = await p0.evaluate(() => [localStorage.getItem("inspector"), localStorage.getItem("myEmail")]);
+  if (me[0] !== "Matt Smith" || me[1] !== "matt.smith@genus.com.au") throw new Error("identity not saved: " + me);
+  await p0.context().close();
+});
 await step("library search filters templates", async () => {
   await page.fill("#libq", "crane"); await settle(page);
   const n = await page.$$eval("#lib .card", e => e.length); if (n < 1 || n > 6) throw new Error("search results: " + n);
@@ -68,8 +76,8 @@ await step("start inspection 01 and rate items", async () => {
   await page.click(`${q0} .riskbox .rscale >> nth=0 >> button >> nth=2`); // consequence 3
   await page.click(`${q0} .riskbox .rscale >> nth=1 >> button >> nth=3`); // likelihood 4 -> 12 High
   await page.click(`${q0} .seg button >> nth=1`); // open
-  await page.fill(`${q0} .nc input >> nth=0`, "Sam Super");
-  await page.fill(`${q0} .nc .own-em`, "sam.super@genus.com.au");
+  await page.selectOption(`${q0} .pp select`, "Zane Patten");
+  if (!/zane\.patten@genus\.com\.au/.test(await page.textContent(q0))) throw new Error("team email not shown");
   const due = await page.inputValue(`${q0} .nc input[type=date]`); if (!due) throw new Error("due date was not suggested from risk");
   await settle(page); await page.locator(q0).scrollIntoViewIfNeeded(); await shot(page, "02-finding-risk");
   // second item UA closed on the spot, the rest compliant (fast path)
@@ -98,7 +106,7 @@ await step("send directly through the relay (findings reach the log)", async () 
   if (!relay.mail.length || !relay.mail[0].attachments) throw new Error("no email with PDF");
   const rep = relay.mail.find(m => m.attachments); if (!/Risk/.test(rep.htmlBody)) throw new Error("email lacks risk column");
   if (!/High 15/.test(rep.htmlBody)) throw new Error("Genus matrix rank not in email");
-  const asg = relay.mail.find(m => m.to === "sam.super@genus.com.au"); if (!asg) throw new Error("assignee not emailed");
+  const asg = relay.mail.find(m => m.to === "zane.patten@genus.com.au"); if (!asg) throw new Error("assignee not emailed");
   globalThis.ACTION_LINK = asg.htmlBody.match(/href="[^"]*(#actions\/[^"]+)"/)[1];
 });
 await step("action register shows the open action", async () => {
@@ -109,7 +117,7 @@ await step("action register shows the open action", async () => {
 await step("assignee opens the email link on their own phone and closes out", async () => {
   const p2 = await newPage({ name: "", hash: ACTION_LINK }); await p2.waitForSelector(".sheet h3", { timeout: 15000 });
   await settle(p2); await shot(p2, "05-action-detail");
-  await p2.click("text=Close out action"); await p2.fill("#coBy", "Sam Super"); await p2.fill("#coNote", "New ERP revision posted and crew briefed at prestart");
+  await p2.click("text=Close out action"); await p2.fill("#coBy", "Zane Patten"); await p2.fill("#coNote", "New ERP revision posted and crew briefed at prestart");
   await p2.click("#coGo"); await p2.waitForTimeout(900);
   const f = relay.get({ action: "dashboard", key: relay.key }).findings.find(x => x.status === "Closed");
   if (!f) throw new Error("close-out did not reach the log");

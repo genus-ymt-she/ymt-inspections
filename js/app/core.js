@@ -59,9 +59,22 @@ function keyHTML(){return `<details class="key"><summary><span class="kt">${ic("
   <div class="ks"><span class="snn"><img src="${SNN_ICONS.FND}" alt="">SNN</span> Orange tag = item linked to a Safety Non-Negotiable. A UA or NI on these items is flagged in the report and email.</div></details>`}
 function snnNames(codes){return (codes||[]).map(c=>SNN[c]).filter(Boolean)}
 /* people the inspector has assigned actions to – remembered on this phone (name -> email) */
-function contacts(){const c=lsJ("contacts",{});(REG&&REG.findings||[]).forEach(f=>{if(f.owner&&f.ownerEmail&&!c[f.owner])c[f.owner]=f.ownerEmail});return c}
+function contacts(){const c=lsJ("contacts",{});TEAM.forEach(p=>{c[p.name]=p.email});(REG&&REG.findings||[]).forEach(f=>{if(f.owner&&f.ownerEmail&&!c[f.owner])c[f.owner]=f.ownerEmail});return c}
 function rememberContact(name,email){name=String(name||"").trim();email=String(email||"").trim().toLowerCase();if(!name||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return;const c=lsJ("contacts",{});c[name]=email;ls("contacts",JSON.stringify(c))}
 const emailOK=e=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(e||"").trim());
+const teamBy=name=>TEAM.find(p=>nameKey(p.name)===nameKey(name));
+/* person picker: the team list plus "Someone else" (free name + email). onPick(name,email) is a global function name. */
+function personPicker(uid,name,email,onPick,label){const inTeam=teamBy(name);const other=!!name&&!inTeam;
+  return `<div class="pp" id="pp-${uid}"><label class="f">${label||"Responsible person"}</label><select class="t" onchange="ppSel('${uid}',this.value,'${onPick}')">
+   <option value="">– choose a person –</option>${TEAM.map(p=>`<option value="${esc(p.name)}" ${inTeam&&inTeam.name===p.name?"selected":""}>${esc(p.name)} – ${esc(p.role)}</option>`).join("")}
+   <option value="__other" ${other?"selected":""}>Someone else…</option></select>
+   <div class="ppo ${other?"":"hide"}"><div class="grid2"><div><label class="f">Name</label><input class="t" value="${other?esc(name):""}" oninput="ppOther('${uid}','${onPick}')" placeholder="Full name"></div>
+   <div><label class="f">Email <span class="muted">· optional, emails them the action</span></label><input class="t" type="email" inputmode="email" value="${other?esc(email||""):""}" oninput="ppOther('${uid}','${onPick}')" placeholder="name@genus.com.au"></div></div></div>
+   ${inTeam?`<div class="muted" style="margin-top:6px">${ic("send","s")} They will be emailed at ${esc(inTeam.email)}</div>`:""}</div>`}
+function ppSel(uid,v,fn){const box=document.getElementById("pp-"+uid);const o=box.querySelector(".ppo");
+  if(v==="__other"){o.classList.remove("hide");const i=o.querySelectorAll("input");window[fn](uid,i[0].value.trim(),i[1].value.trim());i[0].focus();return}
+  o.classList.add("hide");const p=teamBy(v);window[fn](uid,p?p.name:"",p?p.email:"",true)}
+function ppOther(uid,fn){const i=document.getElementById("pp-"+uid).querySelectorAll(".ppo input");window[fn](uid,i[0].value.trim(),i[1].value.trim().toLowerCase())}
 function csvCell(v){v=String(v??"");return /[",\n\r]/.test(v)?`"${v.replace(/"/g,'""')}"`:v}
 function toCSV(rows){return "﻿"+rows.map(r=>r.map(csvCell).join(",")).join("\r\n")}
 async function copyText(t,label){try{await navigator.clipboard.writeText(String(t??""));toast(`${label||"Text"} copied`)}catch(e){

@@ -42,6 +42,8 @@ docs/DEPLOY.md             deployment and relay update guide
 Everything a SHE Manager normally changes is in **`js/app/config.js`**:
 
 - `CONFIG` – project name, job number, document prefix, report recipient
+- `TEAM` – the project team (name, role, email). People pick themselves on first use, and actions are
+  assigned by picking a name, which emails that person automatically
 - `RISK` – the Genus Risk Matrix (taken from the Genus JHA): descriptors, ranked cells, bands, colours,
   risk actions and the suggested close-out days used for due dates
 - `CATEGORIES` – how inspections are grouped in the library

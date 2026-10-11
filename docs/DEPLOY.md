@@ -39,7 +39,7 @@ Drafts, the Outbox and sent history already on phones are kept – the storage f
 
 - Start any inspection, record one NI with a risk rating, sign and send.
 - The report email arrives with the PDF and the finding appears under **Actions**.
-- If you entered a responsible person's @genus.com.au email, they receive an *Action assigned to you* email with a button that opens the action.
+- If you picked a responsible person from the team list (or entered an @genus.com.au email), they receive an *Action assigned to you* email with a button that opens the action.
 - **Insights → Monthly report** builds the monthly PDF.
 
 ---
@@ -56,3 +56,8 @@ Drafts, the Outbox and sent history already on phones are kept – the storage f
   e.g. `/@(genus\.com\.au|acme\.com\.au)$/i`, then redeploy.
 - The Google Sheet, PDF archive and evidence photos are private to the Google account that runs the relay.
 - To change the app key: edit `KEY` in the relay *and* `key` in `config.json`, then redeploy both.
+
+## Adding or removing team members
+
+Edit the `TEAM` list in `js/app/config.js` (name, role, email), then bump the cache version in `sw.js`.
+Each person picks their own name the first time they open PARRON (*Settings → Profile → Change* to switch).

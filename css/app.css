@@ -474,3 +474,7 @@ body.noscroll .toast{bottom:auto;top:calc(env(safe-area-inset-top) + 76px)}
 .card.act{border-left:5px solid var(--rc,var(--line-2))}
 .bar .stats{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:420px){.bar .btn.g span.t{display:none}.hero .kp span{font-size:10.5px}}
+.who{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.who .card{margin:0;text-align:left;padding:11px 12px;font:inherit;color:inherit}
+.who b{display:block;font-size:14.5px}.who span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+@media (max-width:360px){.who{grid-template-columns:1fr}}
