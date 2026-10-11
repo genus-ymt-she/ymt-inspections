@@ -18,8 +18,7 @@ email, the shared project log (Google Sheet) and the PDF archive (Google Drive).
 | **Urgent alert** | Any UA or Critical finding emails the SHE Manager and the inspection supervisor immediately |
 | **Insights** | KPIs with month-on-month change, 6-month trend, findings by type, risk profile, repeat findings, team activity |
 | **Monthly report** | One-tap Monthly HSE Summary PDF and auto-written *2.1 Safety Summary* text for the project monthly report |
-| **Targets** | Weekly inspection target per person (`TEAM` in config.js), shown this week / this month on Insights |
-| **Summaries** | 6 pm daily email, plus a Monday weekly summary to the SHE Manager (inspections vs targets, findings, hazard / positive reports, open, overdue and Critical actions) |
+| **Summaries** | 6 pm daily email, plus a Monday weekly summary to the SHE Manager (inspections and reports by person, findings, hazard / positive reports, open, overdue and Critical actions) |
 
 ## Project structure
 
@@ -45,7 +44,7 @@ docs/DEPLOY.md             deployment and relay update guide
 Everything a SHE Manager normally changes is in **`js/app/config.js`**:
 
 - `CONFIG` – project name, job number, document prefix, report recipient
-- `TEAM` – the project team (name, role, email, weekly inspection target). People pick themselves on first use, and actions are
+- `TEAM` – the project team (name, role, email). People pick themselves on first use, and actions are
   assigned by picking a name, which emails that person automatically
 - `RISK` – the Genus Risk Matrix (taken from the Genus JHA): descriptors, ranked cells, bands, colours,
   risk actions and the suggested close-out days used for due dates

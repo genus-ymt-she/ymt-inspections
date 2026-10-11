@@ -167,10 +167,11 @@ await step("positive observation is logged", async () => {
   const j = relay.get({ action: "dashboard", key: relay.key });
   if (j.obs.length !== 2) throw new Error("observations logged: " + j.obs.length);
 });
-await step("Insights shows lead indicators and targets", async () => {
-  await page.evaluate(() => { REG.at = 0; go("#insights"); }); await page.waitForSelector(".tgt");
-  const t = await page.textContent("#dbody"); if (!/HAZARD REPORTS\s*1/.test(t) || !/POSITIVE OBS\s*1/.test(t)) throw new Error("lead indicators missing");
-  await page.evaluate(() => document.querySelector(".tgt").scrollIntoView({ block: "center" })); await settle(page); await shot(page, "10-targets");
+await step("Insights shows lead indicators (no targets)", async () => {
+  await page.evaluate(() => { REG.at = 0; go("#insights"); }); await page.waitForFunction(() => /HAZARD REPORTS/.test((document.querySelector("#dbody") || {}).textContent || ""));
+  const t = await page.textContent("#dbody"); if (/Inspection targets/.test(t)) throw new Error("targets still shown");
+  if (!/HAZARD REPORTS\s*1/.test(t) || !/POSITIVE OBS\s*1/.test(t)) throw new Error("lead indicators missing");
+  await page.evaluate(() => [...document.querySelectorAll(".chart h3")].find(h => /Lead indicators/.test(h.textContent)).scrollIntoView({ block: "start" })); await settle(page); await shot(page, "10-lead-indicators");
 });
 await step("monthly HSE summary PDF builds", async () => {
   const n = await page.evaluate(() => buildMonthlyPDF(DASH.j).size); if (n < 15000) throw new Error("monthly pdf bytes " + n); console.log("      monthly pdf bytes", n);
