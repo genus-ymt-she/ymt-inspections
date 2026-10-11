@@ -18,7 +18,8 @@ The shared Action register, action emails, Insights charts and Manager mode swit
 2. Select all the code in `Code.gs` and replace it with the contents of **`PARRON_Relay_Code.gs`** from this repository. **Save**.
 3. In the toolbar choose the function **`setup`** and click **Run**.
    - Google asks for permission again because v3 adds **Google Drive** (PDF archive and close-out photos). Approve it.
-   - `setup` adds the new *Findings* sheet and columns to the existing log – **no data is lost** – and emails a confirmation.
+   - `setup` adds the new *Findings* and *Observations* sheets and columns to the existing log – **no data is lost** –
+     schedules the 6 pm daily and Monday 7 am weekly summaries, and emails a confirmation.
 4. **Set the Manager PIN:** ⚙ **Project Settings** (left bar) → **Script properties** → **Add script property**
    - Property: `MANAGER_PIN`  Value: a 4–8 digit PIN known only to the SHE Manager → **Save**.
    - The PIN is never stored in the code or on GitHub.

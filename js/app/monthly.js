@@ -10,7 +10,9 @@ function monthlyFacts(j){const P=DASH.person;DASH.person="";const D=dashData(j);
   const openHi=all.filter(f=>isOpen(f)&&(f.level==="High"||f.level==="Critical")).sort((a,b)=>(+b.score||0)-(+a.score||0));
   const overdue=all.filter(isOverdue).sort((a,b)=>String(a.due).localeCompare(String(b.due)));
   const persons={};D.sent.forEach(x=>{const k=x.name||"(no name)";persons[k]=(persons[k]||0)+1});
-  return {D,trend,prev,rs,F,spot,types,people,byT,repeat,openHi,overdue,persons,v3:j.v>=3}}
+  const O=(j.obs||[]).filter(o=>String(o.at).slice(0,7)===j.month);const hz=O.filter(o=>o.type==="hazard").length,po=O.filter(o=>o.type==="positive").length;
+  const T=targetRows(j);const tMet=T.filter(r=>r.month>=r.monthTarget).length;
+  return {D,trend,prev,rs,F,spot,types,people,byT,repeat,openHi,overdue,persons,v3:j.v>=3,hz,po,T,tMet}}
 function safetySummaryText(j){const x=monthlyFacts(j);const D=x.D;const m=monthLabel(j.month);const nf=D.ua+D.ni;
   const dp=x.prev&&x.prev.avgPct!=null&&D.avgPct!=null?D.avgPct-x.prev.avgPct:null;
   const topT=Object.entries(x.byT).sort((a,b)=>(b[1].ua+b[1].ni)-(a[1].ua+a[1].ni))[0];
@@ -19,6 +21,7 @@ function safetySummaryText(j){const x=monthlyFacts(j);const D=x.D;const m=monthL
   if(x.F.length)s.push(`${Math.round(x.spot/x.F.length*100)}% of findings were closed out at the time of inspection.`);
   if(topT&&topT[1].ua+topT[1].ni)s.push(`The highest number of findings was recorded on ${topT[0].replace(/^\d+\s/,"")} inspections (${topT[1].ua+topT[1].ni}).`);
   if(x.v3)s.push(`At the time of reporting, ${x.rs.open} corrective action${x.rs.open===1?" remains":"s remain"} open (${x.rs.highOpen} rated High or Critical), ${x.rs.overdue} ${x.rs.overdue===1?"is":"are"} overdue and ${x.rs.toVerify} ${x.rs.toVerify===1?"is":"are"} awaiting verification${x.rs.avgClose!=null?`; the average time from finding to close-out is ${x.rs.avgClose} days`:""}.`);
+  if(x.v3)s.push(`Lead indicators: ${x.hz} hazard report${x.hz===1?"":"s"} and ${x.po} positive observation${x.po===1?"":"s"} were submitted${x.T.length?`, and ${x.tMet} of ${x.T.length} team members met their inspection target`:""}.`);
   if(x.repeat.length)s.push(`Repeat findings over the last 90 days relate to item${x.repeat.length>1?"s":""} ${x.repeat.slice(0,3).map(([k,o])=>`${k} (${o.n}×)`).join(", ")}, which will be targeted in toolbox talks and supervisor verification.`);
   return s.join(" ")}
 function copySafetySummary(){if(!DASH.j){toast("Insights still loading");return}copyText(safetySummaryText(DASH.j),"2.1 Safety summary")}
@@ -51,6 +54,9 @@ function buildMonthlyPDF(j){const {jsPDF}=window.jspdf;const doc=new jsPDF({unit
     sec(`OPEN HIGH / CRITICAL RISK ACTIONS (${x.openHi.length})`);tbl(["Report / item","Risk","Corrective action","Owner","Due"],x.openHi.slice(0,25).map(f=>[`${f.reportId}\n${f.item} ${f.location||""}`,`${f.level} ${f.score}`,f.action,f.owner||"TBC",f.due?fmtD(f.due):"-"]),{0:{cellWidth:44},1:{cellWidth:22},3:{cellWidth:32},4:{cellWidth:20}});
     sec(`OVERDUE CORRECTIVE ACTIONS (${x.overdue.length})`);tbl(["Report / item","Risk","Corrective action","Owner","Due"],x.overdue.slice(0,25).map(f=>[`${f.reportId}\n${f.item} ${f.location||""}`,f.level||f.rating,f.action,f.owner||"TBC",`${fmtD(f.due)}\n(${-daysTo(f.due)} d late)`]),{0:{cellWidth:44},1:{cellWidth:22},3:{cellWidth:32},4:{cellWidth:20}},{didParseCell:c=>{if(c.section==="body"&&c.column.index===4){c.cell.styles.textColor=hex("#C5221F");c.cell.styles.fontStyle="bold"}}});
     sec("REPEAT FINDINGS – LAST 90 DAYS");tbl(["Item","Requirement","Times"],x.repeat.map(([k,o])=>[k,o.text,o.n]),{0:{cellWidth:16,fontStyle:"bold"},2:{cellWidth:16,halign:"center"}})}
+  if(x.v3){sec("LEAD INDICATORS");tbl(["Indicator","This month"],[["Hazard reports submitted",x.hz],["Positive observations submitted",x.po],["Inspections completed",D.sent.length]],{1:{halign:"center",cellWidth:40}})}
+  if(x.T.length){sec("INSPECTION TARGETS");tbl(["Team member","Role","Completed","Target","Achieved"],x.T.map(r=>[r.name,r.role,r.month,r.monthTarget,r.monthTarget?Math.round(r.month/r.monthTarget*100)+"%":"-"]),{2:{halign:"center"},3:{halign:"center"},4:{halign:"center"}},
+    {didParseCell:c=>{if(c.section==="body"&&c.column.index===4){const r=x.T[c.row.index];if(r){c.cell.styles.textColor=hex(r.month>=r.monthTarget?"#1E8E3E":"#C5221F");c.cell.styles.fontStyle="bold"}}}})}
   sec("INSPECTIONS BY PERSON");tbl(["Inspector","Inspections sent"],Object.entries(x.persons).sort((a,b)=>b[1]-a[1]).map(([k,n])=>[k,n]),{1:{halign:"center",cellWidth:40}});
   const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setFont("helvetica","normal");doc.setFontSize(6.8);doc.setTextColor(110);
     doc.text(`${docId}  |  Monthly HSE summary – ${monthLabel(j.month)}`,M,290);doc.text(`PARRON v${CONFIG.appVersion}  |  Uncontrolled when printed  |  Page ${i} of ${n}`,W-M,290,{align:"right"})}

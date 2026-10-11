@@ -8,7 +8,7 @@ const CONFIG = {
   project: "J1084 – Parron Wind Farm Connection Assets – Yerramullah Terminal (YMT)",
   projectShort: "YMT – Yerramullah Terminal",
   jobNo: "J1084",
-  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "2.2"
+  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "2.3"
 };
 
 /* Safety Non-Negotiables (Genus) */
@@ -44,20 +44,24 @@ const RISK = {
 };
 
 /* Project team – people who use PARRON and can be assigned actions.
-   Picking a name fills in their email, so they are emailed the action automatically. Add or remove people here. */
+   Picking a name fills in their email, so they are emailed the action automatically. Add or remove people here.
+   target = inspections expected per week (0 = no target). Shown on Insights and in the Monday weekly summary. */
 const TEAM = [
-  { name: "Darren Frizzell",  role: "SHE Manager",                  email: "darren.frizzell@genus.com.au" },
-  { name: "Lee Allen",        role: "SHE Manager",                  email: "lee.allen@genus.com.au" },
-  { name: "Nicola Rucci",     role: "Senior SHE Advisor",           email: "nicola.rucci@genus.com.au" },
-  { name: "Anphin Thomas",    role: "SHE Advisor",                  email: "anphin.thomas@genus.com.au" },
-  { name: "Steve Armitage",   role: "Project Director",             email: "steve.armitage@genus.com.au" },
-  { name: "Gary Armitage",    role: "Construction Manager",         email: "gary.armitage@genus.com.au" },
-  { name: "Joey Ryan",        role: "Grad Project Manager",         email: "joey.ryan@genus.com.au" },
-  { name: "Matt Smith",       role: "Senior Civil Supervisor",      email: "matt.smith@genus.com.au" },
-  { name: "Paul Delaney",     role: "Civil Supervisor",             email: "paul.delaney@genus.com.au" },
-  { name: "Cory Shotter",     role: "Senior Electrical Supervisor", email: "cory.shotter@genus.com.au" },
-  { name: "Zane Patten",      role: "Electrical Supervisor",        email: "zane.patten@genus.com.au" }
+  { name: "Darren Frizzell",  role: "SHE Manager",                  email: "darren.frizzell@genus.com.au", target: 2 },
+  { name: "Lee Allen",        role: "SHE Manager",                  email: "lee.allen@genus.com.au", target: 2 },
+  { name: "Nicola Rucci",     role: "Senior SHE Advisor",           email: "nicola.rucci@genus.com.au", target: 3 },
+  { name: "Anphin Thomas",    role: "SHE Advisor",                  email: "anphin.thomas@genus.com.au", target: 3 },
+  { name: "Steve Armitage",   role: "Project Director",             email: "steve.armitage@genus.com.au", target: 0 },
+  { name: "Gary Armitage",    role: "Construction Manager",         email: "gary.armitage@genus.com.au", target: 1 },
+  { name: "Joey Ryan",        role: "Grad Project Manager",         email: "joey.ryan@genus.com.au", target: 1 },
+  { name: "Matt Smith",       role: "Senior Civil Supervisor",      email: "matt.smith@genus.com.au", target: 2 },
+  { name: "Paul Delaney",     role: "Civil Supervisor",             email: "paul.delaney@genus.com.au", target: 2 },
+  { name: "Cory Shotter",     role: "Senior Electrical Supervisor", email: "cory.shotter@genus.com.au", target: 2 },
+  { name: "Zane Patten",      role: "Electrical Supervisor",        email: "zane.patten@genus.com.au", target: 2 }
 ];
+
+/* Quick report – positive observation categories */
+const OBS_CATEGORIES = ["Above-standard practice", "Speaking up / stop work", "Effective controls in place", "Good housekeeping", "Environmental care", "Leadership / mentoring", "Innovation / improvement"];
 
 /* Inspection library groups (template numbers). Anything not listed shows under "Other". */
 const CATEGORIES = [
