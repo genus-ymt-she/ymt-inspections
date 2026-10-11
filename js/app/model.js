@@ -23,6 +23,7 @@ function problems(d){const p=[];const t=tabByNum(d.tab);if(t.kind==="record")ret
   if(!d.details.inspector.trim())p.push("Inspector name");
   const un=allQ(t).filter(q=>!(d.answers[q.id]&&d.answers[q.id].r));if(un.length)p.push(`${un.length} item(s) not rated`);
   const inc=nonCompliances(d).filter(n=>!ncComplete(n));if(inc.length)p.push(`${inc.length} non-compliance(s) missing finding / corrective action / risk rating / closed status`);
+  {const bad=nonCompliances(d).filter(n=>n.closed===false&&n.ownerEmail&&!emailOK(n.ownerEmail));if(bad.length)p.push(`${bad.length} responsible person email(s) look wrong – check or clear them`)}
   d.others.forEach((o,i)=>{if(!o.r||!(o.title||"").trim())p.push(`Additional hazard ${i+1} needs a description and rating`)});
   if(t.checks){const C=t.checks;const done=checkDone(d);
     C.cols.forEach((col,c)=>{if(checkStarted(d,c)&&!done[c]){const miss=[];if(!chkVal(d,c,0))miss.push("time");if(!chkVal(d,c,1))miss.push("inspected by");
@@ -43,17 +44,18 @@ let saveT=null;
 function save(d,now){d.updated=Date.now();if(d._pinged!==undefined&&Date.now()-(d._pinged||0)>15*60*1000)queuePing(d,"draft");else if(d._pinged===undefined){d._pinged=Date.now()}clearTimeout(saveT);if(now)return dbPut("drafts",d);saveT=setTimeout(()=>dbPut("drafts",d),400)}
 
 /* ---------- risk (5 x 5 matrix, see RISK in config.js) ---------- */
-function riskOf(c,l){c=+c;l=+l;if(!(c>=1&&c<=5&&l>=1&&l<=5))return null;const score=c*l;const lv=RISK.levels.find(x=>score<=x.max)||RISK.levels[RISK.levels.length-1];
-  return {score,level:lv.key,color:lv.color,days:lv.days,response:lv.response,cons:c,like:l}}
+function riskOf(c,l){c=+c;l=+l;if(!(c>=1&&c<=5&&l>=1&&l<=5))return null;const score=RISK.matrix[l][c-1];const lv=RISK.levels.find(x=>score<=x.max)||RISK.levels[RISK.levels.length-1];
+  return {score,level:lv.key,color:lv.color,ink:lv.ink||"#fff",days:lv.days,response:lv.response,cons:c,like:l,cl:RISK.consequence[c-1][1],ll:RISK.likelihood[l-1][1]}}
+const riskText=k=>k?`${k.level} ${k.score} (${k.cl} / ${k.ll})`:"Not rated";
 function riskLevel(key){return RISK.levels.find(x=>x.key===key)||null}
 function riskChip(c,l,small){const k=riskOf(c,l);if(!k)return small?"":`<span class="risk none">Risk not rated</span>`;
-  return `<span class="risk" style="--rc:${k.color}" title="${esc(k.response)}">${esc(k.level)}${small?"":` · ${k.score}`}</span>`}
-function levelChip(level){const lv=riskLevel(level);return lv?`<span class="risk" style="--rc:${lv.color}">${esc(lv.key)}</span>`:""}
+  return `<span class="risk" style="--rc:${k.color};--ri:${k.ink}" title="${esc(k.response)}">${esc(k.level)}${small?"":` ${k.score}`}</span>`}
+function levelChip(level){const lv=riskLevel(level);return lv?`<span class="risk" style="--rc:${lv.color};--ri:${lv.ink||"#fff"}">${esc(lv.key)}</span>`:""}
 
 /* ---------- findings for the shared action register ---------- */
 function findingsOf(d){const t=tabByNum(d.tab);if(t.kind==="record")return [];const rid=reportId(d);
   return nonCompliances(d).map(n=>{const k=riskOf(n.cons,n.like)||{};return {fid:`${rid}|${n.id}`,item:n.id,text:n.text,rating:n.r,snn:snnNames(n.snn).join(" / "),
     cons:n.cons||"",like:n.like||"",score:k.score||"",level:k.level||"",finding:n.finding||"",action:n.action||"",status:n.closed?"spot":"open",
-    owner:n.closed?"":(n.owner||""),due:n.closed?"":(n.due||""),taken:n.taken||""}})}
+    owner:n.closed?"":(n.owner||""),ownerEmail:n.closed?"":String(n.ownerEmail||"").trim().toLowerCase(),due:n.closed?"":(n.due||""),taken:n.taken||""}})}
 function reportFacts(d){const t=tabByNum(d.tab);const s=t.kind==="record"?null:stats(d);
   return {c:s?s.C:"",na:s?s.NA:"",pct:s&&s.pct!==null?s.pct:"",inspDate:String(d.details.datetime||"").slice(0,16),crew:d.details.crew||"",supervisor:d.details.supervisor||""}}

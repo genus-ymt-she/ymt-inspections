@@ -8,55 +8,40 @@ const CONFIG = {
   project: "J1084 – Parron Wind Farm Connection Assets – Yerramullah Terminal (YMT)",
   projectShort: "YMT – Yerramullah Terminal",
   jobNo: "J1084",
-  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "2.0"
+  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "2.1"
 };
 
 /* Safety Non-Negotiables (Genus) */
 const SNN = {"FND": "Foundations", "FFW": "Fitness for Work", "VD": "Vehicles & Driving", "EI": "Energy & Isolation", "UU": "Underground Utilities", "WAH": "Working at Height", "TMP": "Live Traffic & Mobile Plant", "HL": "Hoisting & Lifting", "CS": "Confined Spaces"};
 const snnBadge=(c,pre)=>`<span class="snn" title="Safety Non-Negotiable"><img src="${SNN_ICONS[c]}" alt="">${pre?"SNN · ":""}${esc(SNN[c])}</span>`;
 
-/* Risk matrix – 5 x 5, consequence x likelihood.
-   Align the labels, bands and response times with the project HSE Management Plan risk matrix. */
+/* Genus Risk Matrix (as printed on Genus JHAs). Consequence x likelihood gives a ranked cell 1–25.
+   Close-out days are a project default used to suggest a due date – the Genus matrix sets the response, not a timeframe. */
 const RISK = {
   consequence: [
-    [1, "Insignificant", "No injury or first aid only; negligible environmental impact"],
-    [2, "Minor", "Medical treatment injury; minor, contained environmental impact"],
-    [3, "Moderate", "Lost time / restricted duties injury; reportable environmental incident"],
-    [4, "Major", "Serious injury or permanent impairment; significant environmental harm"],
-    [5, "Catastrophic", "Fatality or multiple serious injuries; severe, long-term environmental harm"]
+    [1, "Minor", "First aid injury/illness. Localised environmental event, no impact to an area of low significance (recovery < 1 week)."],
+    [2, "Moderate", "Medical treatment injury/illness. Low-level localised environmental impact (recovery 1 week – 6 months)."],
+    [3, "Major", "Lost time injury/illness < 2 weeks. Significant surrounding-area environmental impact (recovery 6 months – 1 year)."],
+    [4, "Severe", "Lost time injury/illness > 2 weeks and/or permanent impairment. Serious widespread environmental impact."],
+    [5, "Catastrophic", "Fatality or multiple serious injuries/illnesses. Extensive permanent and irreversible environmental impact."]
   ],
   likelihood: [
-    [1, "Rare", "May occur only in exceptional circumstances"],
-    [2, "Unlikely", "Could occur at some time"],
-    [3, "Possible", "Might occur at some time"],
-    [4, "Likely", "Will probably occur in most circumstances"],
-    [5, "Almost certain", "Expected to occur in most circumstances"]
+    [1, "Rare", "Could occur in exceptional circumstances or once in 10 years."],
+    [2, "Unlikely", "Not likely to occur in normal circumstances. More than annually but less than 10-yearly."],
+    [3, "Possible", "May occur at some time. Could occur annually."],
+    [4, "Likely", "Expected to occur at some time. Could occur monthly."],
+    [5, "Almost certain", "Expected to occur regularly under normal circumstances. Could occur weekly."]
   ],
-  // score = consequence x likelihood; first band whose max >= score applies
+  // ranked cell for [likelihood][consequence 1..5]
+  matrix: { 5: [6, 10, 16, 21, 25], 4: [4, 9, 15, 20, 24], 3: [3, 8, 14, 18, 23], 2: [2, 7, 12, 17, 22], 1: [1, 5, 11, 13, 19] },
+  // first band whose max >= rank applies
   levels: [
-    { key: "Low",      max: 4,  color: "#1E8E3E", days: 28, response: "Manage by routine procedures – close within 28 days" },
-    { key: "Medium",   max: 9,  color: "#C98A00", days: 14, response: "Supervisor action required – close within 14 days" },
-    { key: "High",     max: 14, color: "#E8660D", days: 7,  response: "Senior management attention – close within 7 days" },
-    { key: "Extreme",  max: 25, color: "#C5221F", days: 1,  response: "Stop work – immediate action and escalation" }
+    { key: "Low",      max: 5,  color: "#00A651", ink: "#FFFFFF", days: 28, response: "Routine management – control, monitor and review with normal risk management processes." },
+    { key: "Medium",   max: 13, color: "#FFD200", ink: "#3A2E00", days: 14, response: "Active management – implement additional controls where risk can be further reduced; monitor that identified controls are implemented effectively." },
+    { key: "High",     max: 19, color: "#F07D00", ink: "#FFFFFF", days: 7,  response: "Proactive management – investigate further risk reduction with the workers affected; apply higher-level controls (hierarchy of control); monitor and review." },
+    { key: "Critical", max: 25, color: "#E00000", ink: "#FFFFFF", days: 0,  response: "Immediate action – stop the activity / task and implement controls that reduce the risk to at least High." }
   ]
 };
-
-/* MYOSH entry sheet – the order and labels the SHE Manager sees when keying a report into MYOSH.
-   Change labels or order to match the MYOSH configuration on this project. */
-const MYOSH_FIELDS = [
-  ["Inspection type", "SHEQ Inspection"],
-  ["Inspection title", r => r.title],
-  ["Date of inspection", r => r.date],
-  ["Time", r => r.time],
-  ["Site / project", () => CONFIG.project],
-  ["Location / work front", r => r.location],
-  ["Inspected by", r => r.inspector],
-  ["Contractor / crew", r => r.crew],
-  ["Supervisor / person in charge", r => r.supervisor],
-  ["Result summary", r => r.result],
-  ["Description / comments", r => r.narrative],
-  ["PARRON report ID", r => r.reportId]
-];
 
 /* Inspection library groups (template numbers). Anything not listed shows under "Other". */
 const CATEGORIES = [

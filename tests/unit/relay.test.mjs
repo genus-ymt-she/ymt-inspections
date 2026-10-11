@@ -9,8 +9,8 @@ const report = (over = {}) => ({
   meta: { name: "Test Inspector", no: "01", title: "Site Office, Amenities & First Aid", location: "Laydown 2", ua: 1, ni: 1, snn: 1, started: new Date().toISOString() },
   report: { c: 20, na: 2, pct: 91, inspDate: "2026-10-11T09:30", crew: "Civil crew", supervisor: "S. Boss" },
   findings: [
-    { fid: "YMT-01-20261011-0930-TI|1.1", item: "1.1", text: "Notice board current", rating: "NI", snn: "", cons: 2, like: 3, score: 6, level: "Medium", finding: "ERP out of date", action: "Replace ERP", status: "open", owner: "Site Supervisor", due: "2026-10-20" },
-    { fid: "YMT-01-20261011-0930-TI|1.2", item: "1.2", text: "First aid kit", rating: "UA", snn: "Foundations", cons: 4, like: 4, score: 16, level: "Extreme", finding: "Kit empty", action: "Restock", status: "spot", taken: "Restocked from store" }
+    { fid: "YMT-01-20261011-0930-TI|1.1", item: "1.1", text: "Notice board current", rating: "NI", snn: "", cons: 2, like: 3, score: 6, level: "Medium", finding: "ERP out of date", action: "Replace ERP", status: "open", owner: "Site Supervisor", ownerEmail: "Sam.Super@genus.com.au", due: "2026-10-20" },
+    { fid: "YMT-01-20261011-0930-TI|1.2", item: "1.2", text: "First aid kit", rating: "UA", snn: "Foundations", cons: 4, like: 4, score: 16, level: "Critical", finding: "Kit empty", action: "Restock", status: "spot", taken: "Restocked from store" }
   ], ...over
 });
 
@@ -43,13 +43,40 @@ test("v3 report logs findings, archives the PDF and feeds the dashboard", () => 
   const open = j.findings.find(f => f.item === "1.1");
   assert.equal(open.status, "Open"); assert.equal(open.due, "2026-10-20"); assert.equal(open.level, "Medium"); assert.equal(open.no, "01");
   assert.equal(j.findings.find(f => f.item === "1.2").status, "Closed on spot");
-  assert.equal(j.myoshPending.length, 1);
-  assert.equal(j.myoshPending[0].pct, 91);
-  assert.equal(j.myoshPending[0].supervisor, "S. Boss");
+  assert.equal(j.sent[0].pct, 91);
+  assert.equal(j.sent[0].supervisor, "S. Boss");
   assert.equal(j.trend.length, 6);
 });
 
-test("close-out needs a name; verify / re-open / MYOSH need the Manager PIN", () => {
+test("assignee is emailed their action with a link to close it out", () => {
+  const r = createRelay();
+  r.post(report());
+  const m = r.mail.find(x => x.to === "sam.super@genus.com.au");
+  assert.ok(m, "assignment email sent");
+  assert.match(m.subject, /Action assigned to you/);
+  assert.match(m.htmlBody, /#actions\/YMT-01-20261011-0930-TI%7C1\.1/);
+  const f = r.get({ action: "dashboard", key: r.key }).findings.find(x => x.item === "1.1");
+  assert.equal(f.ownerEmail, "sam.super@genus.com.au"); assert.ok(f.notified);
+});
+
+test("action emails only go to allowed domains", () => {
+  const r = createRelay();
+  r.post(report({ findings: [{ ...report().findings[0], ownerEmail: "someone@gmail.com" }] }));
+  assert.equal(r.mail.filter(x => x.to === "someone@gmail.com").length, 0);
+  assert.equal(r.get({ action: "dashboard", key: r.key }).findings[0].ownerEmail, "");
+});
+
+test("reassigning emails the new person; close-out emails the SHE Manager", () => {
+  const r = createRelay({ pin: "2468" });
+  r.post(report());
+  const fid = "YMT-01-20261011-0930-TI|1.1";
+  assert.equal(r.post({ key: r.key, action: "finding", fid, op: "edit", by: "Darren", owner: "Pat New", ownerEmail: "pat.new@genus.com.au", pin: "2468" }).ok, true);
+  assert.ok(r.mail.find(x => x.to === "pat.new@genus.com.au"), "new owner emailed");
+  r.post({ key: r.key, action: "finding", fid, op: "close", by: "Pat New", note: "Done" });
+  const m = r.mail.at(-1); assert.equal(m.to, "darren.frizzell@genus.com.au"); assert.match(m.subject, /please verify/);
+});
+
+test("close-out needs a name; verify / re-open need the Manager PIN", () => {
   const r = createRelay({ pin: "2468" });
   r.post(report());
   const fid = "YMT-01-20261011-0930-TI|1.1";
@@ -64,9 +91,6 @@ test("close-out needs a name; verify / re-open / MYOSH need the Manager PIN", ()
   const j = r.get({ action: "dashboard", key: r.key });
   const f = j.findings.find(x => x.fid === fid);
   assert.equal(f.item, "1.1"); assert.equal(f.no, "01"); assert.equal(f.due, "2026-10-20");
-  assert.equal(r.post({ key: r.key, action: "myosh", reportId: "YMT-01-20261011-0930-TI", ref: "INS-1", by: "Darren", pin: "bad" }).ok, false);
-  assert.equal(r.post({ key: r.key, action: "myosh", reportId: "YMT-01-20261011-0930-TI", ref: "INS-1", by: "Darren", pin: "2468" }).ok, true);
-  assert.equal(r.get({ action: "dashboard", key: r.key }).myoshPending.length, 0);
 });
 
 test("PIN check rejects when no PIN is configured and locks after 10 failures", () => {
@@ -76,11 +100,15 @@ test("PIN check rejects when no PIN is configured and locks after 10 failures", 
   assert.equal(r.post({ key: r.key, action: "pin", pin: "2468" }).ok, false, "locked out");
 });
 
-test("daily digest includes overdue actions", () => {
+test("daily digest lists overdue actions and reminds the owner", () => {
   const r = createRelay();
   r.post(report({ findings: [{ ...report().findings[0], due: "2020-01-01" }] }));
+  const before = r.mail.length;
   r.ctx.dailyDigest();
-  const m = r.mail.at(-1);
+  const sent = r.mail.slice(before);
+  const rem = sent.find(x => x.to === "sam.super@genus.com.au");
+  assert.ok(rem, "owner reminder"); assert.match(rem.subject, /overdue/);
+  const m = sent.find(x => x.to === "darren.frizzell@genus.com.au");
   assert.match(m.subject, /1 actions overdue/);
   assert.match(m.htmlBody, /Replace ERP/);
 });

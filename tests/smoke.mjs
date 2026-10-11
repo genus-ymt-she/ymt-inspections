@@ -1,6 +1,6 @@
 // End-to-end smoke test. Runs the app in Chromium against the REAL relay code (PARRON_Relay_Code.gs)
 // on in-memory Google services, and walks the full workflow:
-// inspection -> risk-rated finding -> send -> action register -> close-out -> manager verify -> MYOSH entry -> Insights -> monthly PDF.
+// inspection -> risk-rated finding -> send -> assignee emailed -> assignee opens the email link and closes out -> manager verifies -> Insights -> monthly PDF.
 // Usage: node tests/smoke.mjs [--shots]      (screenshots go to tests/out/)
 import { chromium } from "playwright";
 import http from "node:http";
@@ -12,7 +12,7 @@ import { createRelay } from "./gas-mock.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SHOTS = process.argv.includes("--shots");
 const out = path.join(root, "tests/out"); fs.mkdirSync(out, { recursive: true });
-const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".webmanifest": "application/manifest+json" };
+const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json" };
 const srv = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split("?")[0]); if (p.endsWith("/")) p += "index.html";
   const f = path.join(root, p);
@@ -68,7 +68,8 @@ await step("start inspection 01 and rate items", async () => {
   await page.click(`${q0} .riskbox .rscale >> nth=0 >> button >> nth=2`); // consequence 3
   await page.click(`${q0} .riskbox .rscale >> nth=1 >> button >> nth=3`); // likelihood 4 -> 12 High
   await page.click(`${q0} .seg button >> nth=1`); // open
-  await page.fill(`${q0} .nc input >> nth=0`, "Site Supervisor");
+  await page.fill(`${q0} .nc input >> nth=0`, "Sam Super");
+  await page.fill(`${q0} .nc .own-em`, "sam.super@genus.com.au");
   const due = await page.inputValue(`${q0} .nc input[type=date]`); if (!due) throw new Error("due date was not suggested from risk");
   await settle(page); await page.locator(q0).scrollIntoViewIfNeeded(); await shot(page, "02-finding-risk");
   // second item UA closed on the spot, the rest compliant (fast path)
@@ -95,44 +96,40 @@ await step("send directly through the relay (findings reach the log)", async () 
   const j = relay.get({ action: "dashboard", key: relay.key });
   if (j.findings.length !== 2) throw new Error("findings logged: " + j.findings.length);
   if (!relay.mail.length || !relay.mail[0].attachments) throw new Error("no email with PDF");
-  if (!/Risk/.test(relay.mail[0].htmlBody)) throw new Error("email lacks risk column");
+  const rep = relay.mail.find(m => m.attachments); if (!/Risk/.test(rep.htmlBody)) throw new Error("email lacks risk column");
+  if (!/High 15/.test(rep.htmlBody)) throw new Error("Genus matrix rank not in email");
+  const asg = relay.mail.find(m => m.to === "sam.super@genus.com.au"); if (!asg) throw new Error("assignee not emailed");
+  globalThis.ACTION_LINK = asg.htmlBody.match(/href="[^"]*(#actions\/[^"]+)"/)[1];
 });
 await step("action register shows the open action", async () => {
   await page.evaluate(() => go("#actions")); await page.waitForSelector(".act");
   const t = await page.textContent("#app"); if (!/Replace with current ERP/.test(t)) throw new Error("action missing: " + t.replace(/\s+/g, " ").slice(0, 300) + " REG=" + await page.evaluate(() => JSON.stringify(regAll().map(f => [f.status, f.due]))));
   await settle(page); await shot(page, "04-actions");
 });
-await step("close out with evidence note (any user)", async () => {
-  await page.click(".act >> nth=0"); await page.waitForSelector(".sheet h3");
-  await settle(page); await shot(page, "05-action-detail");
-  await page.click("text=Close out action"); await page.fill("#coNote", "New ERP revision posted and crew briefed at prestart");
-  await page.click("#coGo"); await page.waitForTimeout(800);
+await step("assignee opens the email link on their own phone and closes out", async () => {
+  const p2 = await newPage({ name: "", hash: ACTION_LINK }); await p2.waitForSelector(".sheet h3", { timeout: 15000 });
+  await settle(p2); await shot(p2, "05-action-detail");
+  await p2.click("text=Close out action"); await p2.fill("#coBy", "Sam Super"); await p2.fill("#coNote", "New ERP revision posted and crew briefed at prestart");
+  await p2.click("#coGo"); await p2.waitForTimeout(900);
   const f = relay.get({ action: "dashboard", key: relay.key }).findings.find(x => x.status === "Closed");
   if (!f) throw new Error("close-out did not reach the log");
+  if (!relay.mail.find(m => /please verify/.test(m.subject || ""))) throw new Error("SHE Manager not told to verify");
+  await p2.context().close();
 });
 await step("manager mode with PIN, then verify", async () => {
   await page.evaluate(() => go("#settings")); await page.waitForSelector("#mPin");
   await page.fill("#mPin", "2468"); await page.click("text=Turn on"); await page.waitForFunction(() => !!localStorage.getItem("mgrPin"));
   await settle(page); await shot(page, "06-settings");
-  await page.evaluate(() => { ACTF.f = "verify"; go("#actions"); }); await page.waitForSelector(".act");
+  await page.evaluate(async () => { REG.at = 0; await regRefresh(true); ACTF.f = "verify"; go("#actions"); }); await page.waitForSelector(".act");
   await page.click(".act >> nth=0"); await page.click("text=Verify close-out"); await page.click("#aYes"); await page.waitForTimeout(800);
   const f = relay.get({ action: "dashboard", key: relay.key }).findings.find(x => x.status === "Verified");
   if (!f) throw new Error("verify did not reach the log");
 });
-await step("MYOSH queue and entry sheet", async () => {
-  await page.evaluate(() => go("#myosh")); await page.waitForSelector("#app .card.tap");
-  await settle(page); await shot(page, "07-myosh-queue");
-  await page.click("#app .card.tap >> nth=0"); await page.waitForSelector(".mf");
-  const t = await page.textContent("#app"); if (!/Laydown area 2/.test(t) || !/Hazard Register/.test(t)) throw new Error("entry sheet incomplete");
-  await settle(page); await shot(page, "08-myosh-entry");
-  await page.fill("#myRef", "INS-004512"); await page.click("text=Mark as entered in MYOSH"); await page.waitForTimeout(600);
-  if (relay.get({ action: "dashboard", key: relay.key }).myoshPending.length) throw new Error("still pending");
-});
 await step("Insights renders KPIs and charts", async () => {
   await page.evaluate(() => go("#insights")); await page.waitForSelector(".kpis .kpi"); await page.waitForSelector(".chart svg");
-  await settle(page); await shot(page, "09-insights");
+  await settle(page); await shot(page, "07-insights");
   const kp = await page.textContent(".kpis"); if (!/1 of 2 findings/.test(kp)) throw new Error("closed-on-spot KPI wrong");
-  await page.evaluate(() => document.querySelectorAll(".chart")[2].scrollIntoView()); await settle(page); await shot(page, "09b-insights-charts");
+  await page.evaluate(() => document.querySelectorAll(".chart")[2].scrollIntoView()); await settle(page); await shot(page, "08-insights-charts");
   const txt = await page.evaluate(() => safetySummaryText(DASH.j)); if (!/1 site inspection was completed/.test(txt)) throw new Error("summary text: " + txt.slice(0, 120));
 });
 await step("monthly HSE summary PDF builds", async () => {

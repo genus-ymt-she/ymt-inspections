@@ -28,7 +28,7 @@ function blobToB64(b){return new Promise((res,rej)=>{const f=new FileReader();f.
 async function sendDirect(){const d=CUR;const b=$("#bShare");if(!PDFFILE){toast("Report still being prepared – tap again in a moment");return}
   if(b){b.disabled=true;b.innerHTML='<span class="sending"><span class="spin"></span>Sending…</span>'}
   try{const t=tabByNum(d.tab);const s=stats(d);
-    const REC=t.kind==="record";const findings=findingsOf(d),report=reportFacts(d);
+    const REC=t.kind==="record";const findings=findingsOf(d),report=reportFacts(d);findings.forEach(f=>rememberContact(f.owner,f.ownerEmail));
     const item={id:d.id,queuedAt:Date.now(),tries:0,title:`${pad(t.num)} – ${t.short}`,reportId:reportId(d),location:d.details.location,ua:REC?0:s.UA,ni:REC?0:s.NI,snn:REC?0:s.snnN,no:pad(t.num),inspector:d.details.inspector,findings,report,
       payload:{uid:d.id,meta:pingMeta(d),reportId:reportId(d),to:recipient(),subject:subject(d),text:bodyText(d),html:htmlBody(d),filename:fileName(d),pdf:await blobToB64(PDFFILE),report,findings}};
     await dbPut("outbox",item);await dbDel("drafts",d.id);{const q=getPings();if(q[d.id]){q[d.id].state="outbox";ls("pings",JSON.stringify(q))}else queuePing(d,"outbox")}
@@ -54,6 +54,6 @@ async function flushOutbox(manual){await flushPings();if(FLUSHING)return;FLUSHIN
   if(sent&&(location.hash||"#home")==="#home")viewHome();return {sent,left}}
 
 async function markSent(){const d=CUR;if(!await ask2("Close this inspection?","Confirm the report has been sent another way. The inspection is closed on this phone and its open items go on the Action register.","Close inspection"))return;const t=tabByNum(d.tab);const s=stats(d);const REC=t.kind==="record";
-  const findings=findingsOf(d),report=reportFacts(d);
+  const findings=findingsOf(d),report=reportFacts(d);findings.forEach(f=>rememberContact(f.owner,f.ownerEmail));
   await dbPut("sent",{id:d.id,reportId:reportId(d),title:`${pad(t.num)} – ${t.short}`,location:d.details.location,sentAt:Date.now(),ua:REC?0:s.UA,ni:REC?0:s.NI,snn:REC?0:s.snnN,no:pad(t.num),inspector:d.details.inspector,findings,report});
   await dbDel("drafts",d.id);queuePing(d,"sent",{reportId:reportId(d),report,findings});await loadLocalSent();updateBadges();toast("Inspection closed");go("#home")}

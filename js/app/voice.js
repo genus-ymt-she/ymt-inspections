@@ -85,7 +85,7 @@ function parseYesNo(t){ const s=norm(t);
   return null }
 function parseScale(t,list){ const s=norm(t); const W={one:1,two:2,three:3,four:4,five:5,won:1,to:2,too:2,for:4};
   for(const [v,l] of list){ if(s.includes(" "+l.toLowerCase()+" ")) return v }
-  const syn={1:/ (insignificant|negligible|first aid|rare|rarely|never) /,2:/ (minor|small|unlikely) /,3:/ (moderate|medium|possible|possibly|might) /,4:/ (major|serious|likely|probably|probable) /,5:/ (catastrophic|fatal|fatality|death|almost certain|certain|definitely|expected) /};
+  const syn={1:/ (insignificant|negligible|first aid|rarely|never|small) /,2:/ (medical treatment|not likely) /,3:/ (lost time|possibly|might|maybe) /,4:/ (serious|permanent|probably|probable|monthly) /,5:/ (fatal|fatality|death|almost certain|certain|definitely|weekly) /};
   for(const k of [5,4,3,2,1]) if(syn[k].test(s)) return k;
   const m=s.match(/ (\d) /); if(m&&+m[1]>=1&&+m[1]<=5) return +m[1];
   for(const w in W) if(s===" "+w+" ") return W[w]; return null }
@@ -304,7 +304,7 @@ async function voiceNC(kind,id,r,note,haveFinding){ const A=getA(kind,id); const
   if(!(A.action||"").trim()){ const f=await ask("What's the corrective action? Say next when you've finished.",{type:"long",short:"What's the corrective action?"});
     if(f.cmd==="stop") return "stop"; if(f.cmd==="back") return "redo"; if(f.val){ A.action=f.val; save(CUR); refresh() } }
   if(!riskOf(A.cons,A.like)){
-    const rc=await ask("Risk rating. What's the worst credible consequence: insignificant, minor, moderate, major, or catastrophic?",{type:"scale",list:RISK.consequence,short:"Consequence: insignificant, minor, moderate, major, or catastrophic?"});
+    const rc=await ask("Risk rating. What's the worst credible consequence: minor, moderate, major, severe, or catastrophic?",{type:"scale",list:RISK.consequence,short:"Consequence: minor, moderate, major, severe, or catastrophic?"});
     if(rc.cmd==="stop") return "stop"; if(rc.cmd==="back") return "redo"; if(rc.val){ A.cons=rc.val; save(CUR); refresh() }
     const rl=await ask("And the likelihood: rare, unlikely, possible, likely, or almost certain?",{type:"scale",list:RISK.likelihood,short:"Likelihood: rare, unlikely, possible, likely, or almost certain?"});
     if(rl.cmd==="stop") return "stop"; if(rl.val){ A.like=rl.val; save(CUR); refresh() }

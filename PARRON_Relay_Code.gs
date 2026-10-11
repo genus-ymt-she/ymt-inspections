@@ -1,7 +1,7 @@
 /**
  * PARRON relay v3 – emails inspection reports, keeps the shared project log (Google Sheet) behind the
- * in-app Insights, Actions and MYOSH screens, archives report PDFs to Google Drive and sends the
- * 6 pm daily summary.
+ * in-app Insights and Actions screens, emails people when an action is assigned to them (and reminds
+ * them when it is overdue), archives report PDFs to Google Drive and sends the 6 pm daily summary.
  *
  * FIRST TIME: paste this whole file in, Save, choose "setup" in the toolbar and click Run.
  *   Then Deploy > New deployment > Web app (Execute as: Me, Who has access: Anyone).
@@ -9,7 +9,7 @@
  *   sheet columns and asks for Drive permission), then Deploy > Manage deployments > Edit (pencil)
  *   > Version: New version > Deploy. The web app link stays the same – no app change needed.
  * MANAGER PIN: Project Settings (cog, left bar) > Script properties > Add property
- *   MANAGER_PIN = a 4–8 digit PIN. It unlocks verify / re-open / MYOSH entry in the app. It is never
+ *   MANAGER_PIN = a 4–8 digit PIN. It unlocks verify / re-open / reassign in the app. It is never
  *   stored in this file or in GitHub.
  *
  * v2 phones keep working: anything they send is accepted and logged exactly as before.
@@ -21,13 +21,17 @@ const TZ = 'Australia/Perth';
 const DIGEST_HOUR = 18;                       // daily summary between 6 and 7 pm Perth time
 const ARCHIVE_PDFS = true;                    // save a copy of every report PDF to Google Drive
 const MAX_PER_MINUTE = 90;                    // simple flood protection for the public web app link
+const APP_URL = 'https://genus-ymt-she.github.io/ymt-inspections/';   // link used in action emails
+// Action emails are only sent to these domains (stops the public link being used to email anyone).
+// Add a subcontractor's domain here if their people are assigned actions, e.g. /@(genus\.com\.au|acme\.com\.au)$/i
+const ASSIGN_ALLOWED = /@genus\.com\.au$/i;
 
 const SENT_HEAD = ['Sent at', 'Date', 'Month', 'Report ID', 'UID', 'Name', 'No', 'Inspection', 'Location', 'UA', 'NI', 'SNN', 'Sent via',
-  'C', 'NA', 'Compliance %', 'Inspection date', 'Crew', 'Supervisor', 'PDF link', 'MYOSH ref', 'MYOSH entered', 'MYOSH by'];
+  'C', 'NA', 'Compliance %', 'Inspection date', 'Crew', 'Supervisor', 'PDF link'];
 const STAT_HEAD = ['UID', 'Name', 'No', 'Inspection', 'Location', 'Started', 'Last update', 'State', 'Sent at'];
 const FIND_HEAD = ['FID', 'Report ID', 'UID', 'Raised', 'Inspection date', 'Raised by', 'No', 'Inspection', 'Location', 'Crew',
   'Item', 'Item text', 'Rating', 'SNN', 'Consequence', 'Likelihood', 'Risk score', 'Risk level', 'Finding', 'Corrective action',
-  'Status', 'Owner', 'Due', 'Closed at', 'Closed by', 'Close-out note', 'Evidence link', 'Verified at', 'Verified by', 'Updated', 'History'];
+  'Status', 'Owner', 'Due', 'Closed at', 'Closed by', 'Close-out note', 'Evidence link', 'Verified at', 'Verified by', 'Updated', 'History', 'Owner email', 'Notified'];
 const ST = { spot: 'Closed on spot', open: 'Open', closed: 'Closed', verified: 'Verified' };
 
 /* ---------- one-off setup (safe to run again after every update) ---------- */
@@ -79,7 +83,6 @@ function doPost(e) {
     lock.waitLock(25000);
     if (d.action === 'status') { status_(d); return out_({ ok: true }); }
     if (d.action === 'finding') return finding_(d);
-    if (d.action === 'myosh') return myosh_(d);
     if (d.action === 'pin') return out_({ ok: pinOK_(d.pin), error: pinOK_(d.pin) ? '' : 'Incorrect PIN' });
     return send_(d);
   } catch (err) {
@@ -114,7 +117,7 @@ function logSent_(uid, reportId, m, via, r, link) {
   ss.getSheetByName('Sent').appendRow([now, "'" + Utilities.formatDate(now, TZ, 'yyyy-MM-dd'), "'" + Utilities.formatDate(now, TZ, 'yyyy-MM'),
     reportId || '', uid, clean_(m.name), "'" + (m.no || ''), m.title || '', m.location || '', m.ua || 0, m.ni || 0, m.snn || 0, via,
     num_(r.c), num_(r.na), r.pct == null || r.pct === '' ? '' : num_(r.pct), r.inspDate ? "'" + str_(r.inspDate, 20) : '', str_(r.crew, 120), str_(r.supervisor, 120),
-    link || '', '', '', '']);
+    link || '']);
   upsert_(ss, uid, m, 'sent', now);
 }
 
@@ -127,10 +130,47 @@ function logFindings_(d) {
     return [str_(f.fid, 80), d.reportId || '', d.uid || '', now, r.inspDate ? "'" + str_(r.inspDate, 20) : '', clean_(m.name), "'" + (m.no || ''), m.title || '', m.location || '', str_(r.crew, 120),
       "'" + str_(f.item, 20), str_(f.text, 600), f.rating === 'UA' ? 'UA' : 'NI', str_(f.snn, 200), num_(f.cons) || '', num_(f.like) || '', num_(f.score) || '', str_(f.level, 20),
       str_(f.finding, 2000), str_(f.action, 2000), st, str_(f.owner, 120), f.due ? "'" + str_(f.due, 10) : '',
-      st === ST.spot ? now : '', st === ST.spot ? clean_(m.name) : '', st === ST.spot ? str_(f.taken, 2000) : '', '', '', '', now, JSON.stringify(hist)];
+      st === ST.spot ? now : '', st === ST.spot ? clean_(m.name) : '', st === ST.spot ? str_(f.taken, 2000) : '', '', '', '', now, JSON.stringify(hist),
+      st === ST.open ? email_(f.ownerEmail) : '', ''];
   });
-  if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, FIND_HEAD.length).setValues(rows);
+  if (!rows.length) return;
+  const H = idx_(FIND_HEAD); const first = sh.getLastRow() + 1;
+  // one email per person, listing every action assigned to them from this report
+  const by = {}; rows.forEach((r, i) => { const e = r[H['Owner email']]; if (e) (by[e] = by[e] || []).push(i); });
+  Object.keys(by).forEach(e => { if (notifyAssigned_(e, by[e].map(i => findingOut_(rows[i])), m.name)) by[e].forEach(i => { rows[i][H.Notified] = now; }); });
+  sh.getRange(first, 1, rows.length, FIND_HEAD.length).setValues(rows);
 }
+
+/* ---------- action emails ---------- */
+function email_(e) { e = String(e || '').trim().toLowerCase(); return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && ASSIGN_ALLOWED.test(e) ? e : ''; }
+function actionCard_(f) {
+  const lv = { Low: ['#00A651', '#fff'], Medium: ['#FFD200', '#3A2E00'], High: ['#F07D00', '#fff'], Critical: ['#E00000', '#fff'] }[f.level] || ['#7A8594', '#fff'];
+  const dmy = s => s ? String(s).slice(0, 10).split('-').reverse().join('/') : 'TBC';
+  return `<div style="border:1px solid #D0D5DD;border-left:6px solid ${lv[0]};border-radius:8px;padding:12px 14px;margin:12px 0">
+    <div style="font-size:12px;color:#5B6675">${esc_(f.reportId)} · item ${esc_(f.item)} · ${esc_(f.location || '')}</div>
+    <div style="font-size:16px;font-weight:700;margin:4px 0">${esc_(f.action || '')}</div>
+    <div style="font-size:13px;margin-bottom:6px"><b>Finding:</b> ${esc_(f.finding || '')}</div>
+    <span style="background:${lv[0]};color:${lv[1]};font-weight:700;border-radius:4px;padding:2px 8px;font-size:12px">${esc_((f.level || f.rating) + (f.score ? ' ' + f.score : ''))}</span>
+    <span style="font-size:13px;margin-left:8px"><b>Due:</b> ${dmy(f.due)}</span>
+    <div style="margin-top:12px"><a href="${APP_URL}#actions/${encodeURIComponent(f.fid)}" style="background:#EC7723;color:#fff;text-decoration:none;font-weight:700;padding:10px 16px;border-radius:8px;display:inline-block">Open in PARRON to close out</a></div></div>`;
+}
+function mailWrap_(title, sub, inner) {
+  return `<div style="font-family:Arial,sans-serif;color:#1B2430;max-width:640px">
+    <div style="background:#112B4E;color:#fff;padding:12px 14px;border-bottom:4px solid #EC7723"><div style="font-size:12px;color:#EC7723;font-weight:700">PARRON | ${esc_(sub)}</div><div style="font-size:18px;font-weight:700">${esc_(title)}</div></div>
+    ${inner}<p style="font-size:12px;color:#5B6675">When the work is done, open the action in PARRON, tap <b>Close out action</b>, describe what was done and add a photo. The SHE Manager then verifies it.<br>Questions? Reply to this email.</p></div>`;
+}
+function notifyAssigned_(to, list, raisedBy) {
+  if (!to || !list.length) return false;
+  try {
+    MailApp.sendEmail({ to, replyTo: TO, name: 'PARRON Site Inspections',
+      subject: `Action assigned to you – ${list.length > 1 ? list.length + ' actions' : (list[0].level || list[0].rating) + ' – ' + str_(list[0].action, 60)}`,
+      htmlBody: mailWrap_(`${list.length} corrective action${list.length > 1 ? 's' : ''} assigned to you`, 'ACTION ASSIGNED',
+        `<p style="font-size:14px">${esc_(clean_(raisedBy) || 'An inspector')} has assigned you the following from a site inspection on ${esc_(CONFIG_PROJECT)}.</p>${list.map(actionCard_).join('')}`),
+      body: list.map(f => `${f.action} – due ${f.due || 'TBC'} – ${APP_URL}#actions/${encodeURIComponent(f.fid)}`).join('\n') });
+    return true;
+  } catch (e) { return false; }
+}
+const CONFIG_PROJECT = 'the YMT project';
 
 /* Close-out (anyone on the project, with their name) / verify, re-open, edit (Manager PIN). */
 function finding_(d) {
@@ -148,6 +188,9 @@ function finding_(d) {
     let link = '';
     if (d.photo) { try { link = folder_('PARRON – Evidence').createFile(Utilities.newBlob(Utilities.base64Decode(d.photo), 'image/jpeg', `${v[0]}_closeout.jpg`.replace(/[^\w.-]+/g, '_'))).getUrl(); } catch (e) { link = ''; } }
     set('Status', ST.closed); set('Closed at', now); set('Closed by', by); set('Close-out note', str_(d.note, 2000)); if (link) set('Evidence link', link);
+    try { MailApp.sendEmail({ to: TO, name: 'PARRON Site Inspections', subject: `Action closed out – please verify – ${str_(v[H['Corrective action']], 70)}`,
+      htmlBody: mailWrap_('Action closed out – ready to verify', 'CLOSE-OUT', `<p style="font-size:14px"><b>${esc_(by)}</b> closed out this action:</p><p style="font-size:14px;background:#F2F4F7;padding:10px">${esc_(d.note || '')}</p>${link ? `<p><a href="${link}">View evidence photo</a></p>` : ''}${actionCard_(findingOut_(v)).replace('Open in PARRON to close out', 'Open in PARRON to verify')}`),
+      body: `${by} closed out: ${v[H['Corrective action']]}\n${d.note || ''}` }); } catch (e) {}
   } else if (op === 'verify') {
     if (v[H.Status] !== ST.closed && v[H.Status] !== ST.spot) return out_({ ok: false, error: 'Close the action before verifying it' });
     set('Status', ST.verified); set('Verified at', now); set('Verified by', by);
@@ -156,6 +199,7 @@ function finding_(d) {
   } else if (op === 'edit') {
     if (d.owner != null) set('Owner', str_(d.owner, 120));
     if (d.due != null) set('Due', d.due ? "'" + str_(d.due, 10) : '');
+    if (d.ownerEmail != null) { const e = email_(d.ownerEmail); set('Owner email', e); if (e && notifyAssigned_(e, [findingOut_(v)], by)) set('Notified', now); }
   } else return out_({ ok: false, error: 'Unknown change' });
   set('Updated', now);
   hist.push({ at: now.toISOString(), by, op, note: str_(d.note || (op === 'edit' ? [d.owner != null ? 'Owner: ' + d.owner : '', d.due != null ? 'Due: ' + d.due : ''].filter(Boolean).join(', ') : ''), 500) });
@@ -163,14 +207,6 @@ function finding_(d) {
   ['No', 'Item', 'Inspection date', 'Due'].forEach(k => { const x = v[H[k]]; if (x !== '' && x != null) v[H[k]] = "'" + dstr_(x).replace(/^'/, ''); });   // keep "01", "1.1" and dates as text
   sh.getRange(row, 1, 1, FIND_HEAD.length).setValues([v]);
   return out_({ ok: true, finding: findingOut_(v) });
-}
-
-function myosh_(d) {
-  if (!pinOK_(d.pin)) return out_({ ok: false, error: 'Manager PIN needed' });
-  const sh = book_().getSheetByName('Sent'); const H = idx_(SENT_HEAD); const all = rows_(sh);
-  let hit = 0;
-  all.forEach((r, i) => { if (String(r[H['Report ID']]) === String(d.reportId)) { sh.getRange(i + 2, H['MYOSH ref'] + 1, 1, 3).setValues([[str_(d.ref, 60) || '(no ref)', new Date(), clean_(d.by)]]); hit++; } });
-  return out_(hit ? { ok: true } : { ok: false, error: 'Report not found in the log' });
 }
 
 function status_(d) {
@@ -203,8 +239,7 @@ function doGet(e) {
   const S = idx_(SENT_HEAD); const mk = v => Utilities.formatDate(new Date(v), TZ, 'yyyy-MM');
   const allSent = rows_(ss.getSheetByName('Sent')).filter(r => r[0]);
   const sentOut = r => ({ sentAt: iso_(r[0]), reportId: r[3], uid: r[4], name: r[5], no: no_(r[6]), title: r[7], location: r[8], ua: r[9], ni: r[10], snn: r[11], via: r[12],
-    c: r[S.C], na: r[S.NA], pct: r[S['Compliance %']], inspDate: dstr_(r[S['Inspection date']]), crew: r[S.Crew], supervisor: r[S.Supervisor], pdf: r[S['PDF link']],
-    myoshRef: r[S['MYOSH ref']], myoshAt: iso_(r[S['MYOSH entered']]), myoshBy: r[S['MYOSH by']] });
+    c: r[S.C], na: r[S.NA], pct: r[S['Compliance %']], inspDate: dstr_(r[S['Inspection date']]), crew: r[S.Crew], supervisor: r[S.Supervisor], pdf: r[S['PDF link']] });
   const sent = allSent.filter(r => mk(r[0]) === month).map(sentOut);
   const open = rows_(ss.getSheetByName('Status')).filter(r => r[7] === 'draft' || r[7] === 'outbox').map(r => ({
     name: r[1], no: no_(r[2]), title: r[3], location: r[4], started: iso_(r[5]), updated: iso_(r[6]), state: r[7] }));
@@ -214,8 +249,7 @@ function doGet(e) {
   const trend = months.map(k => { const L = allSent.filter(r => mk(r[0]) === k); const pc = L.map(r => r[S['Compliance %']]).filter(x => x !== '' && x != null);
     return { month: k, inspections: L.length, ua: sum_(L, 9), ni: sum_(L, 10), snn: sum_(L, 11), avgPct: pc.length ? Math.round(pc.reduce((a, b) => a + Number(b), 0) / pc.length) : null }; });
   const findings = rows_(ss.getSheetByName('Findings')).filter(r => r[0]).slice(-2500).map(findingOut_);
-  const myoshPending = allSent.filter(r => !r[S['MYOSH ref']] && r[3]).slice(-300).map(sentOut);
-  return out_({ ok: true, v: 3, month, sent, open, trend, findings, myoshPending, generated: new Date().toISOString() });
+  return out_({ ok: true, v: 3, month, sent, open, trend, findings, generated: new Date().toISOString() });
 }
 
 function findingOut_(r) {
@@ -225,6 +259,7 @@ function findingOut_(r) {
     cons: g('Consequence'), like: g('Likelihood'), score: g('Risk score'), level: g('Risk level'), finding: g('Finding'), action: g('Corrective action'),
     status: g('Status'), owner: g('Owner'), due: dstr_(g('Due')), closedAt: iso_(g('Closed at')), closedBy: g('Closed by'), note: g('Close-out note'),
     evidence: g('Evidence link'), verifiedAt: iso_(g('Verified at')), verifiedBy: g('Verified by'), updated: iso_(g('Updated')),
+    ownerEmail: g('Owner email') || '', notified: iso_(g('Notified')),
     history: (() => { try { return JSON.parse(g('History') || '[]'); } catch (e) { return []; } })() };
 }
 
@@ -239,7 +274,6 @@ function dailyDigest() {
   const F = rows_(ss.getSheetByName('Findings')).filter(r => r[0]).map(findingOut_);
   const overdue = F.filter(f => f.status === ST.open && f.due && f.due < today).sort((a, b) => a.due.localeCompare(b.due));
   const toVerify = F.filter(f => f.status === ST.closed);
-  const S = idx_(SENT_HEAD); const myosh = allSent.filter(r => r[3] && !r[S['MYOSH ref']]).length;
   const td = 'style="border:1px solid #D0D5DD;padding:6px 8px;font-size:13px"', th = 'style="background:#112B4E;color:#fff;padding:6px 8px;text-align:left;font-size:12px"';
   const t = (rows, cols) => rows.length ? `<table style="border-collapse:collapse;width:100%"><tr>${cols.map(c => `<th ${th}>${c}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(v => `<td ${td}>${esc_(v)}</td>`).join('')}</tr>`).join('')}</table>` : '<p style="font-size:13px">None.</p>';
   const fmt = v => Utilities.formatDate(new Date(v), TZ, 'dd/MM HH:mm');
@@ -249,12 +283,19 @@ function dailyDigest() {
   const tile = (n, l, c) => `<td style="padding:10px;text-align:center;border:1px solid #D0D5DD"><div style="font-size:22px;font-weight:700;color:${c}">${n}</div><div style="font-size:11px;color:#5B6675">${l}</div></td>`;
   const html = `<div style="font-family:Arial,sans-serif;color:#1B2430;max-width:820px">
     <div style="background:#112B4E;color:#fff;padding:12px 14px;border-bottom:4px solid #EC7723"><div style="font-size:12px;color:#EC7723;font-weight:700">PARRON | DAILY SUMMARY</div><div style="font-size:18px;font-weight:700">${Utilities.formatDate(now, TZ, 'EEEE d MMMM yyyy')}</div></div>
-    <table style="border-collapse:collapse;width:100%;margin:12px 0"><tr>${tile(sentToday.length, 'Sent today', '#2E7D32')}${tile(open.length, 'Not sent', '#C62828')}${tile(overdue.length, 'Actions overdue', '#C62828')}${tile(toVerify.length, 'Awaiting verification', '#E39A00')}${tile(myosh, 'Not yet in MYOSH', '#112B4E')}</tr></table>
+    <table style="border-collapse:collapse;width:100%;margin:12px 0"><tr>${tile(sentToday.length, 'Sent today', '#2E7D32')}${tile(open.length, 'Not sent', '#C62828')}${tile(overdue.length, 'Actions overdue', '#C62828')}${tile(toVerify.length, 'Awaiting verification', '#E39A00')}</tr></table>
     <h3 style="color:#C62828">Not sent – started today (${openToday.length})</h3>${t(openToday.map(r => [r[1], `${no_(r[2])} ${r[3]}`, r[4], fmt(r[5]), st(r[7])]), ['Name', 'Inspection', 'Location', 'Started', 'Status'])}
     <h3 style="color:#C62828">Still not sent – from earlier days (${openOlder.length})</h3>${t(openOlder.map(r => [r[1], `${no_(r[2])} ${r[3]}`, r[4], fmt(r[5]), st(r[7])]), ['Name', 'Inspection', 'Location', 'Started', 'Status'])}
     <h3 style="color:#C62828">Corrective actions overdue (${overdue.length})</h3>${t(overdue.map(f => [f.reportId + ' / ' + f.item, f.level || f.rating, f.action, f.owner || 'TBC', dmy(f.due)]), ['Finding', 'Risk', 'Corrective action', 'Owner', 'Due'])}
     <h3 style="color:#2E7D32">Sent today (${sentToday.length})</h3>${t(Object.keys(byName).sort().map(k => [k, byName[k].length, byName[k].join(', ')]), ['Name', 'Count', 'Inspections'])}
     <p style="font-size:12px;color:#5B6675">Full log: <a href="${ss.getUrl()}">PARRON – Inspection Log</a></p></div>`;
+  // reminders to each person with overdue actions (or actions due tomorrow)
+  const tomorrow = Utilities.formatDate(new Date(now.getTime() + 864e5), TZ, 'yyyy-MM-dd'); const rem = {};
+  F.filter(f => f.status === ST.open && f.ownerEmail && f.due && f.due <= tomorrow).forEach(f => { (rem[f.ownerEmail] = rem[f.ownerEmail] || []).push(f); });
+  Object.keys(rem).forEach(e => { const L = rem[e].sort((a, b) => a.due.localeCompare(b.due)); const late = L.filter(f => f.due < today).length;
+    try { MailApp.sendEmail({ to: e, replyTo: TO, name: 'PARRON Site Inspections', subject: late ? `Reminder: ${late} PARRON action${late > 1 ? 's' : ''} overdue` : `Reminder: PARRON action due tomorrow`,
+      htmlBody: mailWrap_(late ? `${late} action${late > 1 ? 's are' : ' is'} overdue` : 'Action due tomorrow', 'REMINDER', L.map(actionCard_).join('')),
+      body: L.map(f => `${f.action} – due ${f.due} – ${APP_URL}#actions/${encodeURIComponent(f.fid)}`).join('\n') }); } catch (err) {} });
   MailApp.sendEmail({ to: TO, subject: `PARRON daily summary ${Utilities.formatDate(now, TZ, 'dd/MM/yyyy')} – ${open.length} not sent, ${sentToday.length} sent, ${overdue.length} actions overdue`, htmlBody: html, body: 'Open in an HTML email client.', name: 'PARRON Site Inspections' });
 }
 

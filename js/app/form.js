@@ -23,7 +23,7 @@ function viewInsp(d){const t=tabByNum(d.tab);if(t.kind==="record")return viewRec
   if(t.image)h+=`<div class="card tgs"><div class="lock">${esc(t.imageTitle||"Reference")}</div><img src="${t.image}" alt="${esc(t.imageTitle||"")}" onclick="zoomImg(this.src,true)"><div class="muted" style="margin-top:6px">Tap the plan to enlarge.</div></div>`;
   t.sections.forEach(s=>{h+=`<div class="sec">${esc(s.name)}</div>`;s.q.forEach(q=>{h+=qHTML(d,q)})});
   h+=`<div class="sec">Other hazards identified</div><div id="others"></div>
-  <button class="addph" style="width:100%" onclick="addOther()">${ic("plus","s")} Add a hazard not covered above</button>`;
+  <button class="addph" style="width:100%" onclick="addOther()">${ic("plus","s")} Add a hazard not covered above</button>`+pplList();
   render(h);renderOthers();
   document.querySelectorAll("[data-d]").forEach(el=>el.addEventListener("input",()=>{d.details[el.dataset.d]=el.value;if(el.dataset.d==="inspector"&&!ls("inspector"))ls("inspector",el.value.trim());save(d)}));
   document.querySelectorAll("[data-x]").forEach(el=>el.addEventListener("input",()=>{d.details.extra[el.dataset.x]=el.value;save(d)}));
@@ -47,24 +47,30 @@ function ncHTML(kind,id,a){const k=`'${kind}','${id}'`;const rk=riskOf(a.cons,a.
   <label class="f">Closed at time of inspection? <span class="req">*</span></label>
   <div class="seg"><button class="${a.closed===true?"on":""}" onclick="setClosed(${k},true)">Yes – closed</button><button class="${a.closed===false?"on":""}" onclick="setClosed(${k},false)">No – open</button></div>
   ${a.closed===true?`<label class="f">Action taken on the spot <span class="req">*</span></label><textarea class="t" oninput="setF(${k},'taken',this.value)">${esc(a.taken||"")}</textarea>`:""}
-  ${a.closed===false?`<div class="grid2"><div><label class="f">Responsible person</label><input class="t" value="${esc(a.owner||"")}" oninput="setF(${k},'owner',this.value)" placeholder="Name"></div><div><label class="f">Due date${rk?` <span class="muted">· ${esc(rk.level)}: ${rk.days<=1?"immediate":rk.days+" days"}</span>`:""}</label><input class="t" type="date" value="${esc(a.due||"")}" oninput="setF(${k},'due',this.value)"></div></div>`:""}
+  ${a.closed===false?`<div class="grid2"><div><label class="f">Responsible person</label><input class="t" list="ppl" value="${esc(a.owner||"")}" oninput="setOwner(${k},this)" placeholder="Name" autocomplete="off"></div>
+   <div><label class="f">Their email <span class="muted">· emails them the action</span></label><input class="t own-em" type="email" inputmode="email" value="${esc(a.ownerEmail||"")}" oninput="setF(${k},'ownerEmail',this.value.trim())" placeholder="name@genus.com.au" autocomplete="off"></div>
+   <div><label class="f">Due date${rk?` <span class="muted">· ${esc(rk.level)}: ${rk.days<1?"immediate":rk.days+" days"}</span>`:""}</label><input class="t" type="date" value="${esc(a.due||"")}" oninput="setF(${k},'due',this.value)"></div></div>`:""}
   <label class="f">Photos (optional)</label>${(a.photos||[]).length?`<div class="photos">${(a.photos||[]).map((p,i)=>`<div class="ph"><img src="${p}" onclick="zoomImg(this.src)" alt="Photo ${i+1}"><button onclick="delPhoto(${k},${i})" aria-label="Remove photo">${ic("x")}</button></div>`).join("")}</div>`:""}
   ${photoBtns(k)}</div>`}
 function riskHTML(kind,id,a){const kk=`'${kind}','${id}'`;const k=riskOf(a.cons,a.like);
-  const scale=(f,list)=>`<div class="rscale" role="group">${list.map(([v,l])=>`<button class="${+a[f]===v?"on":""}" aria-pressed="${+a[f]===v}" title="${esc(l)}" onclick="setRisk(${kk},'${f}',${v})"><b>${v}</b><span class="rl">${esc(l)}</span></button>`).join("")}</div>`;
+  const scale=(f,list)=>`<div class="rscale" role="group">${list.map(([v,l])=>`<button class="${+a[f]===v?"on":""}" aria-pressed="${+a[f]===v}" onclick="setRisk(${kk},'${f}',${v})">${esc(l)}</button>`).join("")}</div>`;
   const desc=(f,list)=>{const x=list.find(x=>x[0]===+a[f]);return x?`<div class="rresp"><b>${esc(x[1])}</b> – ${esc(x[2])}</div>`:""};
   return `<div class="riskbox"><div class="rh"><b>${ic("gauge","s")} Risk rating <span class="req">*</span></b>${riskChip(a.cons,a.like)}</div>
    <div class="rlab">Consequence – worst credible outcome</div>${scale("cons",RISK.consequence)}${desc("cons",RISK.consequence)}
    <div class="rlab">Likelihood</div>${scale("like",RISK.likelihood)}${desc("like",RISK.likelihood)}
    ${k?`<div class="rresp" style="color:var(--ink)">${ic("info","s")} ${esc(k.response)}</div>`:""}
    <button class="linkbtn" onclick="showMatrix(${+a.cons||0},${+a.like||0})">${ic("layers","s")} View risk matrix</button></div>`}
+function setOwner(kind,id,el){const a=getA(kind,id);a.owner=el.value;const em=contacts()[el.value.trim()];
+  if(em&&!a.ownerEmail){a.ownerEmail=em;const e=el.closest(".grid2").querySelector(".own-em");if(e)e.value=em}save(CUR);renderBar(CUR)}
+function pplList(){return `<datalist id="ppl">${Object.keys(contacts()).sort().map(n=>`<option value="${esc(n)}">`).join("")}</datalist>`}
 function setRisk(kind,id,f,v){const a=getA(kind,id);a[f]=v;const k=riskOf(a.cons,a.like);
   if(k&&a.closed===false&&!a.due)a.due=addDaysISO(Math.max(0,k.days));
   save(CUR);kind==="q"?refreshQ(id):renderOthers()}
-function showMatrix(c,l){const head=`<div class="h"></div>${RISK.likelihood.map(x=>`<div class="h">${x[0]}<br>${esc(x[1])}</div>`).join("")}`;
-  const rows=RISK.consequence.slice().reverse().map(([cv,cl])=>`<div class="h" style="text-align:right;padding-right:6px">${cv} ${esc(cl)}</div>${RISK.likelihood.map(([lv])=>{const k=riskOf(cv,lv);return `<div class="${cv===c&&lv===l?"sel":""}" style="background:${k.color}">${k.score}</div>`}).join("")}`).join("");
-  sheet(`<h3>Risk matrix</h3><p class="muted">Consequence (rows) × likelihood (columns).</p><div class="matrix">${head}${rows}</div>
-   <div style="margin-top:14px">${RISK.levels.map(x=>`<div class="set"><span class="risk" style="--rc:${x.color}">${esc(x.key)}</span><div><span>${esc(x.response)}</span></div></div>`).join("")}</div>`)}
+function showMatrix(c,l){const cell=(lv,cv)=>{const k=riskOf(cv,lv);return `<div class="${cv===c&&lv===l?"sel":""}" style="background:${k.color};color:${k.ink}">${esc(k.level)} ${k.score}</div>`};
+  const head=`<div class="h"></div>${RISK.consequence.map(x=>`<div class="h">${esc(x[1])}</div>`).join("")}`;
+  const rows=RISK.likelihood.slice().reverse().map(([lv,ll])=>`<div class="h rl2">${esc(ll)}</div>${RISK.consequence.map(([cv])=>cell(lv,cv)).join("")}`).join("");
+  sheet(`<h3>Genus Risk Matrix</h3><p class="muted">Likelihood (rows) × consequence (columns), as printed on Genus JHAs.</p><div class="matrix">${head}${rows}</div>
+   <h2 style="margin-top:18px">Risk actions</h2>${RISK.levels.slice().reverse().map(x=>`<div class="set"><span class="risk" style="--rc:${x.color};--ri:${x.ink}">${esc(x.key)}</span><div><span>${esc(x.response)}</span></div></div>`).join("")}`,{wide:true})}
 function photoBtns(k){return `<div class="pbtns" style="margin-top:8px"><label class="addph">${ic("camera","s")} Take photo<input type="file" accept="image/*" capture="environment" class="hide" onchange="addPhoto(${k},this,'camera')"></label><label class="addph">${ic("image","s")} Upload<input type="file" accept="image/*" class="hide" onchange="addPhoto(${k},this,'upload')"></label></div>`}
 function addOther(){CUR.others.push({title:"",r:"NI",snn:[],photos:[]});save(CUR);renderOthers();renderBar(CUR)}
 function renderOthers(){const box=$("#others");if(!box)return;box.innerHTML=CUR.others.map((o,i)=>`<div class="q r-${o.r||"NI"}"><div class="head"><div class="id">X${i+1}</div><div class="txt"><input class="t" placeholder="Short description of the hazard" value="${esc(o.title||"")}" oninput="setF('o','${i}','title',this.value)"></div></div>
@@ -166,7 +172,7 @@ function viewReview(d){const t=tabByNum(d.tab);setHeader("Review & send",`${pad(
   if(!s.ncs.length)h+=`<div class="card empty">${ic("circlecheck")}<b>No non-compliances recorded</b>Nice work – everything inspected met the standard.</div>`;
   s.ncs.forEach(n=>{h+=`<div class="card ncsum ${n.r==="UA"?"ua":""}"><div class="libmeta" style="margin:0 0 6px"><span class="pill ${n.r==="UA"?"ua":"ni"}">${n.r}</span><b style="align-self:center">${esc(n.id)}</b>${riskChip(n.cons,n.like)}${n.snn.map(c=>snnBadge(c,1)).join("")}</div><div>${esc(n.text)}</div>
    <dl class="kv"><dt>Finding</dt><dd>${esc(n.finding||"—")}</dd><dt>Corrective action</dt><dd>${esc(n.action||"—")}</dd>
-   <dt>Status</dt><dd>${n.closed===true?`<span class="pill spot">Closed at inspection</span> ${esc(n.taken||"")}`:n.closed===false?`<span class="pill open">Open</span>${n.owner?` ${esc(n.owner)}`:""}${n.due?` · due ${fmtD(n.due)}`:""}`:"—"}</dd></dl>
+   <dt>Status</dt><dd>${n.closed===true?`<span class="pill spot">Closed at inspection</span> ${esc(n.taken||"")}`:n.closed===false?`<span class="pill open">Open</span>${n.owner?` ${esc(n.owner)}`:""}${n.ownerEmail?` <span class="muted">(${esc(n.ownerEmail)} – will be emailed)</span>`:""}${n.due?` · due ${fmtD(n.due)}`:""}`:"—"}</dd></dl>
    ${n.photos.length?`<div class="photos">${n.photos.map(u=>`<div class="ph"><img src="${u}" onclick="zoomImg(this.src)" alt=""></div>`).join("")}</div>`:""}</div>`});
   if(s.ncs.some(n=>n.closed===false))h+=`<div class="alert blue">${ic("actions")}<div>Open items go onto the project <b>Action register</b> when sent, so they can be tracked to close-out and verified.</div></div>`;
   }else if(p.length)h+=`<div class="alert red">${ic("alert")}<div><b>Not ready to send</b><ul>${p.map(x=>`<li>${esc(x)}</li>`).join("")}</ul><button class="btn s" style="margin-top:10px" onclick="go('#insp/${d.id}')">${ic("back","s")} Back to record</button></div></div>`;
