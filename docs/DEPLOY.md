@@ -66,9 +66,12 @@ Each person picks their own name the first time they open PARRON (*Settings → 
 
 ## Fire Danger Rating on the home screen
 
-The relay reads the official rating from the Bureau of Meteorology's fire-district forecasts and caches it for 30 minutes.
-- In the app (Manager mode) tap the **Fire Danger** box on the home screen → choose the correct **Bureau of Meteorology district**
-  for Badgingarra → **Save for everyone**. This only needs doing once.
-- If the Bureau can't be read, or on a day you need to override it, choose **Set today's rating** in the same panel. A manual
-  rating applies to everyone for the rest of that day.
+The rating comes from the Bureau of Meteorology's public fire weather district forecast (product IDW15100).
+A GitHub Action (`.github/workflows/fdr.yml`) downloads it every 30 minutes and publishes `fdr.json` on the
+`fdr-data` branch; phones read it from there. No Google script change is needed for this.
+- The district is set in `js/app/config.js` (`SITE.fdrDistrict`, currently **Watheroo** – Badgingarra / Shire of Dandaragan).
+- To override for a day (Manager mode): tap the **Fire Danger** box → **Set today's rating** → **Save for everyone**.
+  Choose **– use the Bureau of Meteorology –** to go back to the official rating.
+- GitHub pauses scheduled Actions after 60 days with no repository activity. If the rating stops updating, open
+  **Actions → Fire Danger Rating feed → Enable workflow / Run workflow**.
 - Always confirm Total Fire Bans (DFES) and Harvest & Vehicle Movement Bans (Shire of Dandaragan) at pre-start.

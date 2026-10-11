@@ -15,9 +15,20 @@ async function wxRefresh(force){const W=lsJ("wx",null);if(!force&&W&&Date.now()-
     const r=await fetch(u);if(!r.ok)throw new Error("weather "+r.status);const j=await r.json();
     ls("wx",JSON.stringify({at:Date.now(),date:todayISO(),cur:j.current,day:{max:j.daily.temperature_2m_max[0],min:j.daily.temperature_2m_min[0],rain:j.daily.precipitation_probability_max[0],wind:j.daily.wind_speed_10m_max[0],gust:j.daily.wind_gusts_10m_max[0],dir:j.daily.wind_direction_10m_dominant[0],code:j.daily.weather_code[0]}}));return true}
   catch(e){console.warn(e);return false}}
-async function fdrRefresh(force){const F=lsJ("fdr",null);if(!force&&F&&Date.now()-F.at<20*60e3)return false;if(!directOn()||navigator.onLine===false||!v3())return false;
-  try{const r=await fetch(`${RELAY.url}?action=weather&key=${encodeURIComponent(RELAY.key)}`,{redirect:"follow"});const j=await r.json();if(!j.ok)throw new Error(j.error);
-    ls("fdr",JSON.stringify({at:Date.now(),date:todayISO(),...j.fdr}));return true}catch(e){console.warn(e);return false}}
+function isoPlus(n){const d=new Date();d.setDate(d.getDate()+n);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+/* Rating for the site's district from the BoM feed (by date, so an overnight forecast still shows the right day) */
+function fdrFromFeed(feed,want){const D=(feed&&feed.districts)||{};const name=D[want]?want:D[SITE.fdrDistrict]?SITE.fdrDistrict:"";if(!name)return null;
+  const on=iso=>(D[name].find(x=>x.date===iso)||{}).rating||"";
+  return{today:on(todayISO()),tomorrow:on(isoPlus(1)),area:name,areas:Object.keys(D).sort(),issued:feed.issued||"",source:"Bureau of Meteorology"}}
+async function fdrRefresh(force){const F=lsJ("fdr",null);if(!force&&F&&F.date===todayISO()&&Date.now()-F.at<20*60e3)return false;if(navigator.onLine===false)return false;
+  // the relay holds the SHE Manager's manual rating and district choice; the feed holds the official ratings
+  const rel=(directOn()&&v3())?fetch(`${RELAY.url}?action=weather&key=${encodeURIComponent(RELAY.key)}`,{redirect:"follow"}).then(r=>r.json()).then(j=>j.ok?j.fdr:null).catch(()=>null):Promise.resolve(null);
+  const feed=fetch(FDR_FEED,{cache:"no-cache"}).then(r=>r.ok?r.json():null).catch(()=>null);
+  const [R,B]=await Promise.all([rel,feed]);if(!R&&!B)return false;
+  let out=R&&R.manual?R:fdrFromFeed(B,R&&R.want)||(R&&R.today?R:null);
+  if(!out){if(F&&F.date===todayISO())return false;out={today:"",tomorrow:"",area:"",areas:[],source:""}}
+  if(R&&R.manual&&!out.areas){const f=fdrFromFeed(B,R.want);if(f)out={...out,areas:f.areas,area:out.area||f.area,tomorrow:out.tomorrow||f.tomorrow}}
+  ls("fdr",JSON.stringify({at:Date.now(),date:todayISO(),...out,canPick:!!(R&&"want" in R)}));return true}
 function wxHTML(){const W=lsJ("wx",null),F=lsJ("fdr",null);const fresh=F&&F.date===todayISO();const rating=fresh?fdrNorm(F.today):"";const col=FDR_COL[rating];
   const fdr=`<button class="fdr" style="${col?`--fb:${col[0]};--fi:${col[1]}`:""}" onclick="fdrInfo()" aria-label="Fire danger rating">
     <span class="fl">FIRE DANGER</span><b>${esc(rating||(F&&F.today?fdrNorm(F.today):"Check FDR"))}</b>${fresh&&F.tomorrow?`<span class="ft">Tomorrow: ${esc(fdrNorm(F.tomorrow))}</span>`:`<span class="ft">${fresh?esc(F.area||""):"Tap for details"}</span>`}</button>`;
@@ -33,8 +44,8 @@ function fdrInfo(){const F=lsJ("fdr",null);const fresh=F&&F.date===todayISO();co
    <p class="muted">Always confirm Total Fire Bans (DFES) and Harvest & Vehicle Movement Bans (Shire of Dandaragan) at pre-start.</p>
    <div class="row2"><a class="btn g" href="https://www.emergency.wa.gov.au/" target="_blank" rel="noopener">${ic("ext","s")} Emergency WA</a><a class="btn g" href="https://www.bom.gov.au/wa/forecasts/fire-danger.shtml" target="_blank" rel="noopener">${ic("ext","s")} BoM ratings</a></div>
    ${isManager()?`<h2 style="margin-top:18px">SHE Manager</h2><label class="f" for="fdrSet">Set today's rating</label><select class="t" id="fdrSet"><option value="">– use the Bureau of Meteorology –</option>${Object.keys(FDR_COL).map(k=>`<option ${F&&F.manual&&r===k?"selected":""}>${k}</option>`).join("")}</select>
-     ${fresh&&(F.areas||[]).length?`<label class="f" for="fdrArea">Bureau of Meteorology district</label><select class="t" id="fdrArea">${F.areas.map(a=>`<option ${a===F.area?"selected":""}>${esc(a)}</option>`).join("")}</select>`:""}
+     ${fresh&&F.canPick&&(F.areas||[]).length?`<label class="f" for="fdrArea">Bureau of Meteorology district</label><select class="t" id="fdrArea">${F.areas.map(a=>`<option ${a===F.area?"selected":""}>${esc(a)}</option>`).join("")}</select>`:""}
      <button class="btn o w" onclick="fdrSave()">${ic("check","s")} Save for everyone</button>`:""}`)}
 async function fdrSave(){const rating=$("#fdrSet").value;const a=$("#fdrArea");const body={action:"fdr",rating,by:ls("inspector")||"SHE Manager",pin:ls("mgrPin")||""};if(a)body.area=a.value;
-  try{const r=await relayPost({payload:body},false);if(!r||!r.ok){toast((r&&r.error)||"Not saved",4000);return}ls("fdr",JSON.stringify({at:Date.now(),date:todayISO(),...r.fdr}));closeSheet();toast("Fire danger rating updated");if((location.hash||"#home")==="#home")viewHome()}
+  try{const r=await relayPost({payload:body},false);if(!r||!r.ok){toast((r&&r.error)||"Not saved",4000);return}closeSheet();await fdrRefresh(true);toast("Fire danger rating updated");if((location.hash||"#home")==="#home")viewHome()}
   catch(e){toast("No connection – try again with signal",4000)}}

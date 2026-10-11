@@ -20,10 +20,12 @@ const srv = http.createServer((req, res) => {
   res.writeHead(200, { "content-type": types[path.extname(f)] || "application/octet-stream" }); fs.createReadStream(f).pipe(res);
 }).listen(0);
 const port = srv.address().port;
-const BOM_XML = `<?xml version="1.0"?><product><amoc><issue-time-local tz="WST">2026-10-12T05:00:00+08:00</issue-time-local></amoc><forecast>
-<area aac="WA_FW007" description="Central West Inland" type="fire-district"><forecast-period index="0"><text type="fire_danger">High</text></forecast-period><forecast-period index="1"><text type="fire_danger">Extreme</text></forecast-period></area>
-<area aac="WA_FW010" description="Lower West Inland" type="fire-district"><forecast-period index="0"><text type="fire_danger">Moderate</text></forecast-period></area></forecast></product>`;
-const relay = createRelay({ pin: "2468", fetch: url => /IDW14199/.test(url) ? { body: BOM_XML } : null });
+// Google's servers are refused by the BoM, so the relay finds nothing; the app reads the GitHub feed instead
+const relay = createRelay({ pin: "2468", fetch: () => null });
+const perth = n => new Date(Date.now() + 8 * 3600e3 + n * 864e5).toISOString().slice(0, 10);
+const FEED = { source: "Bureau of Meteorology", issued: perth(0) + "T04:35:00+08:00", districts: {
+  Watheroo: [{ date: perth(-1), rating: "Moderate" }, { date: perth(0), rating: "High", fbi: 31 }, { date: perth(1), rating: "Extreme", fbi: 55 }],
+  Lesueur: [{ date: perth(0), rating: "Moderate" }] } };
 const WX = { current: { temperature_2m: 27.4, relative_humidity_2m: 22, wind_speed_10m: 24, wind_direction_10m: 112, wind_gusts_10m: 41, weather_code: 1 },
   daily: { temperature_2m_max: [33.1, 30], temperature_2m_min: [14.2, 13], precipitation_probability_max: [10, 0], wind_speed_10m_max: [31, 20], wind_gusts_10m_max: [52, 30], wind_direction_10m_dominant: [100, 200], weather_code: [1, 0] } };
 const errors = [];
@@ -32,6 +34,7 @@ const browser = await chromium.launch();
 async function newPage(opts = {}) {
   const ctx = await browser.newContext({ viewport: opts.viewport || { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: "block", timezoneId: "Australia/Perth", locale: "en-AU", colorScheme: opts.dark ? "dark" : "light", acceptDownloads: true });
   await ctx.route(/api\.open-meteo\.com/, route => route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify(WX) }));
+  await ctx.route(/raw\.githubusercontent\.com\/.*fdr\.json/, route => route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify(FEED) }));
   await ctx.route(/script\.google(usercontent)?\.com/, async route => {
     const r = route.request(); const url = new URL(r.url());
     const body = r.method() === "POST" ? relay.post(JSON.parse(r.postData() || "{}")) : relay.get(Object.fromEntries(url.searchParams));
@@ -191,11 +194,12 @@ await step("home shows Badgingarra weather and the official FDR; manager can ove
   for (const want of ["High", "Tomorrow: Extreme", "27°", "ESE 24 km/h", "gusts 41", "10% rain", "Badgingarra"]) if (!t.includes(want)) throw new Error("weather strip missing " + want + ": " + t);
   await page.evaluate(() => window.scrollTo(0, 0)); await settle(page); await shot(page, "17-home-weather");
   await page.click(".fdr"); await page.waitForSelector(".fdrbig"); const info = await page.textContent(".sheet");
-  if (!/Central West Inland/.test(info) || !/Be ready to act/.test(info)) throw new Error("FDR details: " + info.slice(0, 200));
+  if (!/Watheroo/.test(info) || !/Bureau of Meteorology/.test(info) || !/Be ready to act/.test(info)) throw new Error("FDR details: " + info.slice(0, 200));
   await settle(page); await shot(page, "18-fdr-details");
   await page.selectOption("#fdrSet", "Extreme"); await page.click("text=Save for everyone"); await page.waitForFunction(() => /Extreme/.test(document.querySelector(".fdr").textContent), null, { timeout: 10000 });
   if (relay.get({ action: "weather", key: relay.key }).fdr.today !== "Extreme") throw new Error("manual FDR not stored");
-  await page.evaluate(async () => { await relayPost({ payload: { action: "fdr", rating: "", by: "test", pin: "2468" } }, false); });
+  await page.click(".fdr"); await page.waitForSelector("#fdrSet"); await page.selectOption("#fdrSet", ""); await page.click("text=Save for everyone");
+  await page.waitForFunction(() => /High/.test(document.querySelector(".fdr").textContent), null, { timeout: 10000 });
 });
 await step("quick hazard report (Critical) goes to the register and alerts", async () => {
   const before = relay.mail.length;
