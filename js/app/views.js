@@ -13,11 +13,12 @@ async function route(){const seq=++ROUTE_SEQ;const h=location.hash||"#home";cons
   CUR=null;
   if(v==="settings")return viewSettings();
   if(v==="dash"||v==="insights")return viewDash();
+  if(v==="myday")return viewMyDay();
   if(v==="inspections")return viewInspections();
   if(v==="report")return viewReport(id||"hazard");
   if(v==="actions")return viewActions(id?decodeURIComponent(id):"");
   return viewHome()}
-function setNav(v){const m={home:"home","":"home",inspections:"home",insights:"insights",dash:"insights",actions:"actions"};const k=m[v]||"";
+function setNav(v){const m={home:"home","":"home",inspections:"home",myday:"home",insights:"insights",dash:"insights",actions:"actions"};const k=m[v]||"";
   document.querySelectorAll("#tabs a").forEach(a=>{const on=a.dataset.t===k;a.classList.toggle("on",on);if(on)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
 function setHeader(title,sub,btn){$("#hTitle").textContent=title;$("#hSub").textContent=sub;const b=$("#hBtn");
   if(btn){b.innerHTML=(btn.icon?ic(btn.icon):"")+(btn.label?`<span>${esc(btn.label)}</span>`:"");b.setAttribute("aria-label",btn.aria||btn.label||"");b.onclick=btn.fn;b.classList.remove("hide")}else b.classList.add("hide")}
@@ -40,12 +41,13 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
    <button onclick="go('#actions')" class="${mine.length?"warn":""}"><b>${mine.length}</b><span>My actions</span></button>
    <button onclick="ACTF.f='overdue';go('#actions')" class="${st.overdue?"bad":""}"><b>${st.overdue}</b><span>Overdue</span></button>
    <button onclick="go('#insights')"><b>${sentMonth}</b><span>This month</span></button></div></section>`;
-  h+=`<div class="tiles">
+  {const n=mdTodayCount();h+=`<div class="tiles">
+   <button class="tile wide myday" onclick="go('#myday')"><span class="ti">${ic("cal","l")}</span><span class="tw"><b>My Day ${ic("lock","s")}</b><small>${n?`${n} to do today`:"Plan your day"} · private to you</small></span>${ic("chev")}</button>
    <button class="tile wide" onclick="go('#inspections')"><span class="ti" style="background:var(--info-soft);color:var(--info)">${ic("clipboard","l")}</span><span class="tw"><b>Inspection</b><small>${LIB_TABS().length} forms · browse by category</small></span>${ic("chev")}</button>
    <button class="tile" onclick="startInsp(24)"><span class="ti" style="background:var(--accent-soft);color:var(--accent)">${ic("eye","l")}</span><b>Task Observation</b><span>Observe a crew</span></button>
    <button class="tile" onclick="startInsp(23)"><span class="ti" style="background:#EEE8FB;color:#6B47C9">${ic("users","l")}</span><b>Mentoring</b><span>Discussion record</span></button>
    <button class="tile" onclick="go('#report/hazard')"><span class="ti" style="background:var(--ua-soft);color:var(--ua)">${ic("alert","l")}</span><b>Hazard</b><span>Quick report</span></button>
-   <button class="tile" onclick="go('#report/positive')"><span class="ti" style="background:var(--c-soft);color:var(--c)">${ic("star","l")}</span><b>Positive</b><span>Observation</span></button></div>`;
+   <button class="tile" onclick="go('#report/positive')"><span class="ti" style="background:var(--c-soft);color:var(--c)">${ic("star","l")}</span><b>Positive</b><span>Observation</span></button></div>`;}
   if(ob.length)h+=`<div class="outbox">${ic("inbox")}<div><b>Outbox – ${ob.length} report${ob.length>1?"s":""} waiting to send</b><div class="muted" style="margin:4px 0 8px">${ob.map(o=>`${esc(o.title)} · ${esc(o.location)}`).join("<br>")}<br>They send automatically when the phone has signal${ob[0].lastError?` (last try: ${esc(ob[0].lastError)})`:""}.</div><button class="btn o s" onclick="flushOutbox(true)">${ic("send","s")} Send now</button></div></div>`;
   {const sod=new Date();sod.setHours(0,0,0,0);const stale=drafts.filter(d=>d.created<sod.getTime());
    if(stale.length)h+=`<div class="alert red">${ic("clock")}<div><b>${stale.length} unsent inspection${stale.length>1?"s":""} started before today.</b> Finish and send ${stale.length>1?"them":"it"} – or delete if no longer needed.</div></div>`}
@@ -138,5 +140,5 @@ function mgrOff(){lsDel("mgrPin");toast("Manager mode off");updateBadges();viewS
 async function testRelay(){toast("Testing…",1500);const v=await relayVersion(true);
   try{const r=await fetch(RELAY.url,{redirect:"follow"});const j=await r.json();toast(j.ok?`Connected · relay v${v} · ${j.emailsLeftToday} emails left today`:"Relay replied with an error",5000)}catch(e){toast("Could not reach the relay – check signal",4000)}
   if(location.hash==="#settings")viewSettings()}
-async function backupData(){const data={app:"PARRON",v:CONFIG.appVersion,at:new Date().toISOString(),inspector:ls("inspector"),drafts:await dbAll("drafts"),sent:await dbAll("sent"),outbox:(await dbAll("outbox")).map(o=>({...o,payload:{...o.payload,pdf:undefined}}))};
+async function backupData(){const data={app:"PARRON",v:CONFIG.appVersion,at:new Date().toISOString(),inspector:ls("inspector"),myDay:mdLoad(),drafts:await dbAll("drafts"),sent:await dbAll("sent"),outbox:(await dbAll("outbox")).map(o=>({...o,payload:{...o.payload,pdf:undefined}}))};
   downloadBlob(new Blob([JSON.stringify(data)],{type:"application/json"}),`PARRON-backup-${todayISO()}.json`);toast("Backup saved")}
