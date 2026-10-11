@@ -7,4 +7,11 @@ openDB().then(async()=>{setNet();await loadLocalSent();updateBadges();await rout
 window.addEventListener("online",()=>{flushOutbox();flushUpdates()});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden){flushOutbox();flushUpdates()}});
 setInterval(()=>{if(navigator.onLine!==false){flushOutbox();flushUpdates()}},90000);
-if("serviceWorker" in navigator && location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  const had=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(reg=>{document.addEventListener("visibilitychange",()=>{if(!document.hidden)reg.update().catch(()=>{})})}).catch(()=>{});
+  // a new version has taken over: reload once so the screen shows it (but never in the middle of a form)
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!had||window._reloading)return;
+    if(/^#(insp|review|report)/.test(location.hash)){toast("PARRON has been updated – it will refresh when you finish this form",5000);window._pendingReload=true;return}
+    window._reloading=true;location.reload()});
+  window.addEventListener("hashchange",()=>{if(window._pendingReload&&!/^#(insp|review|report)/.test(location.hash)){window._pendingReload=false;window._reloading=true;location.reload()}})}
