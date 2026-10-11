@@ -1,6 +1,17 @@
-const C="ymt-insp-v1.8";
-const FILES=["./","./index.html","./manifest.webmanifest","./config.json","./icon-192.png","./icon-512.png"];
-self.addEventListener("install",e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(FILES)));self.skipWaiting()});
-self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))));self.clients.claim()});
-self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;
- e.respondWith(fetch(e.request).then(r=>{const cp=r.clone();caches.open(C).then(c=>c.put(e.request,cp));return r}).catch(()=>caches.match(e.request,{ignoreSearch:true}).then(r=>r||caches.match("./index.html"))))});
+/* PARRON service worker – network first, falls back to the cached copy so the app works with no signal. */
+const C = "parron-v2.0.0";
+const FILES = [
+  "./", "./index.html", "./manifest.webmanifest", "./config.json", "./icon-192.png", "./icon-512.png",
+  "./css/app.css", "./assets/logo.png",
+  "./js/vendor/jspdf.umd.min.js", "./js/vendor/jspdf.plugin.autotable.min.js",
+  "./js/data/assets.js", "./js/data/templates.js",
+  "./js/app/config.js", "./js/app/core.js", "./js/app/model.js", "./js/app/views.js", "./js/app/report.js",
+  "./js/app/dashboard.js", "./js/app/records.js", "./js/app/pdf.js", "./js/app/send.js", "./js/app/voice.js", "./js/app/boot.js"
+];
+self.addEventListener("install", e => { e.waitUntil(caches.open(C).then(c => c.addAll(FILES))); self.skipWaiting(); });
+self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== C).map(x => caches.delete(x))))); self.clients.claim(); });
+self.addEventListener("fetch", e => {
+  if (e.request.method !== "GET" || !e.request.url.startsWith(self.location.origin)) return;
+  e.respondWith(fetch(e.request).then(r => { if (r.ok) { const cp = r.clone(); caches.open(C).then(c => c.put(e.request, cp)); } return r; })
+    .catch(() => caches.match(e.request, { ignoreSearch: true }).then(r => r || caches.match("./index.html"))));
+});
