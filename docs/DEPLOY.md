@@ -1,0 +1,55 @@
+# Deploying PARRON v2.0
+
+PARRON has two parts. Both are owned at project level – no Genus IT involvement is needed.
+
+| Part | Where it lives | How it updates |
+|---|---|---|
+| **App** (screens, PDFs, forms) | This GitHub repository, published by GitHub Pages | Merge to `main` – phones update automatically next time they open the app with signal |
+| **Relay** (email, project log, PDF archive) | Google Apps Script, in the Google account that set it up | Paste the new code and redeploy (steps below) |
+
+The v2.0 app works with the **old v2 relay**: inspections still send and email exactly as before.
+The shared Action register, MYOSH queue, Insights charts and Manager mode switch on once the relay is updated to v3.
+
+---
+
+## 1. Update the relay to v3 (about 5 minutes)
+
+1. Open the existing Apps Script project (script.google.com → *PARRON relay*).
+2. Select all the code in `Code.gs` and replace it with the contents of **`PARRON_Relay_Code.gs`** from this repository. **Save**.
+3. In the toolbar choose the function **`setup`** and click **Run**.
+   - Google asks for permission again because v3 adds **Google Drive** (PDF archive and close-out photos). Approve it.
+   - `setup` adds the new *Findings* sheet and columns to the existing log – **no data is lost** – and emails a confirmation.
+4. **Set the Manager PIN:** ⚙ **Project Settings** (left bar) → **Script properties** → **Add script property**
+   - Property: `MANAGER_PIN`  Value: a 4–8 digit PIN known only to the SHE Manager → **Save**.
+   - The PIN is never stored in the code or on GitHub.
+5. **Deploy → Manage deployments → ✏ Edit → Version: New version → Deploy.**
+   The web app link stays the same, so `config.json` does not change.
+6. In the app: **Settings → Connection → Test connection** should show *relay v3*.
+7. On the SHE Manager's phone: **Settings → Manager mode** → enter the PIN → **Turn on**.
+
+## 2. Publish the app
+
+1. Merge the pull request into `main`.
+2. GitHub Pages republishes within a minute or two (repository **Settings → Pages** shows the live link).
+3. Phones pick up the new version the next time PARRON is opened with signal (the offline cache version is `parron-v2.0.0` in `sw.js`).
+
+Drafts, the Outbox and sent history already on phones are kept – the storage format is unchanged.
+
+## 3. Check it works
+
+- Start any inspection, record one NI with a risk rating, sign and send.
+- The report email arrives with the PDF; the finding appears under **Actions**; the report appears under **MYOSH**.
+- **Insights → Monthly report** builds the monthly PDF.
+
+---
+
+## Security notes
+
+- The repository is public (required for free GitHub Pages), so anything in it – including the app key in
+  `config.json` – is visible. The key only allows sending reports and status updates; it cannot read
+  email or change settings.
+- Verifying / re-opening actions and recording MYOSH references need the **Manager PIN**, checked by the relay.
+  Ten wrong attempts lock the PIN for 15 minutes.
+- The relay rejects oversized payloads, rate-limits requests and only emails `@genus.com.au` addresses.
+- The Google Sheet, PDF archive and evidence photos are private to the Google account that runs the relay.
+- To change the app key: edit `KEY` in the relay *and* `key` in `config.json`, then redeploy both.
