@@ -6,8 +6,8 @@ const SRC = window.SpeechRecognition || window.webkitSpeechRecognition;
 const V = { on:false, gen:0, speak: ls("voiceSpeak")!=="0", step:null, tap:null, hearFinish:null, cur:{finals:[],interim:""}, noMic:false, noMicWhy:"", pre:"", photoBusy:false, lastErr:null };
 function voiceSupported(){ return !!SRC }
 function voiceCardHTML(kind){
-  if(!voiceSupported()) return `<div class="vcard off"><div><b>🎙 Voice mode</b><span>Not available in this browser. You can still tap the microphone on your phone keyboard in any text box.</span></div></div>`;
-  return `<div class="vcard"><div><b>🎙 Voice mode <em>TRIAL</em></b><span>${kind==="record"
+  if(!voiceSupported()) return `<div class="vcard off">${ic("mic")}<div><b>Voice mode</b><span>Not available in this browser. You can still tap the microphone on your phone keyboard in any text box.</span></div></div>`;
+  return `<div class="vcard">${ic("mic")}<div><b>Voice mode <em>TRIAL</em></b><span>${kind==="record"
     ? "PARRON asks each section out loud and types what you say into the right place. Start a sentence with “action” to add an action."
     : "PARRON reads each question out loud and fills in your answers. Say “compliant”, “needs improvement”, “unacceptable” or “not applicable”."} You review everything before you sign.</span></div><button class="btn o" onclick="voiceStart()">Start</button></div>`;
 }
@@ -83,6 +83,12 @@ function parseYesNo(t){ const s=norm(t);
   const m=/^ (yes|yeah|yep|yup|yes please|correct|affirmative|sure|definitely|it was|it is|closed|all closed|done)(?= )/.exec(s);
   if(m){ const rest=s.slice(m[0].length).trim().replace(/^(and|so|there is|there's|we have|we've got)\s+/,""); return {val:true,text:cap(rest)} }
   return null }
+function parseScale(t,list){ const s=norm(t); const W={one:1,two:2,three:3,four:4,five:5,won:1,to:2,too:2,for:4};
+  for(const [v,l] of list){ if(s.includes(" "+l.toLowerCase()+" ")) return v }
+  const syn={1:/ (insignificant|negligible|first aid|rare|rarely|never) /,2:/ (minor|small|unlikely) /,3:/ (moderate|medium|possible|possibly|might) /,4:/ (major|serious|likely|probably|probable) /,5:/ (catastrophic|fatal|fatality|death|almost certain|certain|definitely|expected) /};
+  for(const k of [5,4,3,2,1]) if(syn[k].test(s)) return k;
+  const m=s.match(/ (\d) /); if(m&&+m[1]>=1&&+m[1]<=5) return +m[1];
+  for(const w in W) if(s===" "+w+" ") return W[w]; return null }
 const MON=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
 const WDAY=["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
 const NUMW={a:1,an:1,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,fourteen:14,twenty:20,thirty:30};
@@ -139,6 +145,7 @@ function vOpts(o){ vPanel(); const box=document.getElementById("vopts"); let h="
   if(o.type==="rating") h=rb("C","C · Compliant","#2E7D32")+rb("NI","NI · Improve","#B87800")+rb("UA","UA · Stop work","#C62828")+rb("NA","N/A","#7A8594");
   else if(o.type==="rating2") h=rb("UA","UA · Unacceptable","#C62828")+rb("NI","NI · Needs improvement","#B87800");
   else if(o.type==="yesno") h=rb("Y","Yes","#2E7D32")+rb("N","No","#5B6675");
+  else if(o.type==="scale") h=o.list.map(([v,l])=>rb(String(v),`${v} · ${l}`,"#1B3D6B")).join("");
   else if(o.type==="photo") h=`<label class="vph" onclick="V.photoBusy=true">📷 Take photo<input type="file" accept="image/*" capture="environment" class="hide" onchange="vPhoto(this,'camera')"></label><label class="vph" onclick="V.photoBusy=true">🖼 Upload<input type="file" accept="image/*" class="hide" onchange="vPhoto(this,'upload')"></label>`;
   box.innerHTML=h; box.style.display=h?"flex":"none" }
 function vTap(v){ if(v==="__mic"){ if(V.noMic){ V.noMic=false; vNote("") }
@@ -176,6 +183,7 @@ async function ask(prompt,o){ o=o||{}; V.step=Object.assign({prompt},o); vOpts(o
         return {cmd:"skip"} }
       if(o.type==="rating"||o.type==="rating2") return {val:v,rest:""};
       if(o.type==="yesno") return {val:v==="Y"};
+      if(o.type==="scale") return {val:+v};
       continue }
     if(res.cmd==="stop") return {cmd:"stop"};
     if(res.cmd==="skip") return {cmd:"skip"};
@@ -189,7 +197,7 @@ async function ask(prompt,o){ o=o||{}; V.step=Object.assign({prompt},o); vOpts(o
         if(!V.on) return {cmd:"stop"}; if(t.tap==="__mic"){ tries=0; vNote(o.hint||""); continue } res=t; // fall through to tap handling by re-entering
         const v=t.tap; if(v==="__stop") return {cmd:"stop"}; if(v==="__back") return {cmd:"back"}; if(v==="__skip") return {cmd:"skip"}; if(v==="__repeat"){ tries=0; speakText=prompt; continue }
         if(v==="__next"){ if(o.form){ const fv=o.form(); if(fv&&(!Array.isArray(fv)||fv.length)) return {val:fv,fromForm:true} } return {cmd:"skip"} }
-        if(o.type==="rating"||o.type==="rating2") return {val:v,rest:""}; if(o.type==="yesno") return {val:v==="Y"}; continue }
+        if(o.type==="rating"||o.type==="rating2") return {val:v,rest:""}; if(o.type==="yesno") return {val:v==="Y"}; if(o.type==="scale") return {val:+v}; continue }
       speakText=o.short||"Sorry, I didn't hear that."; continue }
     const text=res.text||""; vHeard(text);
     const c=o.type==="long"?null:parseCmd(text);
@@ -200,6 +208,7 @@ async function ask(prompt,o){ o=o||{}; V.step=Object.assign({prompt},o); vOpts(o
     if(o.type==="rating"){ p=parseRating(text); if(p&&!["C","UA","NI","NA","NONC"].includes(p.val)) p=null }
     else if(o.type==="rating2"){ const q=parseRating(text); if(q&&(q.val==="UA"||q.val==="NI")) p=q }
     else if(o.type==="yesno"){ p=parseYesNo(text); if(!p&&o.yesText&&text.trim()) p={val:true,text:cap(text)} }
+    else if(o.type==="scale"){ const v=parseScale(text,o.list); p=v?{val:v}:null }
     else if(o.type==="date"){ const d=parseDate(text); p=d?{val:d}:(tries>=1?{val:null,raw:text}:null) }
     else if(o.type==="choice"){ const sel=parseChoice(text,o.list,o.kws); p=(sel.length||o.allowOther)?{val:sel,raw:cap(text)}:null }
     else if(o.type==="photo"){ if(/ (next|done|no|skip|continue|nah|nope|that's it|carry on) /.test(norm(text))) return {cmd:"skip"}; speakText="Say next to carry on."; continue }
@@ -294,13 +303,19 @@ async function voiceNC(kind,id,r,note,haveFinding){ const A=getA(kind,id); const
     if(f.cmd==="stop") return "stop"; if(f.cmd==="back") return "redo"; if(f.val){ A.finding=f.val; save(CUR); refresh() } }
   if(!(A.action||"").trim()){ const f=await ask("What's the corrective action? Say next when you've finished.",{type:"long",short:"What's the corrective action?"});
     if(f.cmd==="stop") return "stop"; if(f.cmd==="back") return "redo"; if(f.val){ A.action=f.val; save(CUR); refresh() } }
+  if(!riskOf(A.cons,A.like)){
+    const rc=await ask("Risk rating. What's the worst credible consequence: insignificant, minor, moderate, major, or catastrophic?",{type:"scale",list:RISK.consequence,short:"Consequence: insignificant, minor, moderate, major, or catastrophic?"});
+    if(rc.cmd==="stop") return "stop"; if(rc.cmd==="back") return "redo"; if(rc.val){ A.cons=rc.val; save(CUR); refresh() }
+    const rl=await ask("And the likelihood: rare, unlikely, possible, likely, or almost certain?",{type:"scale",list:RISK.likelihood,short:"Likelihood: rare, unlikely, possible, likely, or almost certain?"});
+    if(rl.cmd==="stop") return "stop"; if(rl.val){ A.like=rl.val; save(CUR); refresh() }
+    const k=riskOf(A.cons,A.like); if(k) V.pre=`${k.level} risk.` }
   const c=await ask("Was it closed out on the spot? Yes or no.",{type:"yesno",short:"Closed on the spot? Yes or no."});
   if(c.cmd==="stop") return "stop";
   if(!c.cmd){ A.closed=c.val; save(CUR); refresh();
     if(c.val){ const f=await ask("What action was taken? Say next when you've finished.",{type:"long"}); if(f.cmd==="stop") return "stop"; if(f.val){ A.taken=f.val; save(CUR); refresh() } }
     else { const o=await ask("Who is responsible for closing it out?",{type:"text"}); if(o.cmd==="stop") return "stop"; if(o.val){ A.owner=nameCase(o.val); save(CUR); refresh() }
       const due=await ask("When is it due? For example, tomorrow, Friday, or the 20th of October.",{type:"date",short:"When is it due?"}); if(due.cmd==="stop") return "stop";
-      if(due.val){ A.due=due.val; save(CUR); refresh() } else if(due.raw!==undefined) V.pre="I didn't catch the date. Set it on screen." } }
+      if(due.val){ A.due=due.val; save(CUR); refresh() } else if(due.raw!==undefined) V.pre="I didn't catch the date. Set it on screen."; else if(!A.due){ const k=riskOf(A.cons,A.like); if(k){ A.due=addDaysISO(k.days); save(CUR); refresh() } } } }
   const p=await ask("Add a photo with the buttons below if you need one. Say next to carry on.",{type:"photo",photo:{kind,id},short:"Say next to carry on."});
   if(p.cmd==="stop") return "stop"; return "ok" }
 

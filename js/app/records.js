@@ -2,11 +2,11 @@
 /* ---------- discussion records (no ratings) ---------- */
 function R(d){return d.rec=d.rec||{type:[],topics:[],other:"",summary:"",input:"",support:"",actions:[],photos:[],captions:"",fu:"",fuDate:"",raise:"",raiseReason:"",role:"",with:"",others:""}}
 function viewRecord(d){const t=tabByNum(d.tab);const r=R(d);const D=d.details;const F=t.form;
-  setHeader(`${pad(t.num)} – ${t.short}`,"Discussion record",{label:"Home",fn:()=>{save(d,true);queuePing(d,"draft");go("#home")}});
+  setHeader(`${pad(t.num)} · ${t.short}`,"Discussion record",backHome(d));
   const inp=(k,lab,req,ph)=>`<div><label class="f">${esc(lab)}${req?' <span class="req">*</span>':""}</label><input class="t" data-r="${k}" value="${esc(r[k]||"")}" ${ph?`placeholder="${esc(ph)}"`:""}></div>`;
   const ta=(k,lab,req,ph)=>`<label class="f">${esc(lab)}${req?' <span class="req">*</span>':""}</label><textarea class="t" rows="4" data-r="${k}" placeholder="${esc(ph||"")}">${esc(r[k]||"")}</textarea>`;
   let h=`<div class="band"><b>${esc(t.title)}</b>${esc(t.scope)}</div>`+voiceCardHTML("record");
-  if(t.fixed)h+=`<div class="card"><div class="lock">🔒 Fixed</div><div class="fixed">${t.fixed.map(f=>`<div><small>${esc(f[0])}</small><span>${esc(f[1])}</span></div>`).join("")}</div></div>`;
+  if(t.fixed)h+=`<div class="card"><div class="lock">${ic("lock","s")} Fixed</div><div class="fixed">${t.fixed.map(f=>`<div><small>${esc(f[0])}</small><span>${esc(f[1])}</span></div>`).join("")}</div></div>`;
   h+=`<div class="sec">1. Details</div><div class="card"><div class="grid2">
    <div><label class="f">Date & time</label><input class="t" type="datetime-local" data-d="datetime" value="${esc(D.datetime)}"></div>
    <div><label class="f">Location / work area</label><input class="t" data-d="location" value="${esc(D.location)}"></div>
@@ -19,7 +19,7 @@ function viewRecord(d){const t=tabByNum(d.tab);const r=R(d);const D=d.details;co
   h+=`<div class="sec">4. Actions</div><div class="card"><div id="recact">${recActHTML(d)}</div><button class="addph" style="margin-top:8px" onclick="recAddAct()">+ Add action</button></div>`;
   h+=`<div class="sec">5. Photos (optional)</div><div class="card"><div id="recph">${recPhHTML(d)}</div>${ta("captions","Photo caption(s)","","Optional")}</div>`;
   h+=`<div class="sec">6. Follow-up</div><div class="card" id="recfu">${recFuHTML(d)}</div>`;
-  $("#app").innerHTML=h;
+  render(h);
   document.querySelectorAll("[data-d]").forEach(el=>el.addEventListener("input",()=>{d.details[el.dataset.d]=el.value;if(el.dataset.d==="inspector"&&!ls("inspector"))ls("inspector",el.value.trim());save(d)}));
   bindRec(d);renderBar(d)}
 function bindRec(d){document.querySelectorAll("[data-r]").forEach(el=>{if(el._b)return;el._b=1;el.addEventListener("input",()=>{R(d)[el.dataset.r]=el.value;save(d);renderBar(d)})})}
@@ -31,13 +31,13 @@ function recActHTML(d){const a=R(d).actions;if(!a.length)return `<div class="mut
    <div class="row" style="display:flex;gap:10px;align-items:center;margin-top:8px"><label style="display:flex;gap:6px;align-items:center;font-weight:700"><input type="checkbox" ${x.closed?"checked":""} onchange="recSetAct(${i},'closed',this.checked)"> Closed ✓</label><button class="linkbtn" onclick="recDelAct(${i})">Remove</button></div></div>`).join("")}
 function recAddAct(){R(CUR).actions.push({a:"",o:"",due:"",closed:false});save(CUR);$("#recact").innerHTML=recActHTML(CUR)}
 function recSetAct(i,k,v){R(CUR).actions[i][k]=v;save(CUR);renderBar(CUR)}
-function recDelAct(i){if(!confirm("Remove this action?"))return;R(CUR).actions.splice(i,1);save(CUR);$("#recact").innerHTML=recActHTML(CUR)}
+async function recDelAct(i){if(!await ask2("Remove this action?","It is removed from this record.","Remove",true))return;R(CUR).actions.splice(i,1);save(CUR);$("#recact").innerHTML=recActHTML(CUR)}
 function recPhHTML(d){const p=R(d).photos;return `${p.length?`<div class="photos">${p.map((u,i)=>`<div class="ph"><img src="${u}" onclick="zoomImg(this.src)"><button onclick="recDelPh(${i})" aria-label="Remove">×</button></div>`).join("")}</div>`:""}
-  <div class="pbtns" style="margin-top:6px"><label class="addph">📷 Take photo<input type="file" accept="image/*" capture="environment" class="hide" onchange="recAddPh(this,'camera')"></label><label class="addph">🖼 Upload photo<input type="file" accept="image/*" class="hide" onchange="recAddPh(this,'upload')"></label></div>`}
+  <div class="pbtns" style="margin-top:6px"><label class="addph">${ic("camera","s")} Take photo<input type="file" accept="image/*" capture="environment" class="hide" onchange="recAddPh(this,'camera')"></label><label class="addph">${ic("image","s")} Upload<input type="file" accept="image/*" class="hide" onchange="recAddPh(this,'upload')"></label></div>`}
 function recAddPh(inp,src){const f=inp.files&&inp.files[0];if(!f)return;const d=CUR;const r=R(d);
   stampPhoto(f,[["Discussion record",r.with?"with "+r.with:"",d.details.inspector].filter(Boolean).join("  ·  "),d.details.location||""],{source:src,max:1280})
    .then(ph=>{r.photos.push(ph.img);save(d);$("#recph").innerHTML=recPhHTML(d)}).catch(()=>toast("Could not read that photo"))}
-function recDelPh(i){if(!confirm("Remove this photo?"))return;R(CUR).photos.splice(i,1);save(CUR);$("#recph").innerHTML=recPhHTML(CUR)}
+async function recDelPh(i){if(!await ask2("Remove this photo?","It is removed from this record.","Remove",true))return;R(CUR).photos.splice(i,1);save(CUR);$("#recph").innerHTML=recPhHTML(CUR)}
 function recFuHTML(d){const r=R(d);const seg=(k,v,l)=>`<button class="${r[k]===v?"on":""}" onclick="recSet('${k}','${v}')">${l}</button>`;
   return `<label class="f">Follow-up required? <span class="req">*</span></label><div class="seg">${seg("fu","No","No")}${seg("fu","Yes","Yes")}</div>
    ${r.fu==="Yes"?`<label class="f">Follow-up date <span class="req">*</span></label><input class="t" type="date" data-r="fuDate" value="${esc(r.fuDate||"")}">`:""}

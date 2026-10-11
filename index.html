@@ -4,21 +4,35 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#112B4E">
+<meta name="description" content="PARRON – site inspections, corrective actions and MYOSH reporting for the YMT project">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="PARRON">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>PARRON – Site Inspections</title>
+<script>/* apply the saved theme before first paint */try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;if(localStorage.getItem("contrast")==="high")document.documentElement.dataset.contrast="high"}catch(e){}</script>
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
 <header class="top">
-  <img src="assets/logo.png" alt="Genus">
+  <span class="logo"><img src="assets/logo.png" alt="Genus"></span>
   <div class="t"><b id="hTitle">PARRON</b><span id="hSub">Proactive Assessment, Reporting, Risk &amp; Observation Network</span></div>
-  <button class="iconbtn" id="hBtn" onclick="go('#home')">Home</button>
+  <span class="netdot" id="net" title="Online"></span>
+  <button class="hbtn" id="hBtn" onclick="go('#home')">Home</button>
 </header>
-<main id="app"></main>
-<div class="toast" id="toast"></div>
+<main id="app"><div class="skel"></div><div class="skel"></div><div class="skel"></div></main>
+<nav class="tabs" id="tabs" aria-label="Main">
+  <div class="in">
+    <a href="#home" data-t="home"><svg class="ic" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>Inspect</a>
+    <a href="#actions" data-t="actions"><svg class="ic" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></svg>Actions<span class="bdg hide" id="bdgA"></span></a>
+    <a href="#insights" data-t="insights"><svg class="ic" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Insights</a>
+    <a href="#myosh" data-t="myosh"><svg class="ic" viewBox="0 0 24 24"><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>MYOSH<span class="bdg o hide" id="bdgM"></span></a>
+  </div>
+</nav>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="js/vendor/jspdf.umd.min.js"></script>
 <script src="js/vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="js/data/assets.js"></script>
@@ -27,8 +41,13 @@
 <script src="js/app/core.js"></script>
 <script src="js/app/model.js"></script>
 <script src="js/app/views.js"></script>
+<script src="js/app/form.js"></script>
 <script src="js/app/report.js"></script>
+<script src="js/app/register.js"></script>
+<script src="js/app/actions.js"></script>
+<script src="js/app/myosh.js"></script>
 <script src="js/app/dashboard.js"></script>
+<script src="js/app/monthly.js"></script>
 <script src="js/app/records.js"></script>
 <script src="js/app/pdf.js"></script>
 <script src="js/app/send.js"></script>

@@ -28,8 +28,9 @@ function blobToB64(b){return new Promise((res,rej)=>{const f=new FileReader();f.
 async function sendDirect(){const d=CUR;const b=$("#bShare");if(!PDFFILE){toast("Report still being prepared – tap again in a moment");return}
   if(b){b.disabled=true;b.innerHTML='<span class="sending"><span class="spin"></span>Sending…</span>'}
   try{const t=tabByNum(d.tab);const s=stats(d);
-    const item={id:d.id,queuedAt:Date.now(),tries:0,title:`${pad(t.num)} – ${t.short}`,reportId:reportId(d),location:d.details.location,ua:s.UA,ni:s.NI,snn:s.snnN,
-      payload:{uid:d.id,meta:pingMeta(d),reportId:reportId(d),to:recipient(),subject:subject(d),text:bodyText(d),html:htmlBody(d),filename:fileName(d),pdf:await blobToB64(PDFFILE)}};
+    const REC=t.kind==="record";const findings=findingsOf(d),report=reportFacts(d);
+    const item={id:d.id,queuedAt:Date.now(),tries:0,title:`${pad(t.num)} – ${t.short}`,reportId:reportId(d),location:d.details.location,ua:REC?0:s.UA,ni:REC?0:s.NI,snn:REC?0:s.snnN,no:pad(t.num),inspector:d.details.inspector,findings,report,
+      payload:{uid:d.id,meta:pingMeta(d),reportId:reportId(d),to:recipient(),subject:subject(d),text:bodyText(d),html:htmlBody(d),filename:fileName(d),pdf:await blobToB64(PDFFILE),report,findings}};
     await dbPut("outbox",item);await dbDel("drafts",d.id);{const q=getPings();if(q[d.id]){q[d.id].state="outbox";ls("pings",JSON.stringify(q))}else queuePing(d,"outbox")}
     const r=await sendItem(item);
     if(r.ok){toast("✓ Report sent to the SHE Manager",4500)}else toast("No connection – report saved in the Outbox and will send automatically",6500);
@@ -42,8 +43,9 @@ async function sendItem(item){if(!directOn())return {ok:false,error:"Direct send
   let res;try{res=await relayPost(item,false)}catch(e){
     // CORS-blocked replies still deliver the email; a second no-cors attempt is safe because the relay ignores duplicates.
     if(e&&e.name!=="AbortError"&&navigator.onLine!==false){try{res=await relayPost(item,true)}catch(e2){res={ok:false,error:String(e2)}}}else res={ok:false,error:String(e)}}
-  if(res&&res.ok){await dbPut("sent",{id:item.id,reportId:item.reportId,title:item.title,location:item.location,sentAt:Date.now(),ua:item.ua,ni:item.ni,snn:item.snn,via:res.unconfirmed?"direct*":"direct"});
-    await dbDel("outbox",item.id);return res}
+  if(res&&res.ok){await dbPut("sent",{id:item.id,reportId:item.reportId,title:item.title,location:item.location,sentAt:Date.now(),ua:item.ua,ni:item.ni,snn:item.snn,via:res.unconfirmed?"direct*":"direct",
+      no:item.no,inspector:item.inspector,findings:item.findings||[],report:item.report||{},pdfLink:res.pdf||""});
+    await dbDel("outbox",item.id);await loadLocalSent();REG.at=0;updateBadges();return res}
   item.tries=(item.tries||0)+1;item.lastError=(res&&res.error)||"Unknown";item.lastTry=Date.now();await dbPut("outbox",item);return res||{ok:false}}
 let FLUSHING=false;
 async function flushOutbox(manual){await flushPings();if(FLUSHING)return;FLUSHING=true;let sent=0,left=0;
@@ -51,6 +53,7 @@ async function flushOutbox(manual){await flushPings();if(FLUSHING)return;FLUSHIN
   if(sent)toast(`✓ ${sent} report(s) from the Outbox sent`,4000);else if(manual&&left)toast("Still no connection – will keep trying",4000);
   if(sent&&(location.hash||"#home")==="#home")viewHome();return {sent,left}}
 
-async function markSent(){const d=CUR;if(!confirm("Confirm the email has been sent? This closes the inspection on this phone."))return;const t=tabByNum(d.tab);const s=stats(d);
-  await dbPut("sent",{id:d.id,reportId:reportId(d),title:`${pad(t.num)} – ${t.short}`,location:d.details.location,sentAt:Date.now(),ua:s.UA,ni:s.NI,snn:s.snnN});
-  await dbDel("drafts",d.id);queuePing(d,"sent",{reportId:reportId(d)});toast("Inspection closed");go("#home")}
+async function markSent(){const d=CUR;if(!await ask2("Close this inspection?","Confirm the report has been sent another way. The inspection is closed on this phone and its open items go on the Action register.","Close inspection"))return;const t=tabByNum(d.tab);const s=stats(d);const REC=t.kind==="record";
+  const findings=findingsOf(d),report=reportFacts(d);
+  await dbPut("sent",{id:d.id,reportId:reportId(d),title:`${pad(t.num)} – ${t.short}`,location:d.details.location,sentAt:Date.now(),ua:REC?0:s.UA,ni:REC?0:s.NI,snn:REC?0:s.snnN,no:pad(t.num),inspector:d.details.inspector,findings,report});
+  await dbDel("drafts",d.id);queuePing(d,"sent",{reportId:reportId(d),report,findings});await loadLocalSent();updateBadges();toast("Inspection closed");go("#home")}

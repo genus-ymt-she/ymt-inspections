@@ -7,7 +7,7 @@ function subject(d){const t=tabByNum(d.tab);const s=stats(d);
   return `YMT Inspection | ${pad(t.num)} ${t.short} | ${fmtDT(d.details.datetime).slice(0,10)} | ${d.details.location} | ${s.UA} UA / ${s.NI} NI${s.snnN?` | ⚠ ${s.snnN} SNN`:""}`}
 function bodyText(d,limit){if(tabByNum(d.tab).kind==="record"){let x=recBodyText(d);if(limit&&x.length>limit)x=x.slice(0,limit-60)+"\n…\n(Shortened – full record in the attached PDF.)";return x}const t=tabByNum(d.tab);const s=stats(d);const D=d.details;const L=[];
   const HR="━━━━━━━━━━━━━━━━━━━━━━━━━━━━",hr="──────────────────────────────";
-  const st=n=>n.closed?"CLOSED":"OPEN";
+  const st=n=>n.closed?"CLOSED":"OPEN";const rkT=n=>{const k=riskOf(n.cons,n.like);return k?`${k.level} (${n.cons}x${n.like}=${k.score})`:"Not rated"};
   L.push(`PARRON | SITE INSPECTION REPORT`);
   L.push(`${pad(t.num)} – ${t.title.replace(/^\d+\s–\s/,"")}`);
   L.push(HR);L.push("");
@@ -32,12 +32,13 @@ function bodyText(d,limit){if(tabByNum(d.tab).kind==="record"){let x=recBodyText
   else{
     const open=s.ncs.filter(n=>!n.closed).length;
     L.push(`SUMMARY – ${s.ncs.length} non-compliance(s): ${open} open, ${s.ncs.length-open} closed`);
-    L.push("No. | Ref | Rating | Status | SNN");
-    s.ncs.forEach((n,i)=>L.push(`${i+1} | ${n.id} | ${n.r} | ${st(n)} | ${n.snn.length?"⚠ "+snnNames(n.snn).join(" / "):"–"}`));
+    L.push("No. | Ref | Rating | Risk | Status | SNN");
+    s.ncs.forEach((n,i)=>L.push(`${i+1} | ${n.id} | ${n.r} | ${(riskOf(n.cons,n.like)||{}).level||"-"} | ${st(n)} | ${n.snn.length?"⚠ "+snnNames(n.snn).join(" / "):"–"}`));
     L.push("");L.push(HR);L.push(`NON-COMPLIANCES FOR HAZARD REGISTER (${s.ncs.length})`);L.push(HR);
     s.ncs.forEach((n,i)=>{L.push("");
       L.push(`${i+1} of ${s.ncs.length}  |  ${n.id}  |  ${n.r==="UA"?"UA – Unacceptable":"NI – Needs improvement"}  |  ${st(n)}`);
       if(n.snn.length)L.push(`⚠ Safety Non-Negotiable: ${snnNames(n.snn).join(" / ")}`);
+      L.push(`Risk: ${rkT(n)}`);
       L.push(`Item: ${n.text}`);
       L.push(`Finding: ${n.finding}`);
       L.push(`Proposed corrective action: ${n.action}`);
@@ -45,7 +46,7 @@ function bodyText(d,limit){if(tabByNum(d.tab).kind==="record"){let x=recBodyText
       else L.push(`Status: OPEN  |  Responsible: ${n.owner||"TBC"}  |  Due: ${n.due?fmtD(n.due):"TBC"}`);
       if(n.photos.length)L.push(`Photos: ${n.photos.length} (see PDF)`);
       L.push(hr)})}
-  L.push("");L.push("Completed form attached (PDF) – upload to MYOSH as a SHEQ Inspection.");
+  L.push("");L.push("Completed form attached (PDF) – upload to MYOSH as a SHEQ Inspection. Open items are tracked in the PARRON Action register.");
   L.push(`Sent from PARRON v${CONFIG.appVersion} – Proactive Assessment, Reporting, Risk & Observation Network`);
   let txt=L.join("\n");if(limit&&txt.length>limit)txt=txt.slice(0,limit-80)+"\n…\n(Summary shortened – full detail in the attached PDF.)";return txt}
 
@@ -69,8 +70,8 @@ function htmlBody(d){if(tabByNum(d.tab).kind==="record")return recHtml(d);const 
   if(s.UA)h+=`<p style="background:#FDECEC;border:1px solid #C62828;color:#7A1414;padding:8px 10px;font-weight:700;margin:8px 0">UA recorded – task stopped / made safe; Supervisor and SHE Manager to be notified.</p>`;
   if(!s.ncs.length)h+=`<p style="font-weight:700;color:#2E7D32">No non-compliances identified.</p>`;
   else{h+=`<h3 style="color:#112B4E;margin:16px 0 6px">Non-compliances for Hazard Register (${s.ncs.length})</h3><table style="border-collapse:collapse;width:100%">
-    <tr><th ${th}>#</th><th ${th}>Ref</th><th ${th}>Rating</th><th ${th}>Item / finding</th><th ${th}>Proposed corrective action</th><th ${th}>Status</th><th ${th}>SNN</th></tr>`;
-    s.ncs.forEach((n,i)=>{h+=`<tr><td ${td}>${i+1}</td><td ${td}><b>${e(n.id)}</b></td><td ${td}>${pill(n.r,n.r==="UA"?"#C62828":"#E39A00")}</td>
+    <tr><th ${th}>#</th><th ${th}>Ref</th><th ${th}>Rating</th><th ${th}>Risk</th><th ${th}>Item / finding</th><th ${th}>Proposed corrective action</th><th ${th}>Status</th><th ${th}>SNN</th></tr>`;
+    s.ncs.forEach((n,i)=>{h+=`<tr><td ${td}>${i+1}</td><td ${td}><b>${e(n.id)}</b></td><td ${td}>${pill(n.r,n.r==="UA"?"#C62828":"#E39A00")}</td><td ${td}>${(()=>{const k=riskOf(n.cons,n.like);return k?pill(k.level+" "+k.score,k.color):"–"})()}</td>
       <td ${td}>${e(n.text)}<br><b>Finding:</b> ${e(n.finding)}${n.photos.length?`<br><i>${n.photos.length} photo(s) in PDF</i>`:""}</td><td ${td}>${e(n.action)}</td>
       <td ${td}>${n.closed?`<b style="color:#2E7D32">CLOSED</b><br>${e(n.taken)}`:`<b style="color:#C62828">OPEN</b><br>${n.owner?"Responsible: "+e(n.owner)+"<br>":""}${n.due?"Due: "+fmtD(n.due):""}`}</td>
       <td ${td}>${n.snn.length?`<b style="color:#EC7723">⚠ ${e(snnNames(n.snn).join(" / "))}</b>`:"–"}</td></tr>`});
