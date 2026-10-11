@@ -8,11 +8,14 @@ const CONFIG = {
   project: "J1084 – Parron Wind Farm Connection Assets – Yerramullah Terminal (YMT)",
   projectShort: "YMT – Yerramullah Terminal",
   jobNo: "J1084",
-  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "2.9"
+  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "2.9.1"
 };
 
-/* Site location for the home-screen weather (forecast for this point) */
-const SITE = { name: "Badgingarra", lat: -30.39, lon: 115.50 };
+/* Site location for the home-screen weather (forecast for this point) and the Bureau of Meteorology
+   fire weather district used for the Fire Danger Rating (Badgingarra – Shire of Dandaragan – is in Watheroo) */
+const SITE = { name: "Badgingarra", lat: -30.39, lon: 115.50, fdrDistrict: "Watheroo" };
+/* Official Fire Danger Ratings for every WA district, refreshed every 30 min by .github/workflows/fdr.yml */
+const FDR_FEED = "https://raw.githubusercontent.com/genus-ymt-she/ymt-inspections/fdr-data/fdr.json";
 
 /* Safety Non-Negotiables (Genus) */
 const SNN = {"FND": "Foundations", "FFW": "Fitness for Work", "VD": "Vehicles & Driving", "EI": "Energy & Isolation", "UU": "Underground Utilities", "WAH": "Working at Height", "TMP": "Live Traffic & Mobile Plant", "HL": "Hoisting & Lifting", "CS": "Confined Spaces"};

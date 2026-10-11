@@ -1,0 +1,42 @@
+name: Fire Danger Rating feed
+# Every 30 minutes: read the Bureau of Meteorology fire-district forecast (public FTP feed) and publish
+# fdr.json on the "fdr-data" branch, which the app reads for the home-screen Fire Danger box.
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [tools/fdr-feed.mjs, .github/workflows/fdr.yml]
+permissions:
+  contents: write
+concurrency: fdr-feed
+jobs:
+  feed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: { sparse-checkout: tools, path: app }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Download the BoM fire-district forecast
+        run: |
+          for i in 1 2 3; do
+            curl -sSf -m 60 -o IDW15100.xml ftp://ftp.bom.gov.au/anon/gen/fwo/IDW15100.xml && break
+            curl -sSf -m 60 -o IDW15100.xml https://reg.bom.gov.au/fwo/IDW15100.xml && break
+            sleep 20
+          done
+          test -s IDW15100.xml
+      - name: Build fdr.json
+        run: node app/tools/fdr-feed.mjs IDW15100.xml > fdr.json && head -c 400 fdr.json
+      - name: Publish to the fdr-data branch (only when the forecast changes)
+        run: |
+          git init -q pub && cd pub
+          git config user.name "PARRON FDR feed" && git config user.email "actions@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          if git fetch -q --depth 1 origin fdr-data 2>/dev/null; then git checkout -q -b fdr-data FETCH_HEAD; else git checkout -q --orphan fdr-data; fi
+          cp ../fdr.json fdr.json && git add fdr.json
+          if git diff --cached --quiet; then echo "No change"; exit 0; fi
+          git commit -qm "Fire Danger Rating $(node -p 'require("./fdr.json").issued')"
+          git push -q origin fdr-data

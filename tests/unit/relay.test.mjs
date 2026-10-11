@@ -177,18 +177,18 @@ test("weekly summary goes only to the SHE Manager with activity per person", () 
 const BOM_XML = `<?xml version="1.0"?><product><amoc><issue-time-local tz="WST">2026-10-11T16:20:00+08:00</issue-time-local></amoc><forecast>
 <area aac="WA_PW009" description="Central West" type="public-district"><forecast-period index="0"><text type="forecast">Sunny.</text></forecast-period></area>
 <area aac="WA_FW010" description="Lower West Inland" type="fire-district"><forecast-period index="0"><text type="fire_danger">Moderate</text></forecast-period><forecast-period index="1"><text type="fire_danger">High</text></forecast-period></area>
-<area aac="WA_FW007" description="Central West Inland" type="fire-district"><forecast-period index="0" start-time-local="2026-10-11T00:00:00+08:00"><text type="fire_danger">High</text></forecast-period><forecast-period index="1"><text type="fire_danger">Extreme</text></forecast-period></area>
+<area aac="WA_FW007" description="Watheroo" type="fire-district"><forecast-period index="0" start-time-local="2026-10-11T00:00:00+08:00"><text type="fire_danger">High</text></forecast-period><forecast-period index="1"><text type="fire_danger">Extreme</text></forecast-period></area>
 </forecast></product>`;
 
-test("Fire Danger Rating is read from the BoM fire-district areas (Central West by default)", () => {
+test("Fire Danger Rating is read from the BoM fire-district areas (Watheroo by default)", () => {
   const seen = [];
-  const r = createRelay({ fetch: (url) => { seen.push(url); return /IDW12300/.test(url) && url.startsWith("https") ? { body: BOM_XML } : null; } });
+  const r = createRelay({ fetch: (url) => { seen.push(url); return /IDW15100/.test(url) && url.startsWith("https") ? { body: BOM_XML } : null; } });
   const j = r.get({ action: "weather", key: r.key });
   assert.equal(j.ok, true);
-  assert.equal(j.fdr.area, "Central West Inland"); assert.equal(j.fdr.today, "High"); assert.equal(j.fdr.tomorrow, "Extreme");
-  assert.deepEqual(j.fdr.areas, ["Lower West Inland", "Central West Inland"]);
+  assert.equal(j.fdr.area, "Watheroo"); assert.equal(j.fdr.today, "High"); assert.equal(j.fdr.tomorrow, "Extreme");
+  assert.deepEqual(j.fdr.areas, ["Lower West Inland", "Watheroo"]); assert.equal(j.fdr.want, "");
   assert.equal(j.fdr.source, "Bureau of Meteorology");
-  assert.ok(seen.some(u => /IDW14199/.test(u)), "tries products in order");
+  assert.ok(seen.some(u => /reg\.bom\.gov\.au\/fwo\/IDW15100/.test(u)), "reads the fire-district product");
   assert.equal(r.get({ action: "weather", key: "bad" }).ok, false);
 });
 
@@ -196,7 +196,7 @@ test("SHE Manager can choose the district or set today's FDR by hand (PIN)", () 
   const r = createRelay({ fetch: () => ({ body: BOM_XML }) });
   assert.equal(r.post({ key: r.key, action: "fdr", area: "Lower West Inland", pin: "nope" }).ok, false);
   let j = r.post({ key: r.key, action: "fdr", area: "Lower West Inland", pin: "2468" });
-  assert.equal(j.ok, true); assert.equal(j.fdr.area, "Lower West Inland"); assert.equal(j.fdr.today, "Moderate");
+  assert.equal(j.ok, true); assert.equal(j.fdr.area, "Lower West Inland"); assert.equal(j.fdr.today, "Moderate"); assert.equal(j.fdr.want, "Lower West Inland");
   j = r.post({ key: r.key, action: "fdr", rating: "Extreme", by: "Darren Frizzell", pin: "2468" });
   assert.equal(j.fdr.today, "Extreme"); assert.equal(j.fdr.manual, true); assert.match(j.fdr.source, /Darren/);
   assert.equal(r.get({ action: "weather", key: r.key }).fdr.today, "Extreme");

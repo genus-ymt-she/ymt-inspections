@@ -1,5 +1,5 @@
 /* PARRON service worker – network first, falls back to the cached copy so the app works with no signal. */
-const C = "parron-v2.9.0";
+const C = "parron-v2.9.1";
 const FILES = [
   "./",
   "./index.html",
