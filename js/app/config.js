@@ -55,7 +55,7 @@ const TEAM = [
   { name: "Joey Ryan",        role: "Grad Project Manager",         email: "joey.ryan@genus.com.au" },
   { name: "Matt Smith",       role: "Senior Civil Supervisor",      email: "matt.smith@genus.com.au" },
   { name: "Paul Delaney",     role: "Civil Supervisor",             email: "paul.delaney@genus.com.au" },
-  { name: "Cory Shotty",      role: "Senior Electrical Supervisor", email: "cory.shotter@genus.com.au" },
+  { name: "Cory Shotter",     role: "Senior Electrical Supervisor", email: "cory.shotter@genus.com.au" },
   { name: "Zane Patten",      role: "Electrical Supervisor",        email: "zane.patten@genus.com.au" }
 ];
 
