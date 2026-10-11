@@ -37,10 +37,12 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   const mon=new Date();mon.setDate(1);mon.setHours(0,0,0,0);const sentMonth=sentAll.filter(s=>s.sentAt>=mon.getTime()).length;
   let h=`<section class="hero"><div class="hi">${esc(greeting())}${me?",":""}</div><h1>${esc(firstName(me)||"Welcome")}</h1>
    <div class="proj">${ic("pin","s")} ${esc(CONFIG.jobNo)} · ${esc(CONFIG.projectShort)} · ${new Date().toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"})}</div>
+   ${wxHTML()}
    <div class="kp"><button onclick="document.getElementById('drafts')?.scrollIntoView({behavior:'smooth'})"><b>${drafts.length}</b><span>In progress</span></button>
    <button onclick="go('#actions')" class="${mine.length?"warn":""}"><b>${mine.length}</b><span>My actions</span></button>
    <button onclick="ACTF.f='overdue';go('#actions')" class="${st.overdue?"bad":""}"><b>${st.overdue}</b><span>Overdue</span></button>
    <button onclick="go('#insights')"><b>${sentMonth}</b><span>This month</span></button></div></section>`;
+  {const due=mdDueReminders();if(due.length)h+=`<button class="remind" onclick="go('#myday')">${ic("clock")}<div><b>Reminder${due.length>1?"s":""} today</b>${due.slice(0,3).map(x=>`<span>${esc(x.text)}${x.time?` · ${esc(x.time)}`:""}</span>`).join("")}${due.length>3?`<span>+${due.length-3} more</span>`:""}</div>${ic("chev")}</button>`}
   {const n=mdTodayCount();h+=`<div class="tiles">
    <button class="tile wide myday" onclick="go('#myday')"><span class="ti">${ic("cal","l")}</span><span class="tw"><b>My Day ${ic("lock","s")}</b><small>${n?`${n} to do today`:"Plan your day"} · private to you</small></span>${ic("chev")}</button>
    <button class="tile wide" onclick="go('#inspections')"><span class="ti" style="background:var(--info-soft);color:var(--info)">${ic("clipboard","l")}</span><span class="tw"><b>Inspection</b><small>${LIB_TABS().length} forms · browse by category</small></span>${ic("chev")}</button>
@@ -64,7 +66,8 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
       <div class="libmeta">${s.ua?`<span class="tag r">${s.ua} UA</span>`:""}${s.ni?`<span class="tag o">${s.ni} NI</span>`:""}${s.snn?`<span class="tag o">${s.snn} SNN</span>`:""}${!s.ua&&!s.ni&&s.ua!==undefined?`<span class="tag g">No findings</span>`:""}${s.via?`<span class="tag g">${ic("check","s")} Emailed</span>`:""}</div></div></div></div>`})}
   h+=`<p class="foot">PARRON v${esc(CONFIG.appVersion)} · Proactive Assessment, Reporting, Risk &amp; Observation Network<br>Works offline · Data stays on this phone until you send it</p>`;
   render(h);
-  regRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home")viewHome()})}
+  regRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home")viewHome()});
+  Promise.all([wxRefresh(),fdrRefresh()]).then(r=>{if(r.some(Boolean)&&(location.hash||"#home")==="#home"&&!stale(seq)){const w=document.querySelector(".hero .wx");if(w)w.outerHTML=wxHTML()}})}
 /* ---------- inspection library (own page: search + categories) ---------- */
 async function viewInspections(){const seq=ROUTE_SEQ;setHeader("Inspections",`${LIB_TABS().length} forms · pick one to start`,{icon:"back",aria:"Back",fn:()=>go("#home")});
   const sentAll=(await dbAll("sent")).sort((a,b)=>b.sentAt-a.sentAt);if(stale(seq))return;
@@ -140,5 +143,5 @@ function mgrOff(){lsDel("mgrPin");toast("Manager mode off");updateBadges();viewS
 async function testRelay(){toast("Testing…",1500);const v=await relayVersion(true);
   try{const r=await fetch(RELAY.url,{redirect:"follow"});const j=await r.json();toast(j.ok?`Connected · relay v${v} · ${j.emailsLeftToday} emails left today`:"Relay replied with an error",5000)}catch(e){toast("Could not reach the relay – check signal",4000)}
   if(location.hash==="#settings")viewSettings()}
-async function backupData(){const data={app:"PARRON",v:CONFIG.appVersion,at:new Date().toISOString(),inspector:ls("inspector"),myDay:mdLoad(),drafts:await dbAll("drafts"),sent:await dbAll("sent"),outbox:(await dbAll("outbox")).map(o=>({...o,payload:{...o.payload,pdf:undefined}}))};
+async function backupData(){const data={app:"PARRON",v:CONFIG.appVersion,at:new Date().toISOString(),inspector:ls("inspector"),myDay:mdLoad(),myReminders:recLoad(),drafts:await dbAll("drafts"),sent:await dbAll("sent"),outbox:(await dbAll("outbox")).map(o=>({...o,payload:{...o.payload,pdf:undefined}}))};
   downloadBlob(new Blob([JSON.stringify(data)],{type:"application/json"}),`PARRON-backup-${todayISO()}.json`);toast("Backup saved")}

@@ -19,7 +19,8 @@ The shared Action register, action emails, Insights charts and Manager mode swit
 3. In the toolbar choose the function **`setup`** and click **Run**.
    - Google asks for permission again because v3 adds **Google Drive** (PDF archive and close-out photos). Approve it.
    - `setup` adds the new *Findings* and *Observations* sheets and columns to the existing log – **no data is lost** –
-     schedules the 6 pm daily and Monday 7 am weekly summaries, and emails a confirmation.
+     schedules the 6 pm daily summary, the Monday 7 am weekly summary and the 5 am personal reminder emails,
+     and emails a confirmation (which also says whether the Fire Danger Rating could be read from the Bureau of Meteorology).
 4. **Set the Manager PIN:** ⚙ **Project Settings** (left bar) → **Script properties** → **Add script property**
    - Property: `MANAGER_PIN`  Value: a 4–8 digit PIN known only to the SHE Manager → **Save**.
    - The PIN is never stored in the code or on GitHub.
@@ -62,3 +63,12 @@ Drafts, the Outbox and sent history already on phones are kept – the storage f
 
 Edit the `TEAM` list in `js/app/config.js` (name, role, email), then bump the cache version in `sw.js`.
 Each person picks their own name the first time they open PARRON (*Settings → Profile → Change* to switch).
+
+## Fire Danger Rating on the home screen
+
+The relay reads the official rating from the Bureau of Meteorology's fire-district forecasts and caches it for 30 minutes.
+- In the app (Manager mode) tap the **Fire Danger** box on the home screen → choose the correct **Bureau of Meteorology district**
+  for Badgingarra → **Save for everyone**. This only needs doing once.
+- If the Bureau can't be read, or on a day you need to override it, choose **Set today's rating** in the same panel. A manual
+  rating applies to everyone for the rest of that day.
+- Always confirm Total Fire Bans (DFES) and Harvest & Vehicle Movement Bans (Shire of Dandaragan) at pre-start.

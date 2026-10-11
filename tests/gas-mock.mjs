@@ -54,10 +54,10 @@ function formatDate(d, tz, fmt) {
   const Y = t.getUTCFullYear(), M = t.getUTCMonth(), D = t.getUTCDate(), h = t.getUTCHours(), m = t.getUTCMinutes();
   const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  return fmt.replace("EEEE", days[t.getUTCDay()]).replace("MMMM", months[M]).replace("MMM", months[M].slice(0, 3)).replace("yyyy", Y).replace("MM", pad(M + 1)).replace("dd", pad(D)).replace(/\bd\b/, D).replace("HH", pad(h)).replace("mm", pad(m));
+  return fmt.replace(/^u$/, String(t.getUTCDay() || 7)).replace("EEEE", days[t.getUTCDay()]).replace("MMMM", months[M]).replace("MMM", months[M].slice(0, 3)).replace("yyyy", Y).replace("MM", pad(M + 1)).replace("dd", pad(D)).replace(/\bd\b/, D).replace("HH", pad(h)).replace("mm", pad(m));
 }
 
-export function createRelay({ pin = "2468" } = {}) {
+export function createRelay({ pin = "2468", fetch: fetchHandler = null } = {}) {
   const props = new Map(pin ? [["MANAGER_PIN", pin]] : []);
   const cache = new Map();
   const mail = [], files = [], triggers = [];
@@ -69,6 +69,7 @@ export function createRelay({ pin = "2468" } = {}) {
     createFolder: (n) => { const s = mkFolder(name + "/" + n); f.subs.set(n, s); return s; } }; folders.set(id, f); return f; };
   const ctx = {
     console, Date, JSON, Math,
+    UrlFetchApp: { fetch: (url, opts) => { const r = fetchHandler ? fetchHandler(url, opts) : null; return { getResponseCode: () => r ? (r.code || 200) : 404, getContentText: () => r ? r.body : "" }; } },
     SpreadsheetApp: { create: (n) => (ss = new Spreadsheet(n)), openById: () => { if (!ss) throw new Error("missing"); return ss; } },
     PropertiesService: { getScriptProperties: () => ({ getProperty: k => props.has(k) ? props.get(k) : null, setProperty: (k, v) => props.set(k, v) }) },
     CacheService: { getScriptCache: () => ({ get: k => cache.has(k) ? cache.get(k) : null, put: (k, v) => cache.set(k, v) }) },

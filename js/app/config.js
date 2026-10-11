@@ -8,8 +8,11 @@ const CONFIG = {
   project: "J1084 – Parron Wind Farm Connection Assets – Yerramullah Terminal (YMT)",
   projectShort: "YMT – Yerramullah Terminal",
   jobNo: "J1084",
-  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "2.8"
+  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "2.9"
 };
+
+/* Site location for the home-screen weather (forecast for this point) */
+const SITE = { name: "Badgingarra", lat: -30.39, lon: 115.50 };
 
 /* Safety Non-Negotiables (Genus) */
 const SNN = {"FND": "Foundations", "FFW": "Fitness for Work", "VD": "Vehicles & Driving", "EI": "Energy & Isolation", "UU": "Underground Utilities", "WAH": "Working at Height", "TMP": "Live Traffic & Mobile Plant", "HL": "Hoisting & Lifting", "CS": "Confined Spaces"};
