@@ -293,6 +293,8 @@ await step("Trade Assistants: fuel register – start of day, end of day, sign a
   if (!/Firefighting Water Trailer/.test(await page.textContent("#app"))) throw new Error("fire trailer missing from TA page");
   await settle(page); await shot(page, "21-ta-page");
   await page.click(".tacard button.btn.o"); await page.waitForSelector(".fa");
+  await page.click(".tachips >> text=Jayden Mullan"); await page.waitForSelector(".tachips .chip.on");
+  if (await page.inputValue('[data-d="inspector"]') !== "Jayden Mullan" || await page.inputValue("#fuPos") !== "Trade Assistant") throw new Error("TA quick pick did not fill name / position"); await page.evaluate(() => window.scrollTo(0, 0)); await settle(page); await shot(page, "21b-fuel-who");
   const fixed = await page.textContent(".fixed"); if (!/PWF – 1084/.test(fixed) || !/Day/.test(fixed)) throw new Error("fixed details: " + fixed);
   // saving with nothing filled in lists what is missing
   await page.click("text=Save start of day"); await page.waitForSelector(".sheet"); if (!/WL46/.test(await page.textContent(".sheet"))) throw new Error("missing list"); await page.evaluate(() => closeSheet());
@@ -306,6 +308,7 @@ await step("Trade Assistants: fuel register – start of day, end of day, sign a
   await page.click("text=Save start of day"); await page.waitForSelector(".tacard .tstep.done");
   if (!/Saved at/.test(await page.textContent(".tacard"))) throw new Error("start of day not shown as saved");
   await page.click(".tacard button.btn.o"); await page.waitForSelector('[data-fu="0|fuel"]');
+  await page.click(".tachips >> text=Ben Herbert"); await page.waitForSelector('[data-fu="0|fuel"]');
   await page.fill('[data-fu="0|he"]', "8575.1"); await page.fill('[data-fu="0|fuel"]', "40"); await page.fill('[data-fu="0|cmt"]', "Fuelled pod (Badgingarra Roadhouse)");
   await page.fill('[data-fu="2|fuel"]', "90"); await page.fill('[data-fu="1|fuel"]', "12.5");
   if ((await page.textContent("#ftot")).trim() !== "142.5") throw new Error("total: " + await page.textContent("#ftot"));
@@ -324,6 +327,7 @@ await step("Trade Assistants: fuel register – start of day, end of day, sign a
   const before = relay.mail.length; await page.click("#bShare"); await page.waitForFunction(() => location.hash === "#home", null, { timeout: 15000 });
   const m = relay.mail.slice(before).find(x => /Fuel, Hours/.test(x.subject || ""));
   if (!m || m.to !== "amie.smith@genus.com.au,darren.frizzell@genus.com.au") throw new Error("register email: " + (m && m.to));
+  if (!/Start of day: [0-9:]+ \(Jayden Mullan\)/.test(m.body) || !/\(Ben Herbert\)/.test(m.body)) throw new Error("who did each half: " + m.body.slice(0, 400));
   if (!/142.5 L/.test(m.subject) || !/PRE-START NOT DONE/.test(m.subject)) throw new Error("subject: " + m.subject);
   const rows = relay.sheet("Fuel").getLastRow() - 1; if (rows !== 9) throw new Error("fuel rows logged: " + rows);
   await page.evaluate(() => go("#ta")); await page.waitForSelector(".tacard"); if (!/register has been sent/.test(await page.textContent("#app"))) throw new Error("TA page should show today's register as sent");

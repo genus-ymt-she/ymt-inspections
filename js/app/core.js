@@ -72,7 +72,7 @@ function personPicker(uid,name,email,onPick,label){const inTeam=teamBy(name);con
    <option value="__other" ${other?"selected":""}>Someone else…</option></select>
    <div class="ppo ${other?"":"hide"}"><div class="grid2"><div><label class="f">Name</label><input class="t" value="${other?esc(name):""}" oninput="ppOther('${uid}','${onPick}')" placeholder="Full name"></div>
    <div><label class="f">Email <span class="muted">· optional, emails them the action</span></label><input class="t" type="email" inputmode="email" value="${other?esc(email||""):""}" oninput="ppOther('${uid}','${onPick}')" placeholder="name@genus.com.au"></div></div></div>
-   ${inTeam?`<div class="muted" style="margin-top:6px">${ic("send","s")} They will be emailed at ${esc(inTeam.email)}</div>`:""}</div>`}
+   ${inTeam?`<div class="muted" style="margin-top:6px">${inTeam.email?`${ic("send","s")} They will be emailed at ${esc(inTeam.email)}`:`${ic("info","s")} No email for ${esc(firstName(inTeam.name))} – tell them about the action in person`}</div>`:""}</div>`}
 function ppSel(uid,v,fn){const box=document.getElementById("pp-"+uid);const o=box.querySelector(".ppo");
   if(v==="__other"){o.classList.remove("hide");const i=o.querySelectorAll("input");window[fn](uid,i[0].value.trim(),i[1].value.trim());i[0].focus();return}
   o.classList.add("hide");const p=teamBy(v);window[fn](uid,p?p.name:"",p?p.email:"",true)}

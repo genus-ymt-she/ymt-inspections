@@ -16,13 +16,17 @@ const hhmm=()=>{const n=new Date();return `${pad(n.getHours())}:${pad(n.getMinut
 function fuelDate(d){return String(d.details.datetime||nowLocal()).slice(0,10)}
 function fuelStage(d){return FSTAGE[d.id]||(FU(d).amAt?"pm":"am")}
 
+/* one-tap "who is doing this" for shared TA phones */
+const TA_TEAM=()=>TEAM.filter(p=>p.ta);
+function taChips(d){const cur=nameKey(d.details.inspector||"");return `<div class="chips tachips" role="group" aria-label="Who is completing this">${TA_TEAM().map(p=>`<button class="chip ${nameKey(p.name)===cur?"on":""}" onclick="taPick('${esc(p.name)}')">${ic("user","s")} ${esc(p.name)}</button>`).join("")}</div>`}
+function taPick(name){const d=CUR;d.details.inspector=name;const t=tabByNum(d.tab);if(t.kind==="fuel"){const p=teamBy(name);FU(d).position=p?p.role:FU(d).position}d.reportId="";save(d);viewInsp(d)}
 function viewFuel(d){const t=tabByNum(d.tab);const F=FU(d);const D=d.details;
   setHeader(`${pad(t.num)} · ${t.short}`,"Trade Assistants",backHome(d));
   let h=`<div class="band"><b>${esc(t.title)}</b>${esc(t.scope)}</div>
    <div class="card"><div class="lock">${ic("lock","s")} Project &amp; shift details (fixed)</div><div class="fixed">${t.fixed.map(f=>`<div><small>${esc(f[0])}</small><span>${esc(f[1])}</span></div>`).join("")}<div><small>Form</small><span>${esc(t.docNo)} · Rev ${esc(t.rev)}</span></div></div></div>
    <div class="card"><div class="grid2">
     <div><label class="f">Date</label><input class="t" type="date" id="fuDate" value="${esc(fuelDate(d))}"></div>
-    <div><label class="f">Recorded by <span class="req">*</span></label><input class="t" data-d="inspector" value="${esc(D.inspector)}" autocomplete="name"></div>
+    <div><label class="f">Recorded by <span class="req">*</span></label>${taChips(d)}<input class="t" data-d="inspector" value="${esc(D.inspector)}" autocomplete="name" placeholder="Or type a name"></div>
     <div><label class="f">Position</label><input class="t" id="fuPos" value="${esc(F.position||"")}"></div></div></div>
    <div class="seg fstage" role="tablist">${["am","pm"].map(s=>`<button class="${fuelStage(d)===s?"on":""}" role="tab" onclick="fuelSetStage('${s}')">${s==="am"?"Start of day":"End of day"}<small>${s==="am"?(F.amAt?`✓ Saved ${esc(F.amAt)}`:"Pre-start &amp; hours"):(F.pmAt?`✓ ${esc(F.pmAt)}`:"Fuel issued")}</small></button>`).join("")}</div>
    <div id="fstage">${fuelStageHTML(d)}</div>`;
@@ -90,7 +94,7 @@ function fuelProblems(d){const F=FU(d);const p=fuelAmProblems(d);if(!F.amAt)p.pu
   return p}
 async function fuelAmDone(){const d=CUR;const p=fuelAmProblems(d);
   if(p.length){sheet(`<h3>Start of day not complete</h3><ul>${p.map(x=>`<li>${esc(x)}</li>`).join("")}</ul><button class="btn o w" onclick="closeSheet()">OK</button>`);return}
-  const F=FU(d);F.amAt=F.amAt||hhmm();await save(d,true);queuePing(d,"draft");FSTAGE[d.id]="pm";toast(`✓ Start of day saved at ${F.amAt} – open it again at the end of the day`,5000);go("#ta")}
+  const F=FU(d);F.amAt=F.amAt||hhmm();F.amBy=F.amBy||d.details.inspector.trim();await save(d,true);queuePing(d,"draft");FSTAGE[d.id]="pm";toast(`✓ Start of day saved at ${F.amAt} – open it again at the end of the day`,5000);go("#ta")}
 function fuelBarHTML(d){const F=FU(d);const am=fuelStage(d)==="am";const n=(am?fuelAmProblems(d):fuelProblems(d)).length;
   return `<div class="in"><div class="stats">${n?`<b>${n}</b> item(s) to complete`:`<b style="color:var(--c)">${ic("circlecheck","s")} ${am?"Start of day ready":"Ready to review"}</b>`} · ${fuelTotal(d)} L</div>
    ${am?`<button class="btn o" onclick="fuelAmDone()">${F.amAt?"Update":"Save start"} ${ic("check","s")}</button>`:`<button class="btn o" onclick="toReview()">Review ${ic("arrow","s")}</button>`}</div>`}
@@ -109,7 +113,7 @@ function viewFuelReview(d){const t=tabByNum(d.tab);const F=FU(d);setHeader("Revi
    <tr><td colspan="3" style="text-align:right"><b>Total fuel used</b></td><td><b>${fuelTotal(d)}</b></td></tr></table></div>`;
   h+=`<h2>Completed by</h2><div class="muted" style="margin:0 4px 6px">${esc(t.declaration)}</div><div class="card"><canvas class="sig" id="sig" aria-label="Signature pad"></canvas><div style="display:flex;justify-content:space-between;align-items:center"><span class="muted">Sign with your finger</span><button class="linkbtn" onclick="clearSig()">Clear</button></div></div>
    <h2>Verified by – Supervisor (optional)</h2><div class="muted" style="margin:0 4px 6px">Supervisor or site representative, if available at the end of the day.</div><div class="card"><div class="grid2">
-    <div><label class="f">Name</label><input class="t" id="fvName" list="teamnames" value="${esc(F.vName)}" autocomplete="off"><datalist id="teamnames">${TEAM.map(x=>`<option value="${esc(x.name)}">${esc(x.role)}</option>`).join("")}</datalist></div>
+    <div><label class="f">Name</label><input class="t" id="fvName" list="teamnames" value="${esc(F.vName)}" autocomplete="off"><datalist id="teamnames">${TEAM.filter(p=>!p.ta).map(x=>`<option value="${esc(x.name)}">${esc(x.role)}</option>`).join("")}</datalist></div>
     <div><label class="f">Position</label><input class="t" id="fvPos" value="${esc(F.vPos)}"></div></div>
     <label class="f">Signature</label><canvas class="sig" id="sig2" aria-label="Supervisor signature pad"></canvas><div style="display:flex;justify-content:space-between;align-items:center"><span class="muted">Hand the phone to the Supervisor to sign</span><button class="linkbtn" onclick="fuelClearSig2()">Clear</button></div></div>`;
   const to=fuelRecipients(d);
@@ -147,7 +151,7 @@ function fuelPayload(d){const F=FU(d);return {date:fuelDate(d),by:d.details.insp
 function fuelSubject(d){return `YMT Fuel, Hours & Pre-Start Register | ${fmtD(fuelDate(d))} | ${fuelTotal(d)} L | by ${d.details.inspector}${FU(d).rows.some(r=>r.pre==="N")?" | ⚠ PRE-START NOT DONE":""}`}
 function fuelBodyText(d){const t=tabByNum(d.tab);const F=FU(d);const L=[];const HR="━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
   L.push("PARRON | DAILY FUEL USAGE / HOURS / PRE-START REGISTER");L.push(t.subtitle);L.push(HR);
-  L.push(`• Date: ${fmtD(fuelDate(d))}`);L.push(`• Recorded by: ${d.details.inspector}${F.position?` (${F.position})`:""}`);L.push(`• Start of day: ${F.amAt||"-"}  ·  End of day: ${F.pmAt||"-"}`);L.push("");
+  L.push(`• Date: ${fmtD(fuelDate(d))}`);L.push(`• Recorded by: ${d.details.inspector}${F.position?` (${F.position})`:""}`);L.push(`• Start of day: ${F.amAt||"-"}${F.amBy?` (${F.amBy})`:""}  ·  End of day: ${F.pmAt||"-"} (${d.details.inspector})`);L.push("");
   fuelRows(d).forEach(r=>L.push(`${r.id||"-"} ${r.desc}: pre-start ${r.pre||"-"}${r.basis?` | ${r.basis}`:""}${r.hs!==""?` | hours ${r.hs}${r.he?` → ${r.he}`:""}`:""}${r.flow?` | flow ${r.flow}`:""}${r.fuel!==""?` | fuel ${r.fuel} L`:""}${r.cmt?` | ${r.cmt}`:""}`));
   L.push("");L.push(`TOTAL FUEL USED: ${fuelTotal(d)} L`);L.push(`Verified by: ${F.vName?`${F.vName}${F.vPos?` (${F.vPos})`:""}`:"not verified on the day"}`);L.push("");
   L.push("Completed register attached (PDF).");L.push(`Sent from PARRON v${CONFIG.appVersion}`);return L.join("\n")}
@@ -155,7 +159,7 @@ function fuelHtml(d){const t=tabByNum(d.tab);const F=FU(d);const e=esc;
   const td='style="border:1px solid #D0D5DD;padding:5px 7px;font-size:13px;vertical-align:top"',th='style="border:1px solid #112B4E;background:#112B4E;color:#fff;padding:5px 7px;font-size:12px;text-align:left"';
   return `<div style="font-family:Arial,Helvetica,sans-serif;color:#1B2430;max-width:960px">
   <div style="background:#112B4E;color:#fff;padding:12px 14px;border-bottom:4px solid #EC7723"><div style="font-size:12px;color:#EC7723;font-weight:700;letter-spacing:.06em">PARRON | ${e(t.docNo)}</div><div style="font-size:18px;font-weight:700">Daily Fuel Usage / Hours / Pre-Start Register</div><div style="font-size:12px">${e(t.subtitle)}</div></div>
-  <p style="font-size:13px"><b>Date:</b> ${fmtD(fuelDate(d))} &nbsp; <b>Recorded by:</b> ${e(d.details.inspector)}${F.position?` (${e(F.position)})`:""} &nbsp; <b>Start of day:</b> ${e(F.amAt||"-")} &nbsp; <b>End of day:</b> ${e(F.pmAt||"-")}</p>
+  <p style="font-size:13px"><b>Date:</b> ${fmtD(fuelDate(d))} &nbsp; <b>Recorded by:</b> ${e(d.details.inspector)}${F.position?` (${e(F.position)})`:""} &nbsp; <b>Start of day:</b> ${e(F.amAt||"-")}${F.amBy?` (${e(F.amBy)})`:""} &nbsp; <b>End of day:</b> ${e(F.pmAt||"-")} (${e(d.details.inspector)})</p>
   <table style="border-collapse:collapse;width:100%"><tr>${["Asset ID","Description","Pre-start","Hours basis","Hour meter start","Hour meter end","Hours","Flow meter (standpipe)","Fuel issued (L)","Comments / issues"].map(x=>`<th ${th}>${x}</th>`).join("")}</tr>
   ${fuelRows(d).map(r=>`<tr>${[r.id,r.desc,r.pre,r.basis,r.hs,r.he,r.hrs,r.flow,r.fuel,r.cmt].map((v,i)=>`<td ${td}>${i===2&&v==="N"?'<b style="color:#C62828">N</b>':e(v)}</td>`).join("")}</tr>`).join("")}
   <tr><td ${td} colspan="8" style="border:1px solid #D0D5DD;padding:5px 7px;text-align:right;font-weight:700">TOTAL FUEL USED (L)</td><td ${td}><b>${fuelTotal(d)}</b></td><td ${td}></td></tr></table>
@@ -191,7 +195,7 @@ async function buildFuelPDF(d){const {jsPDF}=window.jspdf;const doc=new jsPDF({u
     didParseCell:c=>{if(c.section==="body")c.cell.styles.minCellHeight=16},
     didDrawCell:c=>{if(c.section!=="body")return;const img=c.column.index===2?d.signature:c.column.index===6?F.vSig:"";if(!img)return;const h=Math.min(c.cell.height-2,14);try{doc.addImage(img,"PNG",c.cell.x+1,c.cell.y+1,Math.min(h*2.6,c.cell.width-2),h)}catch(e){}}});
   y=doc.lastAutoTable.finalY+4;doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(80);
-  doc.text(PDFSAFE(`Start-of-day check saved ${F.amAt||"-"}  ·  End-of-day check ${F.pmAt||"-"}  ·  Recorded in PARRON`),M,y);
+  doc.text(PDFSAFE(`Start-of-day check saved ${F.amAt||"-"}${F.amBy?` by ${F.amBy}`:""}  ·  End-of-day check ${F.pmAt||"-"} by ${d.details.inspector}  ·  Recorded in PARRON`),M,y);
   const ph=[];F.rows.forEach(r=>r.ph.forEach(p=>ph.push({img:p.img,cap:`${fuelLabel(r)} – ${p.s==="am"?"start of day":"end of day"}`})));
   if(ph.length){doc.addPage();y=14;doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(...NAVY);doc.text("PHOTOS",M,y);y+=4;
     const cols=4,gap=5,pw=(W-2*M-gap*(cols-1))/cols;let rh=0;
