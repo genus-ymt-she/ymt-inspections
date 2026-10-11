@@ -7,17 +7,19 @@ function setShareState(ready){const b=$("#bShare");if(!b||b.dataset.blocked)retu
 function prepPDF(d){PDFFILE=null;setShareState(false);clearTimeout(prepPDF._t);prepPDF._t=setTimeout(async()=>{try{PDFBLOB=null;const b=await buildPDF(d);
   PDFFILE=new File([b],fileName(d),{type:"application/pdf"});setShareState(true)}catch(e){console.error(e);toast("Could not create the PDF");setShareState(true)}},200)}
 function isMobile(){return !!((navigator.userAgentData&&navigator.userAgentData.mobile)||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent)))}
-function copyAddr(){try{if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(recipient()).catch(()=>{})}catch(e){}}
+/* who a report goes to: the SHE Manager, or the form's own list (e.g. the fuel register goes to the Project Admin as well) */
+function sendTo(d){return d&&tabByNum(d.tab).kind==="fuel"?fuelRecipients(d).join(","):recipient()}
+function copyAddr(){try{if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(sendTo(CUR)).catch(()=>{})}catch(e){}}
 function sendShare(){const d=CUR;if(!PDFFILE){toast("Report still being prepared – tap again in a moment");return}
   if(!(isMobile()&&navigator.canShare&&navigator.canShare({files:[PDFFILE]}))){sendOutlookLink();return}
   const data=SHARE_TEXT?{files:[PDFFILE],title:subject(d)}:{files:[PDFFILE]};
   let p;try{p=navigator.share(data)}catch(e){p=Promise.reject(e)}
-  copyAddr();toast(`Tap Outlook, then paste ${recipient()} into To`,6000);
+  copyAddr();toast(`Tap Outlook, then paste ${sendTo(d)} into To`,6000);
   p.then(()=>{d.shareUsed=true;save(d,true)}).catch(e=>{if(e&&e.name==="AbortError")return;console.error(e);
     if(SHARE_TEXT){SHARE_TEXT=false;toast("Tap Send via Outlook once more",5000)}else toast("Share menu not available – use the Backup button",6000)})}
 function sendOutlookLink(){const d=CUR;const run=f=>{downloadBlob(f,fileName(d));copyAddr();
-    const q=`?to=${encodeURIComponent(recipient())}&subject=${encodeURIComponent(subject(d))}&body=${encodeURIComponent(bodyText(d,1700))}`;
-    const mailto=`mailto:${encodeURIComponent(recipient())}?subject=${encodeURIComponent(subject(d))}&body=${encodeURIComponent(bodyText(d,1700))}`;
+    const q=`?to=${encodeURIComponent(sendTo(d))}&subject=${encodeURIComponent(subject(d))}&body=${encodeURIComponent(bodyText(d,1700))}`;
+    const mailto=`mailto:${encodeURIComponent(sendTo(d))}?subject=${encodeURIComponent(subject(d))}&body=${encodeURIComponent(bodyText(d,1700))}`;
     toast("PDF saved – attach it to the email before sending",6000);
     setTimeout(()=>{if(isMobile()){let left=false;const v=()=>{if(document.hidden)left=true};document.addEventListener("visibilitychange",v);
       location.href="ms-outlook://compose"+q;setTimeout(()=>{document.removeEventListener("visibilitychange",v);if(!left)location.href=mailto},1600)}else location.href=mailto},700)};
@@ -28,12 +30,12 @@ function blobToB64(b){return new Promise((res,rej)=>{const f=new FileReader();f.
 async function sendDirect(){const d=CUR;const b=$("#bShare");if(!PDFFILE){toast("Report still being prepared – tap again in a moment");return}
   if(b){b.disabled=true;b.innerHTML='<span class="sending"><span class="spin"></span>Sending…</span>'}
   try{const t=tabByNum(d.tab);const s=stats(d);
-    const REC=t.kind==="record";const findings=findingsOf(d),report=reportFacts(d);findings.forEach(f=>rememberContact(f.owner,f.ownerEmail));
+    const REC=t.kind==="record"||t.kind==="fuel";const findings=findingsOf(d),report=reportFacts(d);findings.forEach(f=>rememberContact(f.owner,f.ownerEmail));
     const item={id:d.id,queuedAt:Date.now(),tries:0,title:`${pad(t.num)} – ${t.short}`,reportId:reportId(d),location:d.details.location,ua:REC?0:s.UA,ni:REC?0:s.NI,snn:REC?0:s.snnN,no:pad(t.num),inspector:d.details.inspector,findings,report,
-      payload:{uid:d.id,meta:pingMeta(d),reportId:reportId(d),to:recipient(),subject:subject(d),text:bodyText(d),html:htmlBody(d),filename:fileName(d),pdf:await blobToB64(PDFFILE),report,findings,alert:alertInfo(d)}};
+      payload:{uid:d.id,meta:pingMeta(d),reportId:reportId(d),to:sendTo(d),subject:subject(d),text:bodyText(d),html:htmlBody(d),filename:fileName(d),pdf:await blobToB64(PDFFILE),report,findings,alert:alertInfo(d),...(t.kind==="fuel"?{fuel:fuelPayload(d)}:{})}};
     await dbPut("outbox",item);await dbDel("drafts",d.id);{const q=getPings();if(q[d.id]){q[d.id].state="outbox";ls("pings",JSON.stringify(q))}else queuePing(d,"outbox")}
     const r=await sendItem(item);
-    if(r.ok){toast("✓ Report sent to the SHE Manager",4500)}else toast("No connection – report saved in the Outbox and will send automatically",6500);
+    if(r.ok){toast(t.kind==="fuel"?"✓ Register sent":"✓ Report sent to the SHE Manager",4500)}else toast("No connection – report saved in the Outbox and will send automatically",6500);
     go("#home")}catch(e){console.error(e);toast("Could not send – report kept. Try again or use Other ways to send",6500);if(b){b.disabled=false;b.textContent="Send report"}}}
 async function relayPost(item,noCors){const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),60000);
   try{const r=await fetch(RELAY.url,{method:"POST",body:JSON.stringify({...item.payload,key:RELAY.key}),signal:ctl.signal,redirect:"follow",...(noCors?{mode:"no-cors"}:{})});
@@ -53,7 +55,7 @@ async function flushOutbox(manual){await flushPings();if(FLUSHING)return;FLUSHIN
   if(sent)toast(`✓ ${sent} report(s) from the Outbox sent`,4000);else if(manual&&left)toast("Still no connection – will keep trying",4000);
   if(sent&&(location.hash||"#home")==="#home")viewHome();return {sent,left}}
 
-async function markSent(){const d=CUR;if(!await ask2("Close this inspection?","Confirm the report has been sent another way. The inspection is closed on this phone and its open items go on the Action register.","Close inspection"))return;const t=tabByNum(d.tab);const s=stats(d);const REC=t.kind==="record";
+async function markSent(){const d=CUR;if(!await ask2("Close this inspection?","Confirm the report has been sent another way. The inspection is closed on this phone and its open items go on the Action register.","Close inspection"))return;const t=tabByNum(d.tab);const s=stats(d);const REC=t.kind==="record"||t.kind==="fuel";
   const findings=findingsOf(d),report=reportFacts(d);findings.forEach(f=>rememberContact(f.owner,f.ownerEmail));
   await dbPut("sent",{id:d.id,reportId:reportId(d),title:`${pad(t.num)} – ${t.short}`,location:d.details.location,sentAt:Date.now(),ua:REC?0:s.UA,ni:REC?0:s.NI,snn:REC?0:s.snnN,no:pad(t.num),inspector:d.details.inspector,findings,report});
   await dbDel("drafts",d.id);queuePing(d,"sent",{reportId:reportId(d),report,findings});await loadLocalSent();updateBadges();toast("Inspection closed");go("#home")}

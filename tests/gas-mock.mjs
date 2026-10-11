@@ -54,7 +54,7 @@ function formatDate(d, tz, fmt) {
   const Y = t.getUTCFullYear(), M = t.getUTCMonth(), D = t.getUTCDate(), h = t.getUTCHours(), m = t.getUTCMinutes();
   const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  return fmt.replace(/^u$/, String(t.getUTCDay() || 7)).replace("EEEE", days[t.getUTCDay()]).replace("MMMM", months[M]).replace("MMM", months[M].slice(0, 3)).replace("yyyy", Y).replace("MM", pad(M + 1)).replace("dd", pad(D)).replace(/\bd\b/, D).replace("HH", pad(h)).replace("mm", pad(m));
+  return fmt.replace(/^u$/, String(t.getUTCDay() || 7)).replace("EEEE", days[t.getUTCDay()]).replace("EEE", days[t.getUTCDay()].slice(0, 3)).replace("MMMM", months[M]).replace("MMM", months[M].slice(0, 3)).replace("yyyy", Y).replace("MM", pad(M + 1)).replace("dd", pad(D)).replace(/\bd\b/, D).replace("HH", pad(h)).replace("mm", pad(m));
 }
 
 export function createRelay({ pin = "2468", fetch: fetchHandler = null } = {}) {

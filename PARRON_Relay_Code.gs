@@ -34,6 +34,8 @@ const APP_URL = 'https://genus-ymt-she.github.io/ymt-inspections/';   // link us
 // Action emails are only sent to these domains (stops the public link being used to email anyone).
 // Add a subcontractor's domain here if their people are assigned actions, e.g. /@(genus\.com\.au|acme\.com\.au)$/i
 const ASSIGN_ALLOWED = /@genus\.com\.au$/i;
+// Daily Fuel Usage / Hours / Pre-Start Register: the weekly fuel summary (Monday, with the weekly summary) goes here
+const FUEL_TO = 'amie.smith@genus.com.au';
 
 const SENT_HEAD = ['Sent at', 'Date', 'Month', 'Report ID', 'UID', 'Name', 'No', 'Inspection', 'Location', 'UA', 'NI', 'SNN', 'Sent via',
   'C', 'NA', 'Compliance %', 'Inspection date', 'Crew', 'Supervisor', 'PDF link'];
@@ -43,6 +45,8 @@ const FIND_HEAD = ['FID', 'Report ID', 'UID', 'Raised', 'Inspection date', 'Rais
   'Status', 'Owner', 'Due', 'Closed at', 'Closed by', 'Close-out note', 'Evidence link', 'Verified at', 'Verified by', 'Updated', 'History', 'Owner email', 'Notified'];
 const OBS_HEAD = ['Logged', 'Date', 'Month', 'Report ID', 'Type', 'Name', 'Location', 'Description', 'Category', 'Person / crew recognised',
   'Consequence', 'Likelihood', 'Risk score', 'Risk level', 'Immediate action', 'Status', 'Owner', 'Owner email', 'Due', 'Photo links'];
+const FUEL_HEAD = ['Logged', 'Date', 'Report ID', 'Recorded by', 'Asset ID', 'Description', 'Pre-start', 'Hours basis', 'Hour meter start',
+  'Hour meter end', 'Hours', 'Flow meter', 'Fuel (L)', 'Comments', 'Verified by'];
 const REM_HEAD = ['ID', 'Name', 'Email', 'Reminder', 'Repeat', 'Time', 'Created', 'Last sent', 'Active'];
 const ST = { spot: 'Closed on spot', open: 'Open', closed: 'Closed', verified: 'Verified' };
 
@@ -62,6 +66,7 @@ function setup() {
     '\nDaily summary: every day between 6 and 7 pm (Perth time).' +
     '\nWeekly summary: every Monday between 7 and 8 am (Perth time).' +
     '\nPersonal reminders: emailed between 5 and 6 am (Perth time).' +
+    '\nWeekly fuel, hours & pre-start register: Mondays to ' + FUEL_TO + '.' +
     '\nFire Danger Rating: ' + (fdrFetch_(true).today ? 'reading from the Bureau of Meteorology' : 'could not be read automatically – set it in the app (Manager mode) or choose the district') +
     '\nManager PIN: ' + (pin ? 'set' : 'NOT SET – add MANAGER_PIN under Project Settings > Script properties.'));
 }
@@ -71,8 +76,8 @@ function book_() {
   let ss, id = p.getProperty('SHEET_ID');
   if (id) { try { ss = SpreadsheetApp.openById(id); } catch (e) { ss = null; } }
   if (!ss) { ss = SpreadsheetApp.create('PARRON – Inspection Log (YMT)'); p.setProperty('SHEET_ID', ss.getId()); }
-  sheet_(ss, 'Sent', SENT_HEAD); sheet_(ss, 'Status', STAT_HEAD); sheet_(ss, 'Findings', FIND_HEAD); sheet_(ss, 'Observations', OBS_HEAD); sheet_(ss, 'Reminders', REM_HEAD);
-  const s1 = ss.getSheetByName('Sheet1'); if (s1 && ss.getSheets().length > 5) ss.deleteSheet(s1);
+  sheet_(ss, 'Sent', SENT_HEAD); sheet_(ss, 'Status', STAT_HEAD); sheet_(ss, 'Findings', FIND_HEAD); sheet_(ss, 'Observations', OBS_HEAD); sheet_(ss, 'Reminders', REM_HEAD); sheet_(ss, 'Fuel', FUEL_HEAD);
+  const s1 = ss.getSheetByName('Sheet1'); if (s1 && ss.getSheets().length > 6) ss.deleteSheet(s1);
   return ss;
 }
 function sheet_(ss, name, head) {
@@ -117,7 +122,7 @@ function send_(d) {
   const uid = String(d.uid || d.reportId || '');
   if (uid && cache.get('sent_' + uid)) return out_({ ok: true, duplicate: true });
   const opts = {
-    to: (d.to && ALLOWED.test(d.to)) ? d.to : TO,
+    to: to_(d.to),
     subject: str_(d.subject || 'PARRON site inspection', 250),
     body: String(d.text || ''),
     name: 'PARRON Site Inspections'
@@ -131,6 +136,7 @@ function send_(d) {
   if (blob && ARCHIVE_PDFS) { try { link = folder_('PARRON – Reports', Utilities.formatDate(new Date(), TZ, 'yyyy-MM')).createFile(blob).getUrl(); } catch (e) { link = ''; } }
   logSent_(uid, d.reportId, d.meta || {}, 'Direct', d.report || {}, link);
   if (Array.isArray(d.findings)) { logFindings_(d); alert_(d, d.findings); }
+  if (d.fuel && Array.isArray(d.fuel.rows)) logFuel_(d);
   return out_({ ok: true, pdf: link });
 }
 
@@ -171,6 +177,41 @@ function observation_(d) {
   return out_({ ok: true });
 }
 
+// one or more comma-separated project addresses; anything else falls back to the SHE Manager
+function to_(v) { const ok = String(v || '').split(/[,;]/).map(e => e.trim().toLowerCase()).filter(e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && ALLOWED.test(e)); return ok.length ? ok.slice(0, 5).join(',') : TO; }
+function logFuel_(d) {
+  const f = d.fuel; const sh = book_().getSheetByName('Fuel'); const now = new Date();
+  const rows = f.rows.slice(0, 40).map(r => [now, str_(f.date, 10), str_(d.reportId, 60), clean_(f.by), str_(r.id, 20), str_(r.desc, 80), str_(r.pre, 4), str_(r.basis, 10),
+    r.hs === '' ? '' : str_(r.hs, 20), r.he === '' ? '' : str_(r.he, 20), r.hrs === '' ? '' : num_(r.hrs), str_(r.flow, 20), r.fuel === '' ? '' : num_(r.fuel), str_(r.cmt, 300), clean_(f.verifiedBy)]);
+  if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, FUEL_HEAD.length).setValues(rows);
+}
+/* Monday: last week's fuel, hours and pre-starts for the Project Admin (weekly client report) */
+function fuelWeekly_(ss, now) {
+  const F = idx_(FUEL_HEAD); const d1 = new Date(now.getTime() - 864e5), d0 = new Date(now.getTime() - 7 * 864e5);
+  const from = Utilities.formatDate(d0, TZ, 'yyyy-MM-dd'), to = Utilities.formatDate(d1, TZ, 'yyyy-MM-dd');
+  const all = rows_(ss.getSheetByName('Fuel')).map(r => r.map((v, i) => i === F.Date ? dstr_(v) : v)).filter(r => r[F.Date] >= from && r[F.Date] <= to);
+  // if a day's register was sent twice, keep the latest one
+  const latest = {}; all.forEach(r => { const k = r[F.Date]; if (!latest[k] || String(r[F['Report ID']]) > latest[k]) latest[k] = String(r[F['Report ID']]); });
+  const rows = all.filter(r => latest[r[F.Date]] === String(r[F['Report ID']])).sort((a, b) => String(a[F.Date]).localeCompare(String(b[F.Date])));
+  const assets = {}; rows.forEach(r => { const k = (r[F['Asset ID']] ? r[F['Asset ID']] + ' ' : '') + r[F.Description];
+    const a = assets[k] = assets[k] || { fuel: 0, hrs: 0, y: 0, n: 0 }; a.fuel += num_(r[F['Fuel (L)']]); a.hrs += num_(r[F.Hours]); if (r[F['Pre-start']] === 'Y') a.y++; if (r[F['Pre-start']] === 'N') a.n++; });
+  const days = Object.keys(latest).sort(); const total = rows.reduce((s, r) => s + num_(r[F['Fuel (L)']]), 0);
+  const missing = []; for (let t = d0.getTime(); t <= d1.getTime(); t += 864e5) { const dt = new Date(t); const k = Utilities.formatDate(dt, TZ, 'yyyy-MM-dd'); const wd = Utilities.formatDate(dt, TZ, 'u'); if (wd !== '6' && wd !== '7' && !latest[k]) missing.push(Utilities.formatDate(dt, TZ, 'EEE d MMM')); }
+  const td = 'style="border:1px solid #D0D5DD;padding:5px 7px;font-size:13px"', th = 'style="background:#112B4E;color:#fff;padding:5px 7px;text-align:left;font-size:12px"';
+  const tbl = (cols, list) => list.length ? `<table style="border-collapse:collapse;width:100%"><tr>${cols.map(c => `<th ${th}>${c}</th>`).join('')}</tr>${list.map(r => `<tr>${r.map(v => `<td ${td}>${esc_(String(v))}</td>`).join('')}</tr>`).join('')}</table>` : '<p style="font-size:13px">No registers received.</p>';
+  const dmy = s => String(s).slice(0, 10).split('-').reverse().join('/'); const r1 = n => Math.round(n * 10) / 10;
+  const range = `${Utilities.formatDate(d0, TZ, 'd MMM')} – ${Utilities.formatDate(d1, TZ, 'd MMM yyyy')}`;
+  const html = `<div style="font-family:Arial,sans-serif;color:#1B2430;max-width:900px">
+    <div style="background:#112B4E;color:#fff;padding:12px 14px;border-bottom:4px solid #EC7723"><div style="font-size:12px;color:#EC7723;font-weight:700">PARRON | WEEKLY FUEL, HOURS &amp; PRE-START REGISTER</div><div style="font-size:18px;font-weight:700">${range}</div></div>
+    <p style="font-size:14px"><b>Total fuel used: ${r1(total)} L</b> · ${days.length} daily register(s) received${missing.length ? ` · <span style="color:#C5221F">No register for ${esc_(missing.join(', '))}</span>` : ''}</p>
+    <h3 style="color:#112B4E">Totals by asset</h3>${tbl(['Asset', 'Fuel issued (L)', 'Hours', 'Pre-starts done', 'Pre-starts NOT done'], Object.keys(assets).map(k => [k, r1(assets[k].fuel), r1(assets[k].hrs), assets[k].y, assets[k].n]))}
+    <h3 style="color:#112B4E">Daily detail</h3>${tbl(['Date', 'Asset ID', 'Description', 'Pre-start', 'Hours basis', 'Hour meter start', 'Hour meter end', 'Hours', 'Flow meter', 'Fuel (L)', 'Comments', 'Recorded by'],
+      rows.map(r => [dmy(r[F.Date]), r[F['Asset ID']], r[F.Description], r[F['Pre-start']], r[F['Hours basis']], r[F['Hour meter start']], r[F['Hour meter end']], r[F.Hours], r[F['Flow meter']], r[F['Fuel (L)']], r[F.Comments], r[F['Recorded by']]]))}
+    <p style="font-size:12px;color:#5B6675">The signed daily registers (PDF) were emailed each day. A spreadsheet copy is attached.</p></div>`;
+  const csv = [FUEL_HEAD.slice(1).join(',')].concat(rows.map(r => r.slice(1).map(v => '"' + String(v instanceof Date ? dstr_(v) : v).replace(/"/g, '""') + '"').join(','))).join('\n');
+  MailApp.sendEmail({ to: FUEL_TO, cc: TO, name: 'PARRON Site Inspections', subject: `Weekly fuel, hours & pre-start register ${range} – ${r1(total)} L`, htmlBody: html, body: 'Open in an HTML email client.',
+    attachments: [Utilities.newBlob(csv, 'text/csv', `Fuel_Hours_PreStart_${from}_to_${to}.csv`)] });
+}
 function logSent_(uid, reportId, m, via, r, link) {
   const ss = book_(); const now = new Date(); r = r || {};
   ss.getSheetByName('Sent').appendRow([now, "'" + Utilities.formatDate(now, TZ, 'yyyy-MM-dd'), "'" + Utilities.formatDate(now, TZ, 'yyyy-MM'),
@@ -472,6 +513,7 @@ function weeklyDigest() {
     <h3 style="color:#112B4E">Repeat findings – last 90 days</h3>${t(repeat.map(([k, o]) => [esc_(k), esc_(o.text), o.n]), ['Item', 'Requirement', 'Times'])}
     <p style="font-size:12px;color:#5B6675">Open PARRON Insights for charts and the Monthly HSE summary: <a href="${APP_URL}#insights">${APP_URL}</a></p></div>`;
   MailApp.sendEmail({ to: TO, name: 'PARRON Site Inspections', subject: `PARRON weekly summary ${range} – ${sent.length} inspections, ${overdue.length} actions overdue`, htmlBody: html, body: 'Open in an HTML email client.' });
+  try { fuelWeekly_(ss, now); } catch (e) { console.error(e); }
 }
 
 /* ---------- helpers ---------- */

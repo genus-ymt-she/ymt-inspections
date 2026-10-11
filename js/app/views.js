@@ -14,11 +14,13 @@ async function route(){const seq=++ROUTE_SEQ;const h=location.hash||"#home";cons
   if(v==="settings")return viewSettings();
   if(v==="dash"||v==="insights")return viewDash();
   if(v==="myday")return viewMyDay();
+  if(v==="ta")return viewTA();
+  if(v==="radio")return viewRadio();
   if(v==="inspections")return viewInspections();
   if(v==="report")return viewReport(id||"hazard");
   if(v==="actions")return viewActions(id?decodeURIComponent(id):"");
   return viewHome()}
-function setNav(v){const m={home:"home","":"home",inspections:"home",myday:"home",insights:"insights",dash:"insights",actions:"actions"};const k=m[v]||"";
+function setNav(v){const m={home:"home","":"home",inspections:"home",myday:"home",ta:"home",radio:"home",insights:"insights",dash:"insights",actions:"actions"};const k=m[v]||"";
   document.querySelectorAll("#tabs a").forEach(a=>{const on=a.dataset.t===k;a.classList.toggle("on",on);if(on)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
 function setHeader(title,sub,btn){$("#hTitle").textContent=title;$("#hSub").textContent=sub;const b=$("#hBtn");
   if(btn){b.innerHTML=(btn.icon?ic(btn.icon):"")+(btn.label?`<span>${esc(btn.label)}</span>`:"");b.setAttribute("aria-label",btn.aria||btn.label||"");b.onclick=btn.fn;b.classList.remove("hide")}else b.classList.add("hide")}
@@ -49,14 +51,16 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
    <button class="tile" onclick="startInsp(24)"><span class="ti" style="background:var(--accent-soft);color:var(--accent)">${ic("eye","l")}</span><b>Task Observation</b><span>Observe a crew</span></button>
    <button class="tile" onclick="startInsp(23)"><span class="ti" style="background:#EEE8FB;color:#6B47C9">${ic("users","l")}</span><b>Mentoring</b><span>Discussion record</span></button>
    <button class="tile" onclick="go('#report/hazard')"><span class="ti" style="background:var(--ua-soft);color:var(--ua)">${ic("alert","l")}</span><b>Hazard</b><span>Quick report</span></button>
-   <button class="tile" onclick="go('#report/positive')"><span class="ti" style="background:var(--c-soft);color:var(--c)">${ic("star","l")}</span><b>Positive</b><span>Observation</span></button></div>`;}
+   <button class="tile" onclick="go('#report/positive')"><span class="ti" style="background:var(--c-soft);color:var(--c)">${ic("star","l")}</span><b>Positive</b><span>Observation</span></button>
+   <button class="tile" onclick="go('#ta')"><span class="ti" style="background:#FFF1E0;color:#B85C00">${ic("hardhat","l")}</span><b>Trade Assistants</b><span>Fuel register · fire trailer</span></button>
+   <button class="tile radio ${RADIO.playing?"on":""}" onclick="go('#radio')"><span class="ti" style="background:#E7F0FF;color:#1F5FD1">${ic("radio","l")}</span><b>PARRON Radio</b><span>${RADIO.playing?"Now playing":"Shuffle play"}</span></button></div>`;}
   if(ob.length)h+=`<div class="outbox">${ic("inbox")}<div><b>Outbox – ${ob.length} report${ob.length>1?"s":""} waiting to send</b><div class="muted" style="margin:4px 0 8px">${ob.map(o=>`${esc(o.title)} · ${esc(o.location)}`).join("<br>")}<br>They send automatically when the phone has signal${ob[0].lastError?` (last try: ${esc(ob[0].lastError)})`:""}.</div><button class="btn o s" onclick="flushOutbox(true)">${ic("send","s")} Send now</button></div></div>`;
   {const sod=new Date();sod.setHours(0,0,0,0);const stale=drafts.filter(d=>d.created<sod.getTime());
    if(stale.length)h+=`<div class="alert red">${ic("clock")}<div><b>${stale.length} unsent inspection${stale.length>1?"s":""} started before today.</b> Finish and send ${stale.length>1?"them":"it"} – or delete if no longer needed.</div></div>`}
   if(!recipientOK())h+=`<div class="alert red">${ic("alert")}<div><b>Report recipient not set.</b> Set it under Settings.</div></div>`;
   if(!me)h+=`<div class="alert blue">${ic("user")}<div><b>Who are you?</b> Pick your name once so it fills in on every report and your actions show here.<br><button class="btn o s" style="margin-top:8px" onclick="askName().then(()=>viewHome())">Pick my name</button></div></div>`;
   if(drafts.length){h+=`<h2 id="drafts">Continue <span class="cnt">${drafts.length}</span></h2>`;
-    drafts.forEach(d=>{const t=tabByNum(d.tab);const REC=t.kind==="record";const s=REC?null:stats(d);const p=REC?Math.max(0,8-recProblems(d).length)/8:(s.total?s.rated/s.total:0);
+    drafts.forEach(d=>{const t=tabByNum(d.tab);const FUEL=t.kind==="fuel";const REC=t.kind==="record"||FUEL;const s=REC?null:stats(d);const p=FUEL?(FU(d).amAt?.5:.1):REC?Math.max(0,8-recProblems(d).length)/8:(s.total?s.rated/s.total:0);
       h+=`<div class="card tap draft" onclick="go('#insp/${d.id}')"><div class="tab">${ring(p)}<div class="x"><b>${pad(t.num)} · ${esc(t.short)}</b><span>${esc(d.details.location||"No location yet")} · ${fmtDT(d.details.datetime)}</span>
         ${s?`<div class="libmeta"><span class="tag">${s.rated}/${s.total} rated</span>${s.UA?`<span class="tag r">${s.UA} UA</span>`:""}${s.NI?`<span class="tag o">${s.NI} NI</span>`:""}</div>`:""}</div>
         <button class="iconbtn" aria-label="Delete draft" onclick="event.stopPropagation();delDraft('${d.id}')">${ic("trash")}</button></div></div>`})}
@@ -102,7 +106,7 @@ function askName(){return new Promise(res=>{const s=sheet(`<h3>Who are you?</h3>
 async function delDraft(id){if(!await ask2("Delete this draft?","The unfinished inspection and its photos are removed from this phone. This cannot be undone.","Delete",true))return;const d=await dbGet("drafts",id);await dbDel("drafts",id);if(d)queuePing(d,"deleted");toast("Draft deleted");route()}
 /* ---------- status pings: lets Insights see inspections that are started but not sent (name, inspection, location and times only) ---------- */
 function pingMeta(d){const t=tabByNum(d.tab);const s=stats(d);
-  const progress=t.kind==="record"?`${Math.max(0,8-recProblems(d).length)}/8 fields`:`${s.rated}/${s.total} rated`;
+  const progress=t.kind==="fuel"?(FU(d).amAt?"start of day done":"start of day"):t.kind==="record"?`${Math.max(0,8-recProblems(d).length)}/8 fields`:`${s.rated}/${s.total} rated`;
   return {name:(d.details.inspector||ls("inspector")||"").trim(),no:pad(t.num),title:t.short,location:d.details.location||"",started:new Date(d.created).toISOString(),ua:s.UA,ni:s.NI,snn:s.snnN,progress}}
 function getPings(){try{return JSON.parse(ls("pings")||"{}")}catch(e){return {}}}
 function queuePing(d,state,extra){if(state==="draft"&&!problems(d).length)state="finished";const p=getPings();p[d.id]={action:"status",uid:d.id,state,meta:pingMeta(d),...(extra||{})};ls("pings",JSON.stringify(p));d._pinged=Date.now();flushPings()}

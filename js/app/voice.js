@@ -219,7 +219,7 @@ async function ask(prompt,o){ o=o||{}; V.step=Object.assign({prompt},o); vOpts(o
   } }
 
 /* ---- start / stop ---- */
-async function voiceStart(){ if(!voiceSupported()||V.on||!CUR) return; const d=CUR; const t=tabByNum(d.tab);
+async function voiceStart(){ if(!voiceSupported()||V.on||!CUR) return; if(typeof radioPause==="function") radioPause(); const d=CUR; const t=tabByNum(d.tab);
   primeSpeech();
   if(t.kind==="record"){ const ok=await voiceConsent(d); if(!ok) return }
   V.on=true; V.gen++; V.noMic=false; V.pre=""; document.body.classList.add("voiceon"); vPanel(); vState("speaking");
