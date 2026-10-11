@@ -165,11 +165,11 @@ test("setup creates the daily and Monday weekly triggers", () => {
   assert.deepEqual(r.triggers.sort(), ["dailyDigest", "weeklyDigest"]);
 });
 
-test("weekly summary goes only to the SHE Manager with targets per person", () => {
+test("weekly summary goes only to the SHE Manager with activity per person", () => {
   const r = createRelay();
-  r.post(report({ targets: { "Test Inspector": 2, "Matt Smith": 2 } }));
+  r.post(report());
   const before = r.mail.length; r.ctx.weeklyDigest();
   const w = r.mail.slice(before); assert.equal(w.length, 1);
   assert.equal(w[0].to, "darren.frizzell@genus.com.au"); assert.match(w[0].subject, /weekly summary/);
-  assert.match(w[0].htmlBody, /Test Inspector/); assert.match(w[0].htmlBody, /1 short/); assert.match(w[0].htmlBody, /Matt Smith/);
+  assert.match(w[0].htmlBody, /Activity by person/); assert.match(w[0].htmlBody, /Test Inspector/); assert.doesNotMatch(w[0].htmlBody, /target/i);
 });

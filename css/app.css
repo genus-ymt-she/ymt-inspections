@@ -482,7 +482,3 @@ body.noscroll .toast{bottom:auto;top:calc(env(safe-area-inset-top) + 76px)}
 .qr .card{margin:0;text-align:left;font:inherit;color:inherit;display:flex;flex-direction:column;gap:2px;padding:13px 14px}
 .qr .qi{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;margin-bottom:6px}
 .qr b{font-size:15px}.qr span:not(.qi){font-size:12.5px;color:var(--muted)}
-.tgt{display:grid;grid-template-columns:minmax(92px,34%) 1fr auto;gap:6px 10px;align-items:center;font-size:13px;margin:8px 0}
-.tgt .tr{height:12px;background:var(--surface-3);border-radius:6px;overflow:hidden}
-.tgt .tr i{display:block;height:100%;border-radius:6px}
-.tgt .vl{font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}

@@ -118,7 +118,6 @@ function send_(d) {
   if (blob && ARCHIVE_PDFS) { try { link = folder_('PARRON – Reports', Utilities.formatDate(new Date(), TZ, 'yyyy-MM')).createFile(blob).getUrl(); } catch (e) { link = ''; } }
   logSent_(uid, d.reportId, d.meta || {}, 'Direct', d.report || {}, link);
   if (Array.isArray(d.findings)) { logFindings_(d); alert_(d, d.findings); }
-  saveTargets_(d.targets);
   return out_({ ok: true, pdf: link });
 }
 
@@ -157,12 +156,6 @@ function observation_(d) {
     str_(o.immediate, 2000), hazard ? (f.status === 'spot' ? ST.spot : ST.open) : '', str_(f.owner, 120), email_(f.ownerEmail), f.due ? "'" + str_(f.due, 10) : '', links.join('\n')]);
   if (hazard && Array.isArray(d.findings)) { logFindings_(d); alert_(d, d.findings); }
   return out_({ ok: true });
-}
-
-/* the app sends each person's weekly inspection target with every report, so the weekly summary can show them */
-function saveTargets_(t) {
-  if (!t || typeof t !== 'object') return;
-  try { const s = JSON.stringify(t).slice(0, 8000); const p = PropertiesService.getScriptProperties(); if (p.getProperty('TARGETS') !== s) p.setProperty('TARGETS', s); } catch (e) {}
 }
 
 function logSent_(uid, reportId, m, via, r, link) {
@@ -368,11 +361,10 @@ function weeklyDigest() {
   const raised = F.filter(f => inWeek(f.raised)); const open = F.filter(f => f.status === ST.open);
   const overdue = open.filter(f => f.due && f.due < today); const crit = open.filter(f => f.level === 'Critical' || f.level === 'High');
   const pcs = sent.map(r => r[S['Compliance %']]).filter(x => x !== '' && x != null).map(Number); const avg = pcs.length ? Math.round(pcs.reduce((a, b) => a + b, 0) / pcs.length) : null;
-  let targets = {}; try { targets = JSON.parse(PropertiesService.getScriptProperties().getProperty('TARGETS') || '{}'); } catch (e) {}
-  const people = {}; Object.keys(targets).forEach(k => { if (targets[k] > 0) people[k] = { n: 0, t: targets[k], obs: 0 }; });
-  sent.forEach(r => { const k = clean_(r[5]) || '(no name)'; (people[k] = people[k] || { n: 0, t: targets[k] || 0, obs: 0 }).n++; });
-  obs.forEach(r => { const k = clean_(r[O.Name]) || '(no name)'; (people[k] = people[k] || { n: 0, t: targets[k] || 0, obs: 0 }).obs++; });
-  const met = Object.values(people).filter(p => p.t > 0); const metN = met.filter(p => p.n >= p.t).length;
+  const people = {};
+  sent.forEach(r => { const k = clean_(r[5]) || '(no name)'; (people[k] = people[k] || { n: 0, obs: 0 }).n++; });
+  obs.forEach(r => { const k = clean_(r[O.Name]) || '(no name)'; (people[k] = people[k] || { n: 0, obs: 0 }).obs++; });
+  const closedWk = F.filter(f => f.closedAt && inWeek(f.closedAt)).length;
   const rep = {}; F.filter(f => new Date(f.raised).getTime() >= now.getTime() - 90 * 864e5).forEach(f => { rep[f.item] = rep[f.item] || { n: 0, text: f.text }; rep[f.item].n++; });
   const repeat = Object.entries(rep).filter(([, o]) => o.n > 1).sort((a, b) => b[1].n - a[1].n).slice(0, 5);
   const td = 'style="border:1px solid #D0D5DD;padding:6px 8px;font-size:13px"', th = 'style="background:#112B4E;color:#fff;padding:6px 8px;text-align:left;font-size:12px"';
@@ -383,8 +375,8 @@ function weeklyDigest() {
   const html = `<div style="font-family:Arial,sans-serif;color:#1B2430;max-width:820px">
     <div style="background:#112B4E;color:#fff;padding:12px 14px;border-bottom:4px solid #EC7723"><div style="font-size:12px;color:#EC7723;font-weight:700">PARRON | WEEKLY SUMMARY</div><div style="font-size:18px;font-weight:700">${range}</div></div>
     <table style="border-collapse:collapse;width:100%;margin:12px 0"><tr>${tile(sent.length, 'Inspections', '#112B4E')}${tile(avg == null ? '–' : avg + '%', 'Avg compliance', '#1E8E3E')}${tile(raised.length, 'Findings raised', '#C5221F')}${tile(obs.filter(r => r[O.Type] === 'Hazard').length, 'Hazard reports', '#E8660D')}${tile(obs.filter(r => r[O.Type] !== 'Hazard').length, 'Positive obs', '#1E8E3E')}</tr>
-    <tr>${tile(open.length, 'Open actions', '#C98A00')}${tile(overdue.length, 'Overdue', '#C5221F')}${tile(crit.length, 'Open High / Critical', '#C5221F')}${tile(F.filter(f => f.status === ST.closed).length, 'To verify', '#E39A00')}${tile(met.length ? metN + ' / ' + met.length : '–', 'Met inspection target', '#112B4E')}</tr></table>
-    <h3 style="color:#112B4E">Inspections by person (target per week)</h3>${t(Object.keys(people).sort().map(k => { const p = people[k]; return [esc_(k), p.n, p.t || '–', p.t ? (p.n >= p.t ? '<b style="color:#1E8E3E">Met</b>' : `<b style="color:#C5221F">${p.t - p.n} short</b>`) : '', p.obs]; }), ['Name', 'Inspections', 'Target', 'Status', 'Hazard / positive reports'])}
+    <tr>${tile(open.length, 'Open actions', '#C98A00')}${tile(overdue.length, 'Overdue', '#C5221F')}${tile(crit.length, 'Open High / Critical', '#C5221F')}${tile(F.filter(f => f.status === ST.closed).length, 'To verify', '#E39A00')}${tile(closedWk, 'Closed this week', '#1E8E3E')}</tr></table>
+    <h3 style="color:#112B4E">Activity by person</h3>${t(Object.keys(people).sort((a, b) => people[b].n - people[a].n || a.localeCompare(b)).map(k => [esc_(k), people[k].n, people[k].obs]), ['Name', 'Inspections', 'Hazard / positive reports'])}
     <h3 style="color:#C5221F">Open High / Critical actions (${crit.length})</h3>${t(crit.slice(0, 20).map(f => [esc_(f.reportId + ' / ' + f.item), esc_(f.level + ' ' + f.score), esc_(f.action), esc_(f.owner || 'TBC'), dmy(f.due)]), ['Finding', 'Risk', 'Corrective action', 'Owner', 'Due'])}
     <h3 style="color:#C5221F">Overdue actions (${overdue.length})</h3>${t(overdue.slice(0, 20).map(f => [esc_(f.reportId + ' / ' + f.item), esc_(f.level || f.rating), esc_(f.action), esc_(f.owner || 'TBC'), dmy(f.due)]), ['Finding', 'Risk', 'Corrective action', 'Owner', 'Due'])}
     <h3 style="color:#112B4E">Repeat findings – last 90 days</h3>${t(repeat.map(([k, o]) => [esc_(k), esc_(o.text), o.n]), ['Item', 'Requirement', 'Times'])}

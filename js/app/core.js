@@ -62,8 +62,7 @@ function snnNames(codes){return (codes||[]).map(c=>SNN[c]).filter(Boolean)}
 function contacts(){const c=lsJ("contacts",{});TEAM.forEach(p=>{c[p.name]=p.email});(REG&&REG.findings||[]).forEach(f=>{if(f.owner&&f.ownerEmail&&!c[f.owner])c[f.owner]=f.ownerEmail});return c}
 function rememberContact(name,email){name=String(name||"").trim();email=String(email||"").trim().toLowerCase();if(!name||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return;const c=lsJ("contacts",{});c[name]=email;ls("contacts",JSON.stringify(c))}
 const emailOK=e=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(e||"").trim());
-/* sent with every report so the relay's urgent alert reaches the supervisor and the weekly summary knows the targets */
-function teamTargets(){const t={};TEAM.forEach(p=>{t[p.name]=+p.target||0});return t}
+/* sent with every report so the relay's urgent alert also reaches the inspection supervisor */
 function alertInfo(d){const sup=teamBy(d.details.supervisor||"");return {supervisorEmail:sup?sup.email:""}}
 const teamBy=name=>TEAM.find(p=>nameKey(p.name)===nameKey(name));
 /* person picker: the team list plus "Someone else" (free name + email). onPick(name,email) is a global function name. */
