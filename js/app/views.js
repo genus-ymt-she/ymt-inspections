@@ -14,9 +14,8 @@ async function route(){const seq=++ROUTE_SEQ;const h=location.hash||"#home";cons
   if(v==="settings")return viewSettings();
   if(v==="dash"||v==="insights")return viewDash();
   if(v==="actions")return viewActions(id?decodeURIComponent(id):"");
-  if(v==="myosh")return viewMyosh(id?decodeURIComponent(id):"");
   return viewHome()}
-function setNav(v){const m={home:"home","":"home",insights:"insights",dash:"insights",actions:"actions",myosh:"myosh"};const k=m[v]||"";
+function setNav(v){const m={home:"home","":"home",insights:"insights",dash:"insights",actions:"actions"};const k=m[v]||"";
   document.querySelectorAll("#tabs a").forEach(a=>{const on=a.dataset.t===k;a.classList.toggle("on",on);if(on)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
 function setHeader(title,sub,btn){$("#hTitle").textContent=title;$("#hSub").textContent=sub;const b=$("#hBtn");
   if(btn){b.innerHTML=(btn.icon?ic(btn.icon):"")+(btn.label?`<span>${esc(btn.label)}</span>`:"");b.setAttribute("aria-label",btn.aria||btn.label||"");b.onclick=btn.fn;b.classList.remove("hide")}else b.classList.add("hide")}
@@ -97,21 +96,22 @@ const isManager=()=>!!ls("mgrPin");
 async function viewSettings(){setHeader("Settings","This phone only",{icon:"back",aria:"Back",fn:()=>history.length>1?history.back():go("#home")});
   const th=ls("theme")||"auto";const hc=ls("contrast")==="high";
   render(`<h2>Profile</h2><div class="card"><label class="f" for="sName">Your name (fills in as Inspector)</label><input class="t" id="sName" value="${esc(ls("inspector")||"")}" autocomplete="name">
+   <label class="f" for="sEm">Your email <span class="muted">· actions assigned to this email show under “Mine”</span></label><input class="t" id="sEm" type="email" inputmode="email" value="${esc(ls("myEmail")||"")}" autocomplete="email">
    <label class="f" for="sRec">Reports are sent to</label><input class="t" id="sRec" type="email" value="${esc(recipient())}">
    <p class="muted">Set by the SHE Manager. Only change this if instructed.</p><button class="btn o w" onclick="saveSettings()">${ic("check","s")} Save</button></div>
   <h2>Appearance</h2><div class="card"><div class="set">${ic("sun")}<div><b>Theme</b><span>Dark mode is easier on the eyes at night and saves battery.</span></div></div>
    <div class="seg" role="group" aria-label="Theme">${[["auto","Auto"],["light","Light"],["dark","Dark"]].map(([k,l])=>`<button class="${th===k?"on":""}" onclick="setTheme('${k}')">${l}</button>`).join("")}</div>
    <div class="set" style="margin-top:6px">${ic("sun")}<div><b>High contrast</b><span>Stronger text and borders for bright sunlight.</span></div><label class="switch"><input type="checkbox" ${hc?"checked":""} onchange="setContrast(this.checked)"><i></i></label></div></div>
-  <h2>Manager mode</h2><div class="card"><div class="set">${ic("lock")}<div><b>${isManager()?"On – this phone can verify actions and record MYOSH entries":"Off"}</b><span>For the SHE Manager. Needs the Manager PIN set in the relay.</span></div></div>
+  <h2>Manager mode</h2><div class="card"><div class="set">${ic("lock")}<div><b>${isManager()?"On – this phone can verify, re-open and reassign actions":"Off"}</b><span>For the SHE Manager. Needs the Manager PIN set in the relay.</span></div></div>
    ${isManager()?`<button class="btn g w" onclick="mgrOff()">Turn off on this phone</button>`:`<label class="f" for="mPin">Manager PIN</label><input class="t" id="mPin" type="password" inputmode="numeric" autocomplete="off" maxlength="12"><button class="btn w" onclick="mgrOn()">${ic("lock","s")} Turn on</button>`}</div>
   <h2>Connection</h2><div class="card"><div class="set">${ic("send")}<div><b>Direct send</b><span id="cState">${directOn()?"On – reports email automatically":"Not set up – reports are shared via Outlook"}</span></div></div>
-   <div class="set">${ic("layers")}<div><b>Project log</b><span id="rState">${directOn()?(v3()?"Connected – shared actions, Insights and MYOSH tracking":"Checking…"):"Not connected"}</span></div></div>
+   <div class="set">${ic("layers")}<div><b>Project log</b><span id="rState">${directOn()?(v3()?"Connected – shared actions, action emails and Insights":"Checking…"):"Not connected"}</span></div></div>
    ${directOn()?`<button class="btn g w" onclick="testRelay()">${ic("refresh","s")} Test connection</button>`:""}</div>
   <h2>Install on your phone</h2><div class="card"><ol class="steps"><li><b>iPhone:</b> open this page in Safari › Share › <i>Add to Home Screen</i>.</li><li><b>Android:</b> open in Chrome › ⋮ menu › <i>Install app</i>.</li><li>Open it once with coverage. After that it works with no signal – reports send when you are back in range.</li></ol></div>
   <h2>Data on this phone</h2><div class="card"><div class="set">${ic("download")}<div><b>Back up my data</b><span>Drafts and sent history as a file – useful before changing phones.</span></div><button class="btn g s" onclick="backupData()">Back up</button></div></div>
   <p class="foot">PARRON v${esc(CONFIG.appVersion)}<br>${esc(CONFIG.project)}</p>`);
-  if(directOn()&&!v3())relayVersion(true).then(()=>{const e=$("#rState");if(e)e.textContent=v3()?"Connected – shared actions, Insights and MYOSH tracking":"Relay v2 – update the relay script to share actions and MYOSH tracking"})}
-function saveSettings(){ls("inspector",$("#sName").value.trim().replace(/\s+/g," "));const r=$("#sRec").value.trim();
+  if(directOn()&&!v3())relayVersion(true).then(()=>{const e=$("#rState");if(e)e.textContent=v3()?"Connected – shared actions, action emails and Insights":"Relay v2 – update the relay script to share actions and send action emails"})}
+function saveSettings(){ls("inspector",$("#sName").value.trim().replace(/\s+/g," "));ls("myEmail",$("#sEm").value.trim().toLowerCase());const r=$("#sRec").value.trim();
   if(r&&r!==CONFIG.recipient)ls("recipientOverride",r);else lsDel("recipientOverride");
   toast("Saved");go("#home")}
 function setTheme(k){if(k==="auto"){lsDel("theme");delete document.documentElement.dataset.theme}else{ls("theme",k);document.documentElement.dataset.theme=k}viewSettings()}

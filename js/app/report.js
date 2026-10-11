@@ -7,7 +7,7 @@ function subject(d){const t=tabByNum(d.tab);const s=stats(d);
   return `YMT Inspection | ${pad(t.num)} ${t.short} | ${fmtDT(d.details.datetime).slice(0,10)} | ${d.details.location} | ${s.UA} UA / ${s.NI} NI${s.snnN?` | ⚠ ${s.snnN} SNN`:""}`}
 function bodyText(d,limit){if(tabByNum(d.tab).kind==="record"){let x=recBodyText(d);if(limit&&x.length>limit)x=x.slice(0,limit-60)+"\n…\n(Shortened – full record in the attached PDF.)";return x}const t=tabByNum(d.tab);const s=stats(d);const D=d.details;const L=[];
   const HR="━━━━━━━━━━━━━━━━━━━━━━━━━━━━",hr="──────────────────────────────";
-  const st=n=>n.closed?"CLOSED":"OPEN";const rkT=n=>{const k=riskOf(n.cons,n.like);return k?`${k.level} (${n.cons}x${n.like}=${k.score})`:"Not rated"};
+  const st=n=>n.closed?"CLOSED":"OPEN";const rkT=n=>riskText(riskOf(n.cons,n.like));
   L.push(`PARRON | SITE INSPECTION REPORT`);
   L.push(`${pad(t.num)} – ${t.title.replace(/^\d+\s–\s/,"")}`);
   L.push(HR);L.push("");
@@ -71,7 +71,7 @@ function htmlBody(d){if(tabByNum(d.tab).kind==="record")return recHtml(d);const 
   if(!s.ncs.length)h+=`<p style="font-weight:700;color:#2E7D32">No non-compliances identified.</p>`;
   else{h+=`<h3 style="color:#112B4E;margin:16px 0 6px">Non-compliances for Hazard Register (${s.ncs.length})</h3><table style="border-collapse:collapse;width:100%">
     <tr><th ${th}>#</th><th ${th}>Ref</th><th ${th}>Rating</th><th ${th}>Risk</th><th ${th}>Item / finding</th><th ${th}>Proposed corrective action</th><th ${th}>Status</th><th ${th}>SNN</th></tr>`;
-    s.ncs.forEach((n,i)=>{h+=`<tr><td ${td}>${i+1}</td><td ${td}><b>${e(n.id)}</b></td><td ${td}>${pill(n.r,n.r==="UA"?"#C62828":"#E39A00")}</td><td ${td}>${(()=>{const k=riskOf(n.cons,n.like);return k?pill(k.level+" "+k.score,k.color):"–"})()}</td>
+    s.ncs.forEach((n,i)=>{h+=`<tr><td ${td}>${i+1}</td><td ${td}><b>${e(n.id)}</b></td><td ${td}>${pill(n.r,n.r==="UA"?"#C62828":"#E39A00")}</td><td ${td}>${(()=>{const k=riskOf(n.cons,n.like);return k?`<span style="display:inline-block;background:${k.color};color:${k.ink};font-weight:700;border-radius:4px;padding:2px 8px;font-size:12px">${e(k.level+" "+k.score)}</span>`:"–"})()}</td>
       <td ${td}>${e(n.text)}<br><b>Finding:</b> ${e(n.finding)}${n.photos.length?`<br><i>${n.photos.length} photo(s) in PDF</i>`:""}</td><td ${td}>${e(n.action)}</td>
       <td ${td}>${n.closed?`<b style="color:#2E7D32">CLOSED</b><br>${e(n.taken)}`:`<b style="color:#C62828">OPEN</b><br>${n.owner?"Responsible: "+e(n.owner)+"<br>":""}${n.due?"Due: "+fmtD(n.due):""}`}</td>
       <td ${td}>${n.snn.length?`<b style="color:#EC7723">⚠ ${e(snnNames(n.snn).join(" / "))}</b>`:"–"}</td></tr>`});

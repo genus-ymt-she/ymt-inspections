@@ -5,7 +5,7 @@ try{const c=JSON.parse(ls("relayCfg")||"null");if(c&&c.url)RELAY=Object.assign({
 async function loadRelay(){try{const r=await fetch("config.json?v="+Date.now(),{cache:"no-store"});if(!r.ok)return;const c=await r.json();
   if(c&&typeof c.relayUrl==="string"){const url=c.relayUrl.trim();RELAY={url,key:c.key||"",v:url===RELAY.url?RELAY.v:0};ls("relayCfg",JSON.stringify(RELAY))}}catch(e){}}
 const directOn=()=>/^https:\/\/script\.google(usercontent)?\.com\//.test(RELAY.url)||/^https?:\/\/localhost/.test(RELAY.url);
-/* v3 relays add the shared action register, MYOSH tracking and Manager PIN. Older relays are detected so
+/* v3 relays add the shared action register, action emails and Manager PIN. Older relays are detected so
    v3-only requests are never sent to them (an old relay would treat them as a report). */
 async function relayVersion(force){if(!directOn())return 0;if(RELAY.v&&!force&&Date.now()-(RELAY.vAt||0)<6*3600e3)return RELAY.v;
   try{const r=await fetch(RELAY.url,{redirect:"follow"});const j=await r.json();RELAY.v=Number(j.v)||2;RELAY.vAt=Date.now();ls("relayCfg",JSON.stringify(RELAY))}catch(e){}
@@ -58,6 +58,10 @@ const RKEY=[["C","var(--c)","Compliant","meets the requirement in the plan."],["
 function keyHTML(){return `<details class="key"><summary><span class="kt">${ic("info")} Rating key</span><span class="kchips">${RKEY.map(k=>`<span class="kb" style="background:${k[1]}">${RLABEL[k[0]]}</span>`).join("")}</span></summary><div class="kr">${RKEY.map(k=>`<div class="ki"><span class="kb" style="background:${k[1]}">${RLABEL[k[0]]}</span><span><b>${k[2]}</b> – ${k[3]}</span></div>`).join("")}</div>
   <div class="ks"><span class="snn"><img src="${SNN_ICONS.FND}" alt="">SNN</span> Orange tag = item linked to a Safety Non-Negotiable. A UA or NI on these items is flagged in the report and email.</div></details>`}
 function snnNames(codes){return (codes||[]).map(c=>SNN[c]).filter(Boolean)}
+/* people the inspector has assigned actions to – remembered on this phone (name -> email) */
+function contacts(){const c=lsJ("contacts",{});(REG&&REG.findings||[]).forEach(f=>{if(f.owner&&f.ownerEmail&&!c[f.owner])c[f.owner]=f.ownerEmail});return c}
+function rememberContact(name,email){name=String(name||"").trim();email=String(email||"").trim().toLowerCase();if(!name||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return;const c=lsJ("contacts",{});c[name]=email;ls("contacts",JSON.stringify(c))}
+const emailOK=e=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(e||"").trim());
 function csvCell(v){v=String(v??"");return /[",\n\r]/.test(v)?`"${v.replace(/"/g,'""')}"`:v}
 function toCSV(rows){return "﻿"+rows.map(r=>r.map(csvCell).join(",")).join("\r\n")}
 async function copyText(t,label){try{await navigator.clipboard.writeText(String(t??""));toast(`${label||"Text"} copied`)}catch(e){

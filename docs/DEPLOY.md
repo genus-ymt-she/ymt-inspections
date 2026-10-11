@@ -8,7 +8,7 @@ PARRON has two parts. Both are owned at project level – no Genus IT involvemen
 | **Relay** (email, project log, PDF archive) | Google Apps Script, in the Google account that set it up | Paste the new code and redeploy (steps below) |
 
 The v2.0 app works with the **old v2 relay**: inspections still send and email exactly as before.
-The shared Action register, MYOSH queue, Insights charts and Manager mode switch on once the relay is updated to v3.
+The shared Action register, action emails, Insights charts and Manager mode switch on once the relay is updated to v3.
 
 ---
 
@@ -38,7 +38,8 @@ Drafts, the Outbox and sent history already on phones are kept – the storage f
 ## 3. Check it works
 
 - Start any inspection, record one NI with a risk rating, sign and send.
-- The report email arrives with the PDF; the finding appears under **Actions**; the report appears under **MYOSH**.
+- The report email arrives with the PDF and the finding appears under **Actions**.
+- If you entered a responsible person's @genus.com.au email, they receive an *Action assigned to you* email with a button that opens the action.
 - **Insights → Monthly report** builds the monthly PDF.
 
 ---
@@ -48,8 +49,10 @@ Drafts, the Outbox and sent history already on phones are kept – the storage f
 - The repository is public (required for free GitHub Pages), so anything in it – including the app key in
   `config.json` – is visible. The key only allows sending reports and status updates; it cannot read
   email or change settings.
-- Verifying / re-opening actions and recording MYOSH references need the **Manager PIN**, checked by the relay.
+- Verifying, re-opening and reassigning actions need the **Manager PIN**, checked by the relay.
   Ten wrong attempts lock the PIN for 15 minutes.
 - The relay rejects oversized payloads, rate-limits requests and only emails `@genus.com.au` addresses.
+  To let action emails reach a subcontractor, add their domain to `ASSIGN_ALLOWED` near the top of the relay code,
+  e.g. `/@(genus\.com\.au|acme\.com\.au)$/i`, then redeploy.
 - The Google Sheet, PDF archive and evidence photos are private to the Google account that runs the relay.
 - To change the app key: edit `KEY` in the relay *and* `key` in `config.json`, then redeploy both.

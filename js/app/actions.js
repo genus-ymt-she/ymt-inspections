@@ -7,7 +7,8 @@ const statusPill=f=>f.status===ST.open?(isOverdue(f)?`<span class="pill ua">Over
 function actLevelColor(f){const lv=riskLevel(f.level);return lv?lv.color:f.rating==="UA"?"var(--ua)":"var(--ni)"}
 async function viewActions(fid){setHeader("Action register","Corrective actions – whole project",{icon:"refresh",aria:"Refresh",fn:async()=>{toast("Refreshing…",1200);await regRefresh(true);viewActions()}});
   const seq=ROUTE_SEQ;await loadLocalSent();await regFresh(seq);if(stale(seq))return;drawActions();
-  if(fid)actDetail(fid);
+  if(fid){if(!findF(fid)&&directOn()){await regRefresh(true);if(stale(seq))return;drawActions()}
+    if(findF(fid))actDetail(fid);else if(RELAY.url)toast("Action not found – it may have been removed",4000)}
   regRefresh().then(ch=>{if(ch&&location.hash.startsWith("#actions"))drawActions()})}
 function drawActions(){const all=regAll();const st=regStats(all);const q=ACTF.q.trim().toLowerCase();
   const flt=ACT_FILTERS.find(x=>x[0]===ACTF.f)||ACT_FILTERS[0];
@@ -17,7 +18,7 @@ function drawActions(){const all=regAll();const st=regStats(all);const q=ACTF.q.
   if(directOn()&&REG.v&&REG.v<3)h+=`<div class="alert org">${ic("info")}<div><b>Showing actions raised on this phone only.</b> Update the relay script to v3 to share the register across the whole project (see the deployment guide).</div></div>`;
   if(!directOn())h+=`<div class="alert org">${ic("wifioff")}<div>Direct send is not set up, so the register shows actions raised on this phone only.</div></div>`;
   h+=`<div class="kpis">
-   <button class="kpi" style="--kc:var(--ua)" onclick="ACTF.f='open';drawActions()"><div class="l">${ic("actions","s")} OPEN</div><div class="v">${st.open}</div><div class="d">${st.highOpen} high / extreme</div></button>
+   <button class="kpi" style="--kc:var(--ua)" onclick="ACTF.f='open';drawActions()"><div class="l">${ic("actions","s")} OPEN</div><div class="v">${st.open}</div><div class="d">${st.highOpen} high / critical</div></button>
    <button class="kpi" style="--kc:var(--ua)" onclick="ACTF.f='overdue';drawActions()"><div class="l">${ic("clock","s")} OVERDUE</div><div class="v" style="color:${st.overdue?"var(--ua)":"inherit"}">${st.overdue}</div><div class="d">${st.dueWeek} due in 7 days</div></button>
    <button class="kpi" style="--kc:var(--ni)" onclick="ACTF.f='verify';drawActions()"><div class="l">${ic("shield","s")} TO VERIFY</div><div class="v">${st.toVerify}</div><div class="d">${st.verified} verified</div></button>
    <div class="kpi" style="--kc:var(--c)"><div class="l">${ic("trend","s")} AVG CLOSE</div><div class="v">${st.avgClose===null?"–":st.avgClose}<small>${st.avgClose===null?"":" days"}</small></div><div class="d">${st.spot} closed on the spot</div></div></div>`;
@@ -39,7 +40,7 @@ function actDetail(fid){const f=findF(fid);if(!f){toast("Action not found");retu
   let h=`<div class="libmeta" style="margin:0 0 8px">${statusPill(f)}${riskChip(f.cons,f.like)}<span class="pill ${f.rating==="UA"?"ua":"ni"}">${esc(f.rating)}</span>${f.snn?`<span class="tag o">${ic("shield","s")} ${esc(f.snn)}</span>`:""}</div>
    <h3>${esc(f.action||"Corrective action")}</h3>
    <dl class="kv"><dt>Item</dt><dd><b>${esc(f.item)}</b> ${esc(f.text||"")}</dd><dt>Finding</dt><dd>${esc(f.finding||"—")}</dd>
-   <dt>Owner</dt><dd>${esc(f.owner||"TBC")}</dd><dt>Due</dt><dd>${f.due?`${fmtD(f.due)} · <b style="color:${isOverdue(f)?"var(--ua)":"inherit"}">${esc(dueText(f.due))}</b>`:"—"}</dd>
+   <dt>Owner</dt><dd>${esc(f.owner||"TBC")}${f.ownerEmail?`<div class="muted">${ic("send","s")} ${esc(f.ownerEmail)}${f.notified?` · emailed ${fmtD(String(f.notified).slice(0,10))}`:isOpen(f)&&!f.local?" · not emailed (address not allowed by the relay)":""}</div>`:isOpen(f)?`<div class="muted">No email – they were not notified</div>`:""}</dd><dt>Due</dt><dd>${f.due?`${fmtD(f.due)} · <b style="color:${isOverdue(f)?"var(--ua)":"inherit"}">${esc(dueText(f.due))}</b>`:"—"}</dd>
    <dt>Inspection</dt><dd>${esc(f.no)} ${esc(f.title||"")}</dd><dt>Location</dt><dd>${esc(f.location||"—")}${f.crew?` · ${esc(f.crew)}`:""}</dd>
    <dt>Raised</dt><dd>${esc(f.by||"")} · ${fmtD(String(f.inspDate||f.raised||"").slice(0,10))}</dd><dt>Report</dt><dd>${esc(f.reportId)}</dd>
    ${f.note?`<dt>Close-out</dt><dd>${esc(f.note)}${f.closedBy?` <span class="muted">– ${esc(f.closedBy)}</span>`:""}</dd>`:""}
@@ -49,7 +50,7 @@ function actDetail(fid){const f=findF(fid);if(!f){toast("Action not found");retu
   const btns=[];
   if(isOpen(f))btns.push(`<button class="btn o w" onclick="closeOutForm('${esc(fid)}')">${ic("check","s")} Close out action</button>`);
   if(M&&f.status===ST.closed)btns.push(`<button class="btn ok w" onclick="actOp('${esc(fid)}','verify')">${ic("shield","s")} Verify close-out</button>`);
-  if(M&&isOpen(f))btns.push(`<button class="btn g w" onclick="editForm('${esc(fid)}')">${ic("edit","s")} Change owner / due date</button>`);
+  if(M&&isOpen(f))btns.push(`<button class="btn g w" onclick="editForm('${esc(fid)}')">${ic("edit","s")} Reassign / change due date</button>`);
   if(M&&(f.status===ST.closed||f.status===ST.verified))btns.push(`<button class="btn g w" onclick="actOp('${esc(fid)}','reopen')">${ic("reopen","s")} Re-open</button>`);
   if(!M&&f.status===ST.closed)h+=`<p class="muted">${ic("lock","s")} The SHE Manager verifies close-outs (Manager mode).</p>`;
   h+=btns.join("");
@@ -66,13 +67,18 @@ function closeOutForm(fid){const f=findF(fid);let photo="";
   s.querySelector("#coCam").onchange=e=>pick(e.target,"camera");s.querySelector("#coUp").onchange=e=>pick(e.target,"upload");
   s.querySelector("#coGo").onclick=async()=>{const by=s.querySelector("#coBy").value.trim(),note=s.querySelector("#coNote").value.trim();if(!by||!note){toast("Add your name and what was done");return}
     if(!ls("inspector"))ls("inspector",by);closeSheet();await queueUpdate({fid,op:"close",by,note,photo:photo?photo.split(",")[1]:""});toast(navigator.onLine===false||!v3()?"Close-out saved – it will sync when connected":"✓ Action closed out",4000);drawActions();actDetail(fid)}}
-function editForm(fid){const f=findF(fid);const s=sheet(`<h3>Change owner / due date</h3>
-  <label class="f" for="edO">Owner</label><input class="t" id="edO" value="${esc(f.owner||"")}"><label class="f" for="edD">Due date</label><input class="t" id="edD" type="date" value="${esc(f.due||"")}">
-  <button class="btn o w" id="edGo">Save</button>`);
-  s.querySelector("#edGo").onclick=async()=>{const owner=s.querySelector("#edO").value.trim(),due=s.querySelector("#edD").value;closeSheet();
-    await queueUpdate({fid,op:"edit",by:ls("inspector")||"SHE Manager",owner,due,note:""});toast("Saved");drawActions();actDetail(fid)}}
+function editForm(fid){const f=findF(fid);const s=sheet(`<h3>Reassign / change due date</h3>
+  <label class="f" for="edO">Responsible person</label><input class="t" id="edO" list="ppl2" value="${esc(f.owner||"")}" autocomplete="off"><datalist id="ppl2">${Object.keys(contacts()).sort().map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
+  <label class="f" for="edE">Their email</label><input class="t" id="edE" type="email" inputmode="email" value="${esc(f.ownerEmail||"")}" placeholder="name@genus.com.au">
+  <label class="f" for="edD">Due date</label><input class="t" id="edD" type="date" value="${esc(f.due||"")}">
+  <p class="muted">If the person or email changes, the new person is emailed the action.</p><button class="btn o w" id="edGo">Save</button>`);
+  s.querySelector("#edO").addEventListener("input",e=>{const em=contacts()[e.target.value.trim()];if(em)s.querySelector("#edE").value=em});
+  s.querySelector("#edGo").onclick=async()=>{const owner=s.querySelector("#edO").value.trim(),ownerEmail=s.querySelector("#edE").value.trim().toLowerCase(),due=s.querySelector("#edD").value;
+    if(ownerEmail&&!emailOK(ownerEmail)){toast("That email looks wrong");return}closeSheet();rememberContact(owner,ownerEmail);
+    const changed=ownerEmail!==(f.ownerEmail||"")||owner!==(f.owner||"");
+    await queueUpdate({fid,op:"edit",by:ls("inspector")||"SHE Manager",owner,due,ownerEmail:changed?ownerEmail:undefined,note:""});toast(changed&&ownerEmail?"Saved – they will be emailed":"Saved");drawActions();actDetail(fid)}}
 async function actOp(fid,op){const lbl={verify:["Verify close-out?","Confirms the action is complete and the control is effective.","Verify"],reopen:["Re-open action?","The action returns to Open and the owner must close it again.","Re-open"]}[op];
   if(!await ask2(lbl[0],lbl[1],lbl[2],op==="reopen"))return;await queueUpdate({fid,op,by:ls("inspector")||"SHE Manager",note:""});toast(op==="verify"?"✓ Verified":"Re-opened");drawActions();actDetail(fid)}
-function exportActions(){const all=regAll();const H=["Report ID","Item","Inspection","Location","Crew","Raised by","Inspection date","Rating","SNN","Consequence","Likelihood","Risk score","Risk level","Item text","Finding","Corrective action","Status","Owner","Due","Closed at","Closed by","Close-out note","Verified at","Verified by"];
-  const rows=all.map(f=>[f.reportId,f.item,`${f.no} ${f.title||""}`,f.location,f.crew,f.by,f.inspDate,f.rating,f.snn,f.cons,f.like,f.score,f.level,f.text,f.finding,f.action,f.status,f.owner,f.due,String(f.closedAt||"").slice(0,10),f.closedBy,f.note,String(f.verifiedAt||"").slice(0,10),f.verifiedBy]);
+function exportActions(){const all=regAll();const H=["Report ID","Item","Inspection","Location","Crew","Raised by","Inspection date","Rating","SNN","Consequence","Likelihood","Risk score","Risk level","Item text","Finding","Corrective action","Status","Owner","Owner email","Due","Closed at","Closed by","Close-out note","Verified at","Verified by"];
+  const rows=all.map(f=>[f.reportId,f.item,`${f.no} ${f.title||""}`,f.location,f.crew,f.by,f.inspDate,f.rating,f.snn,f.cons,f.like,f.score,f.level,f.text,f.finding,f.action,f.status,f.owner,f.ownerEmail,f.due,String(f.closedAt||"").slice(0,10),f.closedBy,f.note,String(f.verifiedAt||"").slice(0,10),f.verifiedBy]);
   downloadBlob(new Blob([toCSV([H,...rows])],{type:"text/csv"}),`PARRON-action-register-${todayISO()}.csv`);toast("Register exported")}

@@ -7,10 +7,10 @@ function monthlyFacts(j){const P=DASH.person;DASH.person="";const D=dashData(j);
   const since=new Date(+j.month.slice(0,4),+j.month.slice(5,7),0);const from=new Date(since);from.setDate(from.getDate()-90);
   const rep={};all.filter(f=>{const d=new Date(f.raised);return d>=from&&d<=new Date(since.getTime()+864e5)}).forEach(f=>{const o=rep[f.item]=rep[f.item]||{n:0,text:f.text};o.n++});
   const repeat=Object.entries(rep).filter(([,o])=>o.n>1).sort((a,b)=>b[1].n-a[1].n).slice(0,6);
-  const openHi=all.filter(f=>isOpen(f)&&(f.level==="High"||f.level==="Extreme")).sort((a,b)=>(+b.score||0)-(+a.score||0));
+  const openHi=all.filter(f=>isOpen(f)&&(f.level==="High"||f.level==="Critical")).sort((a,b)=>(+b.score||0)-(+a.score||0));
   const overdue=all.filter(isOverdue).sort((a,b)=>String(a.due).localeCompare(String(b.due)));
   const persons={};D.sent.forEach(x=>{const k=x.name||"(no name)";persons[k]=(persons[k]||0)+1});
-  return {D,trend,prev,rs,F,spot,types,people,byT,repeat,openHi,overdue,persons,myosh:(j.myoshPending||[]).length,v3:j.v>=3}}
+  return {D,trend,prev,rs,F,spot,types,people,byT,repeat,openHi,overdue,persons,v3:j.v>=3}}
 function safetySummaryText(j){const x=monthlyFacts(j);const D=x.D;const m=monthLabel(j.month);const nf=D.ua+D.ni;
   const dp=x.prev&&x.prev.avgPct!=null&&D.avgPct!=null?D.avgPct-x.prev.avgPct:null;
   const topT=Object.entries(x.byT).sort((a,b)=>(b[1].ua+b[1].ni)-(a[1].ua+a[1].ni))[0];
@@ -18,9 +18,8 @@ function safetySummaryText(j){const x=monthlyFacts(j);const D=x.D;const m=monthL
   s.push(nf?`A total of ${nf} non-compliance${nf===1?" was":"s were"} identified (${D.ua} unacceptable – stop work, ${D.ni} needs improvement)${D.snn?`, of which ${D.snn} ${D.snn===1?"was":"were"} linked to Genus Safety Non-Negotiables`:""}.`:"No non-compliances were identified.");
   if(x.F.length)s.push(`${Math.round(x.spot/x.F.length*100)}% of findings were closed out at the time of inspection.`);
   if(topT&&topT[1].ua+topT[1].ni)s.push(`The highest number of findings was recorded on ${topT[0].replace(/^\d+\s/,"")} inspections (${topT[1].ua+topT[1].ni}).`);
-  if(x.v3)s.push(`At the time of reporting, ${x.rs.open} corrective action${x.rs.open===1?" remains":"s remain"} open (${x.rs.highOpen} rated High or Extreme), ${x.rs.overdue} ${x.rs.overdue===1?"is":"are"} overdue and ${x.rs.toVerify} ${x.rs.toVerify===1?"is":"are"} awaiting verification${x.rs.avgClose!=null?`; the average time from finding to close-out is ${x.rs.avgClose} days`:""}.`);
+  if(x.v3)s.push(`At the time of reporting, ${x.rs.open} corrective action${x.rs.open===1?" remains":"s remain"} open (${x.rs.highOpen} rated High or Critical), ${x.rs.overdue} ${x.rs.overdue===1?"is":"are"} overdue and ${x.rs.toVerify} ${x.rs.toVerify===1?"is":"are"} awaiting verification${x.rs.avgClose!=null?`; the average time from finding to close-out is ${x.rs.avgClose} days`:""}.`);
   if(x.repeat.length)s.push(`Repeat findings over the last 90 days relate to item${x.repeat.length>1?"s":""} ${x.repeat.slice(0,3).map(([k,o])=>`${k} (${o.n}×)`).join(", ")}, which will be targeted in toolbox talks and supervisor verification.`);
-  if(x.v3)s.push(x.myosh?`${x.myosh} inspection report${x.myosh===1?" is":"s are"} awaiting entry into MYOSH.`:"All inspection reports have been entered into MYOSH.");
   return s.join(" ")}
 function copySafetySummary(){if(!DASH.j){toast("Insights still loading");return}copyText(safetySummaryText(DASH.j),"2.1 Safety summary")}
 async function monthlyPDF(){const j=DASH.j;if(!j){toast("Insights still loading");return}toast("Building the monthly summary…",2000);
@@ -37,7 +36,7 @@ function buildMonthlyPDF(j){const {jsPDF}=window.jspdf;const doc=new jsPDF({unit
   doc.setFillColor(...NAVY);doc.rect(M,25,W-2*M,6.5,"F");doc.setTextColor(255);doc.setFont("helvetica","bold");doc.setFontSize(7.5);doc.text(PDFSAFE(CONFIG.project),M+2,29.3);
   let y=35;
   const tiles=[["Inspections",String(D.sent.length),"#1B3D6B"],["Avg compliance",D.avgPct==null?"-":D.avgPct+"%",D.avgPct==null?"#7A8594":D.avgPct>=90?"#1E8E3E":D.avgPct>=75?"#C98A00":"#C5221F"],["Findings (UA / NI)",`${D.ua+D.ni}  (${D.ua} / ${D.ni})`,"#C5221F"],["SNN-linked",String(D.snn),"#EC7723"],
-    ["Open actions",x.v3?String(x.rs.open):"-","#C98A00"],["Overdue",x.v3?String(x.rs.overdue):"-","#C5221F"],["Closed on spot",x.F.length?Math.round(x.spot/x.F.length*100)+"%":"-","#1E8E3E"],["MYOSH backlog",x.v3?String(x.myosh):"-","#112B4E"]];
+    ["Open actions",x.v3?String(x.rs.open):"-","#C98A00"],["Overdue",x.v3?String(x.rs.overdue):"-","#C5221F"],["Closed on spot",x.F.length?Math.round(x.spot/x.F.length*100)+"%":"-","#1E8E3E"],["To verify",x.v3?String(x.rs.toVerify):"-","#112B4E"]];
   const tw=(W-2*M-3*3)/4;tiles.forEach((t,i)=>{const cx=M+(i%4)*(tw+3),cy=y+Math.floor(i/4)*17;doc.setFillColor(...GREY);doc.roundedRect(cx,cy,tw,14.5,1.6,1.6,"F");doc.setFillColor(...hex(t[2]));doc.rect(cx,cy,1.4,14.5,"F");
     doc.setFont("helvetica","bold");doc.setFontSize(6.6);doc.setTextColor(90);doc.text(t[0].toUpperCase(),cx+4,cy+5);doc.setFontSize(12.5);doc.setTextColor(...hex(t[2]));doc.text(t[1],cx+4,cy+11.6)});
   y+=37;
@@ -48,8 +47,8 @@ function buildMonthlyPDF(j){const {jsPDF}=window.jspdf;const doc=new jsPDF({unit
   if(x.trend.length){sec("SIX-MONTH TREND");tbl(["Month","Inspections","Avg compliance","UA","NI","SNN-linked"],x.trend.map(t=>[monthLabel(t.month),t.inspections,t.avgPct==null?"-":t.avgPct+"%",t.ua,t.ni,t.snn]),{0:{fontStyle:"bold"}})}
   sec("INSPECTIONS BY TYPE");tbl(["Inspection","Completed","Avg compliance","UA","NI"],Object.entries(x.byT).sort((a,b)=>b[1].n-a[1].n).map(([k,o])=>[k,o.n,o.pc.length?Math.round(o.pc.reduce((a,b)=>a+b,0)/o.pc.length)+"%":"-",o.ua,o.ni]),{1:{halign:"center"},2:{halign:"center"},3:{halign:"center"},4:{halign:"center"}});
   if(x.v3){sec("RISK PROFILE – FINDINGS RAISED THIS MONTH");tbl(["Risk rating","Raised","Closed on spot","Open now"],RISK.levels.slice().reverse().map(l=>[l.key,x.F.filter(f=>f.level===l.key).length,x.F.filter(f=>f.level===l.key&&f.status===ST.spot).length,x.F.filter(f=>f.level===l.key&&f.status===ST.open).length]),{},
-      {didParseCell:c=>{if(c.section==="body"&&c.column.index===0){const l=riskLevel(c.cell.raw);if(l){c.cell.styles.fillColor=hex(l.color);c.cell.styles.textColor=255;c.cell.styles.fontStyle="bold"}}}});
-    sec(`OPEN HIGH / EXTREME RISK ACTIONS (${x.openHi.length})`);tbl(["Report / item","Risk","Corrective action","Owner","Due"],x.openHi.slice(0,25).map(f=>[`${f.reportId}\n${f.item} ${f.location||""}`,`${f.level} (${f.score})`,f.action,f.owner||"TBC",f.due?fmtD(f.due):"-"]),{0:{cellWidth:44},1:{cellWidth:22},3:{cellWidth:32},4:{cellWidth:20}});
+      {didParseCell:c=>{if(c.section==="body"&&c.column.index===0){const l=riskLevel(c.cell.raw);if(l){c.cell.styles.fillColor=hex(l.color);c.cell.styles.textColor=hex(l.ink||"#FFFFFF");c.cell.styles.fontStyle="bold"}}}});
+    sec(`OPEN HIGH / CRITICAL RISK ACTIONS (${x.openHi.length})`);tbl(["Report / item","Risk","Corrective action","Owner","Due"],x.openHi.slice(0,25).map(f=>[`${f.reportId}\n${f.item} ${f.location||""}`,`${f.level} ${f.score}`,f.action,f.owner||"TBC",f.due?fmtD(f.due):"-"]),{0:{cellWidth:44},1:{cellWidth:22},3:{cellWidth:32},4:{cellWidth:20}});
     sec(`OVERDUE CORRECTIVE ACTIONS (${x.overdue.length})`);tbl(["Report / item","Risk","Corrective action","Owner","Due"],x.overdue.slice(0,25).map(f=>[`${f.reportId}\n${f.item} ${f.location||""}`,f.level||f.rating,f.action,f.owner||"TBC",`${fmtD(f.due)}\n(${-daysTo(f.due)} d late)`]),{0:{cellWidth:44},1:{cellWidth:22},3:{cellWidth:32},4:{cellWidth:20}},{didParseCell:c=>{if(c.section==="body"&&c.column.index===4){c.cell.styles.textColor=hex("#C5221F");c.cell.styles.fontStyle="bold"}}});
     sec("REPEAT FINDINGS – LAST 90 DAYS");tbl(["Item","Requirement","Times"],x.repeat.map(([k,o])=>[k,o.text,o.n]),{0:{cellWidth:16,fontStyle:"bold"},2:{cellWidth:16,halign:"center"}})}
   sec("INSPECTIONS BY PERSON");tbl(["Inspector","Inspections sent"],Object.entries(x.persons).sort((a,b)=>b[1]-a[1]).map(([k,n])=>[k,n]),{1:{halign:"center",cellWidth:40}});

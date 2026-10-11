@@ -51,7 +51,7 @@ async function buildPDF(d){if(PDFBLOB)return PDFBLOB;if(tabByNum(d.tab).kind==="
   const ICO=7.5,IG=1.2;
   if(s.ncs.length){doc.autoTable({startY:y,margin:{left:M,right:M,top:16,bottom:16},
      head:[["#","Rating","Risk","Item / finding","Proposed corrective action","Status","SNN"]],
-     body:s.ncs.map(n=>{const k=riskOf(n.cons,n.like);return [n.id,n.r,k?`${k.level}\n${n.cons}x${n.like}=${k.score}`:"-",PDFSAFE(`${n.text}\n\nFinding: ${n.finding}`),PDFSAFE(n.action),PDFSAFE(n.closed?`CLOSED at time of inspection\nAction taken: ${n.taken}`:`OPEN${n.owner?`\nResponsible: ${n.owner}`:""}${n.due?`\nDue: ${fmtD(n.due)}`:""}`),PDFSAFE(snnNames(n.snn).join("\n")||"-")]}),
+     body:s.ncs.map(n=>{const k=riskOf(n.cons,n.like);return [n.id,n.r,k?`${k.level} ${k.score}\n${k.cl} /\n${k.ll}`:"-",PDFSAFE(`${n.text}\n\nFinding: ${n.finding}`),PDFSAFE(n.action),PDFSAFE(n.closed?`CLOSED at time of inspection\nAction taken: ${n.taken}`:`OPEN${n.owner?`\nResponsible: ${n.owner}`:""}${n.due?`\nDue: ${fmtD(n.due)}`:""}`),PDFSAFE(snnNames(n.snn).join("\n")||"-")]}),
      theme:"grid",styles:{font:"helvetica",fontSize:7.6,cellPadding:1.6,lineColor:[200,206,214],lineWidth:.2,textColor:20,valign:"top"},
      headStyles:{fillColor:NAVY,textColor:255,fontStyle:"bold"},
      columnStyles:{0:{cellWidth:11,fontStyle:"bold"},1:{cellWidth:12,halign:"center",fontStyle:"bold"},2:{cellWidth:17,halign:"center",fontStyle:"bold",fontSize:7},3:{cellWidth:51},4:{cellWidth:37},5:{cellWidth:30},6:{cellWidth:28,halign:"center"}},
@@ -60,7 +60,7 @@ async function buildPDF(d){if(PDFBLOB)return PDFBLOB;if(tabByNum(d.tab).kind==="
        codes.forEach(k=>{if(SNN_ICONS[k]){doc.addImage(SNN_ICONS[k],"PNG",x,c.cell.y+1.6,ICO,ICO)}x+=ICO+IG})},
      didParseCell:c=>{if(c.section==="body"&&c.column.index===6&&((s.ncs[c.row.index]||{}).snn||[]).length){c.cell.styles.cellPadding={top:1.6+ICO+1.2,bottom:1.6,left:1,right:1};c.cell.styles.fontSize=6.8}
        if(c.section==="body"&&c.column.index===1){c.cell.styles.textColor=255;c.cell.styles.fillColor=c.cell.raw==="UA"?hex("#C62828"):hex("#E39A00")}
-       if(c.section==="body"&&c.column.index===2){const n=s.ncs[c.row.index];const k=n&&riskOf(n.cons,n.like);if(k){c.cell.styles.fillColor=hex(k.color);c.cell.styles.textColor=255}}
+       if(c.section==="body"&&c.column.index===2){const n=s.ncs[c.row.index];const k=n&&riskOf(n.cons,n.like);if(k){c.cell.styles.fillColor=hex(k.color);c.cell.styles.textColor=hex(k.ink)}}
        if(c.section==="body"&&c.column.index===6&&c.cell.raw!=="-"){c.cell.styles.textColor=ORG;c.cell.styles.fontStyle="bold"}
        if(c.section==="body"&&c.column.index===5){c.cell.styles.textColor=String(c.cell.raw).startsWith("CLOSED")?hex("#2E7D32"):hex("#C62828");c.cell.styles.fontStyle="bold"}}});
     y=doc.lastAutoTable.finalY+4;

@@ -1,5 +1,5 @@
 /* PARRON service worker – network first, falls back to the cached copy so the app works with no signal. */
-const C = "parron-v2.0.0";
+const C = "parron-v2.1.0";
 const FILES = [
   "./",
   "./index.html",
@@ -7,6 +7,10 @@ const FILES = [
   "./config.json",
   "./icon-192.png",
   "./icon-512.png",
+  "./icon-maskable-512.png",
+  "./apple-touch-icon.png",
+  "./assets/genus-logo-white.svg",
+  "./assets/icon-any.svg",
   "./css/app.css",
   "./assets/logo.png",
   "./js/vendor/jspdf.umd.min.js",
@@ -21,7 +25,6 @@ const FILES = [
   "./js/app/report.js",
   "./js/app/register.js",
   "./js/app/actions.js",
-  "./js/app/myosh.js",
   "./js/app/dashboard.js",
   "./js/app/monthly.js",
   "./js/app/records.js",

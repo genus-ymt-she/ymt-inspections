@@ -1,4 +1,4 @@
-# PARRON – Site Inspections, Actions & MYOSH Reporting
+# PARRON – Site Inspections & Corrective Actions
 
 **P**roactive **A**ssessment, **R**eporting, **R**isk & **O**bservation **N**etwork — the YMT project's field inspection app
 (J1084 Parron Wind Farm Connection Assets – Yerramullah Terminal).
@@ -12,23 +12,24 @@ email, the shared project log (Google Sheet) and the PDF archive (Google Drive).
 | Area | Capability |
 |---|---|
 | **Inspect** | 22 checklist inspections + discussion record, C / UA / NI / N/A ratings, SNN-linked items, EXIF-verified time-stamped photos, voice mode, signature sign-off, branded PDF |
-| **Risk** | 5 × 5 consequence × likelihood rating on every finding, response time and suggested due date by risk level |
-| **Actions** | Project-wide corrective action register: overdue escalation, close-out with photo evidence, SHE Manager verification (Manager PIN), re-open, full history, CSV export |
-| **MYOSH** | Queue of reports not yet entered in MYOSH; copy-ready fields in MYOSH order, hazard register entries, MYOSH reference recorded against each report |
+| **Risk** | Genus Risk Matrix on every finding (Minor → Catastrophic × Rare → Almost certain, ranked 1–25, Low / Medium / High / Critical) with the Genus risk action and a suggested due date |
+| **Actions** | Project-wide corrective action register. The responsible person is **emailed the action** with a link to close it out, and reminded when it is due or overdue. Close-out with photo evidence, SHE Manager emailed to verify (Manager PIN), re-open / reassign, full history, CSV export |
 | **Insights** | KPIs with month-on-month change, 6-month trend, findings by type, risk profile, repeat findings, team activity |
 | **Monthly report** | One-tap Monthly HSE Summary PDF and auto-written *2.1 Safety Summary* text for the project monthly report |
-| **Daily summary** | 6 pm email: unsent forms, overdue actions, items awaiting verification, MYOSH backlog |
+| **Daily summary** | 6 pm email: unsent forms, overdue actions, items awaiting verification |
 
 ## Project structure
 
 ```
 index.html                 app shell
 css/app.css                design system (light / dark / high contrast)
-js/app/config.js           ← project settings: recipient, risk matrix, MYOSH fields, categories
-js/app/*.js                app modules (views, form, register, actions, myosh, dashboard, monthly, pdf, voice …)
+js/app/config.js           ← project settings: recipient, Genus risk matrix, categories
+js/app/*.js                app modules (views, form, register, actions, dashboard, monthly, pdf, voice …)
 js/data/templates.js       inspection checklists
 js/data/assets.js          embedded logo and SNN icons (used in PDFs offline)
 js/vendor/                 jsPDF + AutoTable
+assets/                    vector Genus logo (colour + white) and app icon artwork
+tools/render-svg.mjs       rebuilds the PNG icons from the SVG artwork
 PARRON_Relay_Code.gs       Google Apps Script relay (v3)
 config.json                relay link used by the app
 sw.js                      offline cache
@@ -41,9 +42,8 @@ docs/DEPLOY.md             deployment and relay update guide
 Everything a SHE Manager normally changes is in **`js/app/config.js`**:
 
 - `CONFIG` – project name, job number, document prefix, report recipient
-- `RISK` – consequence / likelihood descriptors, risk bands, colours and close-out times
-  (align these with the project HSE Management Plan risk matrix)
-- `MYOSH_FIELDS` – order and labels of the MYOSH entry sheet
+- `RISK` – the Genus Risk Matrix (taken from the Genus JHA): descriptors, ranked cells, bands, colours,
+  risk actions and the suggested close-out days used for due dates
 - `CATEGORIES` – how inspections are grouped in the library
 
 After editing, bump `const C = "parron-v…"` in `sw.js` so phones pick up the change.
@@ -58,6 +58,6 @@ node tests/smoke.mjs --shots      # same, saving screenshots to tests/out/
 ```
 
 The tests run the **real** relay code against simulated Google services, so the whole loop
-(inspection → send → register → close-out → verify → MYOSH → Insights → monthly PDF) is checked on every change.
+(inspection → send → assignee emailed → close-out from the email link → verify → Insights → monthly PDF) is checked on every change.
 
 See **[docs/DEPLOY.md](docs/DEPLOY.md)** to publish an update or upgrade the relay.
