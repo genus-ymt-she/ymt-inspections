@@ -23,7 +23,7 @@ function viewInsp(d){const t=tabByNum(d.tab);if(t.kind==="record")return viewRec
   if(t.image)h+=`<div class="card tgs"><div class="lock">${esc(t.imageTitle||"Reference")}</div><img src="${t.image}" alt="${esc(t.imageTitle||"")}" onclick="zoomImg(this.src,true)"><div class="muted" style="margin-top:6px">Tap the plan to enlarge.</div></div>`;
   t.sections.forEach(s=>{h+=`<div class="sec">${esc(s.name)}</div>`;s.q.forEach(q=>{h+=qHTML(d,q)})});
   h+=`<div class="sec">Other hazards identified</div><div id="others"></div>
-  <button class="addph" style="width:100%" onclick="addOther()">${ic("plus","s")} Add a hazard not covered above</button>`+pplList();
+  <button class="addph" style="width:100%" onclick="addOther()">${ic("plus","s")} Add a hazard not covered above</button>`;
   render(h);renderOthers();
   document.querySelectorAll("[data-d]").forEach(el=>el.addEventListener("input",()=>{d.details[el.dataset.d]=el.value;if(el.dataset.d==="inspector"&&!ls("inspector"))ls("inspector",el.value.trim());save(d)}));
   document.querySelectorAll("[data-x]").forEach(el=>el.addEventListener("input",()=>{d.details.extra[el.dataset.x]=el.value;save(d)}));
@@ -47,9 +47,7 @@ function ncHTML(kind,id,a){const k=`'${kind}','${id}'`;const rk=riskOf(a.cons,a.
   <label class="f">Closed at time of inspection? <span class="req">*</span></label>
   <div class="seg"><button class="${a.closed===true?"on":""}" onclick="setClosed(${k},true)">Yes – closed</button><button class="${a.closed===false?"on":""}" onclick="setClosed(${k},false)">No – open</button></div>
   ${a.closed===true?`<label class="f">Action taken on the spot <span class="req">*</span></label><textarea class="t" oninput="setF(${k},'taken',this.value)">${esc(a.taken||"")}</textarea>`:""}
-  ${a.closed===false?`<div class="grid2"><div><label class="f">Responsible person</label><input class="t" list="ppl" value="${esc(a.owner||"")}" oninput="setOwner(${k},this)" placeholder="Name" autocomplete="off"></div>
-   <div><label class="f">Their email <span class="muted">· emails them the action</span></label><input class="t own-em" type="email" inputmode="email" value="${esc(a.ownerEmail||"")}" oninput="setF(${k},'ownerEmail',this.value.trim())" placeholder="name@genus.com.au" autocomplete="off"></div>
-   <div><label class="f">Due date${rk?` <span class="muted">· ${esc(rk.level)}: ${rk.days<1?"immediate":rk.days+" days"}</span>`:""}</label><input class="t" type="date" value="${esc(a.due||"")}" oninput="setF(${k},'due',this.value)"></div></div>`:""}
+  ${a.closed===false?`${personPicker(`${kind}~${id}`,a.owner,a.ownerEmail,"ncOwner")}<div class="grid2"><div><label class="f">Due date${rk?` <span class="muted">· ${esc(rk.level)}: ${rk.days<1?"immediate":rk.days+" days"}</span>`:""}</label><input class="t" type="date" value="${esc(a.due||"")}" oninput="setF(${k},'due',this.value)"></div></div>`:""}
   <label class="f">Photos (optional)</label>${(a.photos||[]).length?`<div class="photos">${(a.photos||[]).map((p,i)=>`<div class="ph"><img src="${p}" onclick="zoomImg(this.src)" alt="Photo ${i+1}"><button onclick="delPhoto(${k},${i})" aria-label="Remove photo">${ic("x")}</button></div>`).join("")}</div>`:""}
   ${photoBtns(k)}</div>`}
 function riskHTML(kind,id,a){const kk=`'${kind}','${id}'`;const k=riskOf(a.cons,a.like);
@@ -60,9 +58,8 @@ function riskHTML(kind,id,a){const kk=`'${kind}','${id}'`;const k=riskOf(a.cons,
    <div class="rlab">Likelihood</div>${scale("like",RISK.likelihood)}${desc("like",RISK.likelihood)}
    ${k?`<div class="rresp" style="color:var(--ink)">${ic("info","s")} ${esc(k.response)}</div>`:""}
    <button class="linkbtn" onclick="showMatrix(${+a.cons||0},${+a.like||0})">${ic("layers","s")} View risk matrix</button></div>`}
-function setOwner(kind,id,el){const a=getA(kind,id);a.owner=el.value;const em=contacts()[el.value.trim()];
-  if(em&&!a.ownerEmail){a.ownerEmail=em;const e=el.closest(".grid2").querySelector(".own-em");if(e)e.value=em}save(CUR);renderBar(CUR)}
-function pplList(){return `<datalist id="ppl">${Object.keys(contacts()).sort().map(n=>`<option value="${esc(n)}">`).join("")}</datalist>`}
+function ncOwner(uid,name,email,redraw){const [kind,id]=uid.split("~");const a=getA(kind,id);a.owner=name;a.ownerEmail=email;save(CUR);
+  if(redraw)kind==="q"?refreshQ(id):renderOthers();else renderBar(CUR)}
 function setRisk(kind,id,f,v){const a=getA(kind,id);a[f]=v;const k=riskOf(a.cons,a.like);
   if(k&&a.closed===false&&!a.due)a.due=addDaysISO(Math.max(0,k.days));
   save(CUR);kind==="q"?refreshQ(id):renderOthers()}

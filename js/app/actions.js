@@ -67,13 +67,13 @@ function closeOutForm(fid){const f=findF(fid);let photo="";
   s.querySelector("#coCam").onchange=e=>pick(e.target,"camera");s.querySelector("#coUp").onchange=e=>pick(e.target,"upload");
   s.querySelector("#coGo").onclick=async()=>{const by=s.querySelector("#coBy").value.trim(),note=s.querySelector("#coNote").value.trim();if(!by||!note){toast("Add your name and what was done");return}
     if(!ls("inspector"))ls("inspector",by);closeSheet();await queueUpdate({fid,op:"close",by,note,photo:photo?photo.split(",")[1]:""});toast(navigator.onLine===false||!v3()?"Close-out saved – it will sync when connected":"✓ Action closed out",4000);drawActions();actDetail(fid)}}
-function editForm(fid){const f=findF(fid);const s=sheet(`<h3>Reassign / change due date</h3>
-  <label class="f" for="edO">Responsible person</label><input class="t" id="edO" list="ppl2" value="${esc(f.owner||"")}" autocomplete="off"><datalist id="ppl2">${Object.keys(contacts()).sort().map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
-  <label class="f" for="edE">Their email</label><input class="t" id="edE" type="email" inputmode="email" value="${esc(f.ownerEmail||"")}" placeholder="name@genus.com.au">
+let EDIT={};
+function editOwner(uid,name,email){EDIT.owner=name;EDIT.ownerEmail=email}
+function editForm(fid){const f=findF(fid);EDIT={owner:f.owner||"",ownerEmail:f.ownerEmail||""};const s=sheet(`<h3>Reassign / change due date</h3>
+  ${personPicker("edit",f.owner,f.ownerEmail,"editOwner")}
   <label class="f" for="edD">Due date</label><input class="t" id="edD" type="date" value="${esc(f.due||"")}">
-  <p class="muted">If the person or email changes, the new person is emailed the action.</p><button class="btn o w" id="edGo">Save</button>`);
-  s.querySelector("#edO").addEventListener("input",e=>{const em=contacts()[e.target.value.trim()];if(em)s.querySelector("#edE").value=em});
-  s.querySelector("#edGo").onclick=async()=>{const owner=s.querySelector("#edO").value.trim(),ownerEmail=s.querySelector("#edE").value.trim().toLowerCase(),due=s.querySelector("#edD").value;
+  <p class="muted">If the person changes, the new person is emailed the action.</p><button class="btn o w" id="edGo">Save</button>`);
+  s.querySelector("#edGo").onclick=async()=>{const {owner,ownerEmail}=EDIT,due=s.querySelector("#edD").value;
     if(ownerEmail&&!emailOK(ownerEmail)){toast("That email looks wrong");return}closeSheet();rememberContact(owner,ownerEmail);
     const changed=ownerEmail!==(f.ownerEmail||"")||owner!==(f.owner||"");
     await queueUpdate({fid,op:"edit",by:ls("inspector")||"SHE Manager",owner,due,ownerEmail:changed?ownerEmail:undefined,note:""});toast(changed&&ownerEmail?"Saved – they will be emailed":"Saved");drawActions();actDetail(fid)}}
