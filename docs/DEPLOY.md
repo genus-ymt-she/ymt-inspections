@@ -75,3 +75,20 @@ A GitHub Action (`.github/workflows/fdr.yml`) downloads it every 30 minutes and 
 - GitHub pauses scheduled Actions after 60 days with no repository activity. If the rating stops updating, open
   **Actions → Fire Danger Rating feed → Enable workflow / Run workflow**.
 - Always confirm Total Fire Bans (DFES) and Harvest & Vehicle Movement Bans (Shire of Dandaragan) at pre-start.
+
+## Trade Assistants – Fuel, Hours & Pre-Start Register (form 28)
+
+- Home → **Trade Assistants**. The TA completes the **Start of day** (pre-start Y/N/N/A, hours basis, hour meter, optional photo)
+  and saves it; at the end of the day they open it again, add fuel issued / flow meter / comments, sign and send.
+- The register (PDF in the paper GEN-PWF-1084-SHEQ-F021 layout, plus a table in the email) goes to **Amie Smith (Project Admin)**
+  and the SHE Manager. Recipients are set in `js/data/templates.js` (form 28, `"to"`); assets are listed in the same place.
+- **Weekly fuel summary (optional – needs the latest relay code):** after pasting the current `PARRON_Relay_Code.gs` and deploying a
+  new version (no need to run `setup` again), every register is also logged to a *Fuel* sheet, and each Monday at 7 am Amie receives
+  last week's totals by asset, the daily detail, any weekdays with no register, and a CSV copy. Change `FUEL_TO` in the relay to send it elsewhere.
+
+## PARRON Radio
+
+Home → **PARRON Radio** shuffles the project playlist (`RADIO_SONGS` in `js/app/config.js`). Songs play from the artists' official
+YouTube uploads in YouTube's own player – no music is stored in PARRON. If a video is ever removed, the player tries the next listed
+upload, then skips the song. Music needs signal and pauses when the phone is locked (a phone limit for web apps); *Open in YouTube* hands
+the playlist to the YouTube app instead.

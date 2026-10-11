@@ -18,7 +18,7 @@ function nonCompliances(d){const t=tabByNum(d.tab);const out=[];
   const w=n=>(n.r==="UA"?0:2)+(n.snn.length?0:1);const rs=n=>{const k=riskOf(n.cons,n.like);return k?k.score:0};return out.map((n,i)=>[n,i]).sort((x,y)=>w(x[0])-w(y[0])||rs(y[0])-rs(x[0])||x[1]-y[1]).map(x=>x[0])}
 function ncComplete(a){if(!a.finding||!a.finding.trim())return false;if(!a.action||!a.action.trim())return false;if(a.hazard&&!riskOf(a.cons,a.like))return false;
   if(a.closed===true)return !!(a.taken&&a.taken.trim());return a.closed===false}
-function problems(d){const p=[];const t=tabByNum(d.tab);if(t.kind==="record")return recProblems(d);
+function problems(d){const p=[];const t=tabByNum(d.tab);if(t.kind==="record")return recProblems(d);if(t.kind==="fuel")return fuelProblems(d);
   if(!d.details.location.trim())p.push("Inspection location / work front");
   if(t.narrative)t.narrative.fields.forEach(f=>{if(f.req&&!((d.details.narr||{})[f.key]||"").trim())p.push(`Observation record – ${f.label}`)});
   if(t.overall&&t.overall.req&&!d.details.overall)p.push(t.overall.label);
@@ -55,11 +55,11 @@ function riskChip(c,l,small){const k=riskOf(c,l);if(!k)return small?"":`<span cl
 function levelChip(level){const lv=riskLevel(level);return lv?`<span class="risk" style="--rc:${lv.color};--ri:${lv.ink||"#fff"}">${esc(lv.key)}</span>`:""}
 
 /* ---------- findings for the shared action register ---------- */
-function findingsOf(d){const t=tabByNum(d.tab);if(t.kind==="record")return [];const rid=reportId(d);
+function findingsOf(d){const t=tabByNum(d.tab);if(t.kind==="record"||t.kind==="fuel")return [];const rid=reportId(d);
   return nonCompliances(d).map(n=>{const k=riskOf(n.cons,n.like)||{};return {fid:`${rid}|${n.id}`,item:n.id,text:n.text,rating:n.r,snn:snnNames(n.snn).join(" / "),
     cons:n.cons||"",like:n.like||"",score:k.score||"",level:k.level||"",finding:n.finding||"",action:n.action||"",status:n.closed?"spot":"open",
     owner:n.closed?"":(n.owner||""),ownerEmail:n.closed?"":String(n.ownerEmail||"").trim().toLowerCase(),due:n.closed?"":(n.due||""),taken:n.taken||""}})}
-function reportFacts(d){const t=tabByNum(d.tab);const s=t.kind==="record"?null:stats(d);
+function reportFacts(d){const t=tabByNum(d.tab);const s=t.kind==="record"||t.kind==="fuel"?null:stats(d);
   return {c:s?s.C:"",na:s?s.NA:"",pct:s&&s.pct!==null?s.pct:"",inspDate:String(d.details.datetime||"").slice(0,16),crew:d.details.crew||"",supervisor:d.details.supervisor||""}}
 
 /* written observation record (e.g. 24 Task Observation): [label, text] pairs that have content, plus the overall answer */

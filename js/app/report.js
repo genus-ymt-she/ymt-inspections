@@ -3,9 +3,10 @@ function reportId(d){if(d.reportId)return d.reportId;const dt=new Date(d.details
   d.reportId=`YMT-${pad(d.tab)}-${dt.getFullYear()}${pad(dt.getMonth()+1)}${pad(dt.getDate())}-${pad(dt.getHours())}${pad(dt.getMinutes())}-${initials(d.details.inspector)}`;save(d);return d.reportId}
 function fileName(d){const t=tabByNum(d.tab);return `${reportId(d)}_${t.short.replace(/[^A-Za-z0-9]+/g,"_").replace(/_+$/,"")}.pdf`}
 function subject(d){const t=tabByNum(d.tab);const s=stats(d);
+  if(t.kind==="fuel")return fuelSubject(d);
   if(t.kind==="record"){const r=R(d);return `YMT Discussion Record | ${t.short} | ${fmtDT(d.details.datetime).slice(0,10)} | with ${r.with||"-"} | by ${d.details.inspector}${r.raise==="Yes"?" | RAISE WITH SPONSOR":""}`}
   return `YMT Inspection | ${pad(t.num)} ${t.short} | ${fmtDT(d.details.datetime).slice(0,10)} | ${d.details.location} | ${s.UA} UA / ${s.NI} NI${s.snnN?` | ⚠ ${s.snnN} SNN`:""}`}
-function bodyText(d,limit){if(tabByNum(d.tab).kind==="record"){let x=recBodyText(d);if(limit&&x.length>limit)x=x.slice(0,limit-60)+"\n…\n(Shortened – full record in the attached PDF.)";return x}const t=tabByNum(d.tab);const s=stats(d);const D=d.details;const L=[];
+function bodyText(d,limit){if(tabByNum(d.tab).kind==="record"||tabByNum(d.tab).kind==="fuel"){let x=tabByNum(d.tab).kind==="fuel"?fuelBodyText(d):recBodyText(d);if(limit&&x.length>limit)x=x.slice(0,limit-60)+"\n…\n(Shortened – full record in the attached PDF.)";return x}const t=tabByNum(d.tab);const s=stats(d);const D=d.details;const L=[];
   const HR="━━━━━━━━━━━━━━━━━━━━━━━━━━━━",hr="──────────────────────────────";
   const st=n=>n.closed?"CLOSED":"OPEN";const rkT=n=>riskText(riskOf(n.cons,n.like));
   L.push(`PARRON | SITE INSPECTION REPORT`);
@@ -52,7 +53,7 @@ function bodyText(d,limit){if(tabByNum(d.tab).kind==="record"){let x=recBodyText
   let txt=L.join("\n");if(limit&&txt.length>limit)txt=txt.slice(0,limit-80)+"\n…\n(Summary shortened – full detail in the attached PDF.)";return txt}
 
 function visualPhotos(d){const t=tabByNum(d.tab);const out=[];allQ(t).forEach(q=>{const a=d.answers[q.id];if(a&&(a.r==="C"||a.r==="NA")&&(a.photos||[]).length)a.photos.forEach(p=>out.push({p,id:q.id}))});return out}
-function htmlBody(d){if(tabByNum(d.tab).kind==="record")return recHtml(d);const t=tabByNum(d.tab);const s=stats(d);const D=d.details;const e=esc;
+function htmlBody(d){if(tabByNum(d.tab).kind==="record")return recHtml(d);if(tabByNum(d.tab).kind==="fuel")return fuelHtml(d);const t=tabByNum(d.tab);const s=stats(d);const D=d.details;const e=esc;
   const td='style="border:1px solid #D0D5DD;padding:6px 8px;vertical-align:top;font-size:13px"';const th='style="border:1px solid #112B4E;background:#112B4E;color:#fff;padding:6px 8px;text-align:left;font-size:12px"';
   const pill=(txt,bg)=>`<span style="display:inline-block;background:${bg};color:#fff;font-weight:700;border-radius:4px;padding:2px 8px;font-size:12px">${e(txt)}</span>`;
   const rows=[["Report ID",reportId(d)],["Date / time",fmtDT(D.datetime)],["Location",D.location],["Inspector",D.inspector]];

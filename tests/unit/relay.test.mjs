@@ -169,8 +169,8 @@ test("weekly summary goes only to the SHE Manager with activity per person", () 
   const r = createRelay();
   r.post(report());
   const before = r.mail.length; r.ctx.weeklyDigest();
-  const w = r.mail.slice(before); assert.equal(w.length, 1);
-  assert.equal(w[0].to, "darren.frizzell@genus.com.au"); assert.match(w[0].subject, /weekly summary/);
+  const w = r.mail.slice(before).filter(m => /weekly summary/.test(m.subject)); assert.equal(w.length, 1);
+  assert.equal(w[0].to, "darren.frizzell@genus.com.au");
   assert.match(w[0].htmlBody, /Activity by person/); assert.match(w[0].htmlBody, /Test Inspector/); assert.doesNotMatch(w[0].htmlBody, /target/i);
 });
 
@@ -229,4 +229,42 @@ test("monthly reminder on the 31st falls on the last day of shorter months", () 
   assert.equal(r.ctx.occurs_({ type: "monthly", dom: 31 }, d), true);
   assert.equal(r.ctx.occurs_({ type: "monthly", dom: 27 }, d), false);
   assert.equal(r.ctx.occurs_({ type: "weekdays" }, d), false, "Saturday");
+});
+
+const fuelReport = (date, uid, rows) => ({ key: "prn-ymt-7Qk2vX9m", uid, reportId: `YMT-28-${date.replace(/-/g, "")}-1600-JM-${uid}`, to: "amie.smith@genus.com.au,darren.frizzell@genus.com.au",
+  subject: "YMT Fuel, Hours & Pre-Start Register", text: "b", html: "<p>b</p>", filename: "f.pdf", pdf: Buffer.from("%PDF-1.4").toString("base64"),
+  meta: { name: "Jayden Mullan", no: "28", title: "Fuel, Hours & Pre-Start Register", location: "PWF" }, report: {}, findings: [],
+  fuel: { date, by: "Jayden Mullan", position: "TA", amAt: "06:10", pmAt: "16:00", total: 0, verifiedBy: "Matt Smith", rows } });
+const perthISO = n => new Date(Date.now() + 8 * 3600e3 - n * 864e5).toISOString().slice(0, 10);
+
+test("fuel register goes to the Project Admin and SHE Manager, and is logged per asset", () => {
+  const r = createRelay();
+  const res = r.post(fuelReport(perthISO(1), "f1", [{ id: "WL46", desc: "I.T Loader", pre: "Y", basis: "Daily", hs: "8567.3", he: "8575.1", hrs: 7.8, flow: "", fuel: 40, cmt: "Fuelled pod" },
+    { id: "GEN01", desc: "Wheel Wash Genset", pre: "N/A", basis: "", hs: "", he: "", hrs: "", flow: "", fuel: "", cmt: "" }]));
+  assert.equal(res.ok, true);
+  assert.equal(r.mail[0].to, "amie.smith@genus.com.au,darren.frizzell@genus.com.au");
+  assert.equal(r.sheet("Fuel").getLastRow(), 3);
+  assert.equal(r.sheet("Fuel").getRange(2, 13).getValue(), 40);
+});
+
+test("only project addresses are accepted in a recipient list", () => {
+  const r = createRelay();
+  r.post({ ...report(), to: "someone@evil.com,amie.smith@genus.com.au" });
+  assert.equal(r.mail[0].to, "amie.smith@genus.com.au");
+  r.post({ ...report(), uid: "d2", to: "someone@evil.com" });
+  assert.equal(r.mail.at(-1).to, "darren.frizzell@genus.com.au");
+});
+
+test("Monday fuel summary totals last week by asset, keeps the latest register per day and attaches a CSV", () => {
+  const r = createRelay();
+  const row = (fuel, hrs, pre = "Y") => ({ id: "WL46", desc: "I.T Loader", pre, basis: "Daily", hs: "1", he: "2", hrs, flow: "", fuel, cmt: "" });
+  r.post(fuelReport(perthISO(2), "a", [row(40, 8)]));
+  r.post(fuelReport(perthISO(3), "b", [row(10, 2)]));
+  r.post(fuelReport(perthISO(3), "c", [row(30, 6, "N")]));  // re-sent later the same day – replaces "b"
+  r.post(fuelReport(perthISO(20), "old", [row(999, 99)])); // outside the week
+  const before = r.mail.length; r.ctx.weeklyDigest();
+  const m = r.mail.slice(before).find(x => /fuel/i.test(x.subject));
+  assert.ok(m, "fuel summary sent"); assert.equal(m.to, "amie.smith@genus.com.au"); assert.equal(m.cc, "darren.frizzell@genus.com.au");
+  assert.match(m.subject, /70 L/); assert.match(m.htmlBody, /Totals by asset/); assert.match(m.htmlBody, /WL46 I.T Loader/);
+  assert.doesNotMatch(m.htmlBody, /999/); assert.equal(m.attachments[0].type, "text/csv");
 });

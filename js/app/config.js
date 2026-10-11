@@ -8,7 +8,7 @@ const CONFIG = {
   project: "J1084 – Parron Wind Farm Connection Assets – Yerramullah Terminal (YMT)",
   projectShort: "YMT – Yerramullah Terminal",
   jobNo: "J1084",
-  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "2.9.1"
+  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "3.0"
 };
 
 /* Site location for the home-screen weather (forecast for this point) and the Bureau of Meteorology
@@ -62,14 +62,15 @@ const TEAM = [
   { name: "Matt Smith",       role: "Senior Civil Supervisor",      email: "matt.smith@genus.com.au" },
   { name: "Paul Delaney",     role: "Civil Supervisor",             email: "paul.delaney@genus.com.au" },
   { name: "Cory Shotter",     role: "Senior Electrical Supervisor", email: "cory.shotter@genus.com.au" },
-  { name: "Zane Patten",      role: "Electrical Supervisor",        email: "zane.patten@genus.com.au" }
+  { name: "Zane Patten",      role: "Electrical Supervisor",        email: "zane.patten@genus.com.au" },
+  { name: "Amie Smith",       role: "Project Admin",                email: "amie.smith@genus.com.au" }
 ];
 
 /* Quick report – positive observation categories */
 const OBS_CATEGORIES = ["Above-standard practice", "Speaking up / stop work", "Effective controls in place", "Good housekeeping", "Environmental care", "Leadership / mentoring", "Innovation / improvement"];
 
 /* Forms opened from their own tile on the home screen instead of the inspection list */
-const HOME_TILE_FORMS = [24, 23];
+const HOME_TILE_FORMS = [24, 23, 22, 28];   // 22 + 28 sit under the Trade Assistants tile
 
 /* Inspection library groups (template numbers). Anything not listed shows under "Other". */
 const CATEGORIES = [
@@ -79,5 +80,35 @@ const CATEGORIES = [
   { key: "height", label: "Heights & lifting",      nums: [9, 10, 11, 12] },
   { key: "plant",  label: "Plant & traffic",        nums: [13, 14, 21, 26] },
   { key: "ground", label: "Ground & hot work",      nums: [15, 16] },
-  { key: "env",    label: "Fire, chemicals & environment", nums: [17, 18, 19, 20, 22, 25, 27] }
+  { key: "env",    label: "Fire, chemicals & environment", nums: [17, 18, 19, 20, 25, 27] }
+];
+
+/* PARRON Radio playlist (shuffle). ids = official YouTube uploads, first choice first; the player falls back to the next id. */
+const RADIO_SONGS = [
+  { t: "The Safety Dance", a: "Men Without Hats", k: "Safety", ids: ["nM4okRvCg2g", "1p_BvaHsgGg"] },
+  { t: "High Voltage", a: "AC/DC", k: "Electrical", ids: ["Nnjh-zp6pP4"] },
+  { t: "Live Wire", a: "AC/DC", k: "Wire", ids: ["DbTG9YTbdc0"] },
+  { t: "Electric Avenue (Live)", a: "Eddy Grant", k: "Electric", ids: ["YtU_u0RyGZU"] },
+  { t: "Power and the Passion", a: "Midnight Oil", k: "Power", ids: ["6pKPNnk-JhE"] },
+  { t: "The Power", a: "SNAP!", k: "Power", ids: ["nm6DO_7px1I"] },
+  { t: "Shock the Monkey", a: "Peter Gabriel", k: "Shock", ids: ["CnVf1ZoCJSo"] },
+  { t: "Danger! High Voltage", a: "Electric Six", k: "Electrical", ids: ["Jjd1mfhIVEk", "2a4gyJsY0mc"] },
+  { t: "Electric Blue", a: "ICEHOUSE", k: "Electric", ids: ["zeV_POB16f8"] },
+  { t: "Wichita Lineman", a: "Glen Campbell", k: "Lineman", ids: ["Q8P_xTBpAcY"] },
+  { t: "Electric Feel", a: "MGMT", k: "Electric", ids: ["MmZexg8sxyk"] },
+  { t: "The Power of Love", a: "Huey Lewis & the News", k: "Power", ids: ["wBl2QGAIx1s"] },
+  { t: "Shock to the System", a: "Billy Idol", k: "Shock", ids: ["lx2fZU5USus"] },
+  { t: "Electrical Storm", a: "U2", k: "Electrical", ids: ["F4gUkN4Ohho"] },
+  { t: "She's Electric", a: "Oasis", k: "Electric", ids: ["h9JZWhjQDvc", "u-80T2Ve-c0"] },
+  { t: "Live Wire", a: "Mötley Crüe", k: "Wire", ids: ["Ahq4blDfU5s"] },
+  { t: "Together in Electric Dreams", a: "Philip Oakey & Giorgio Moroder", k: "Electric", ids: ["PE1lzqJCeJ0", "vVJYBPQyFTQ"] },
+  { t: "Electricity", a: "Orchestral Manoeuvres in the Dark", k: "Electricity", ids: ["Y43XLVqjytQ", "XXNF4KoVyoU"] },
+  { t: "Wire to Wire", a: "Razorlight", k: "Wire", ids: ["MwRNvpGydzw"] },
+  { t: "The Shock of the Lightning", a: "Oasis", k: "Shock", ids: ["87IQhui_Yy8"] },
+  { t: "Electric Love", a: "BØRNS", k: "Electric", ids: ["RYr96YYEaZY"] },
+  { t: "Electric Boogie", a: "Marcia Griffiths", k: "Electric", ids: ["1vF84LABHm0"] },
+  { t: "Bird on the Wire", a: "Leonard Cohen", k: "Wire", ids: ["BqGArXHDOKY"] },
+  { t: "Shot in the Dark", a: "AC/DC", k: "Power Up", ids: ["54LEywabkl4", "xNhn1KOqq8g"] },
+  { t: "Wichita Lineman", a: "Johnny Cash", k: "Lineman", ids: ["kEM1ri_W4F8"] },
+  { t: "Telegraph Road", a: "Dire Straits", k: "Wire", ids: ["d8bWGGA-5HM"] }
 ];

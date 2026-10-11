@@ -35,6 +35,13 @@ async function newPage(opts = {}) {
   const ctx = await browser.newContext({ viewport: opts.viewport || { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: "block", timezoneId: "Australia/Perth", locale: "en-AU", colorScheme: opts.dark ? "dark" : "light", acceptDownloads: true });
   await ctx.route(/api\.open-meteo\.com/, route => route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify(WX) }));
   await ctx.route(/raw\.githubusercontent\.com\/.*fdr\.json/, route => route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify(FEED) }));
+  await ctx.route(/youtube\.com\/iframe_api/, route => route.fulfill({ status: 200, contentType: "text/javascript", body: `window.YT={PlayerState:{UNSTARTED:-1,ENDED:0,PLAYING:1,PAUSED:2,BUFFERING:3,CUED:5},
+    Player:function(el,o){const self=this;window._yt={ids:[o.videoId],calls:[]};const e=document.getElementById(el);if(e)e.innerHTML='<div class="fakeyt"></div>';
+      const st=v=>setTimeout(()=>o.events.onStateChange({data:v}),10);
+      this.playVideo=()=>{_yt.calls.push("play");st(1)};this.pauseVideo=()=>{_yt.calls.push("pause");st(2)};this.stopVideo=()=>{_yt.calls.push("stop");st(-1)};
+      this.loadVideoById=id=>{_yt.ids.push(id);_yt.calls.push("load");st(1)};this.cueVideoById=id=>{_yt.ids.push(id);_yt.calls.push("cue")};
+      window._ytEnd=()=>o.events.onStateChange({data:0});window._ytErr=()=>o.events.onError({data:150});setTimeout(()=>o.events.onReady({target:self}),10)}};
+    setTimeout(()=>window.onYouTubeIframeAPIReady&&window.onYouTubeIframeAPIReady(),0);` }));
   await ctx.route(/script\.google(usercontent)?\.com/, async route => {
     const r = route.request(); const url = new URL(r.url());
     const body = r.method() === "POST" ? relay.post(JSON.parse(r.postData() || "{}")) : relay.get(Object.fromEntries(url.searchParams));
@@ -53,17 +60,17 @@ const shot = async (page, name) => { if (SHOTS) await page.screenshot({ path: pa
 const settle = page => page.waitForTimeout(450);
 
 const page = await newPage();
-await step("home shows hero and the six tiles (no long list)", async () => {
+await step("home shows hero and the eight tiles (no long list)", async () => {
   await page.waitForSelector(".hero"); await page.waitForSelector(".tiles .tile");
   if (await page.$("#lib")) throw new Error("inspection list should not be on home");
-  const n = await page.$$eval(".tiles .tile", e => e.length); if (n !== 6) throw new Error("tiles: " + n);
-  const labels = await page.$$eval(".tiles .tile b", e => e.map(x => x.textContent.trim()).join("|")); if (labels !== "My Day|Inspection|Task Observation|Mentoring|Hazard|Positive") throw new Error("tiles: " + labels);
+  const n = await page.$$eval(".tiles .tile", e => e.length); if (n !== 8) throw new Error("tiles: " + n);
+  const labels = await page.$$eval(".tiles .tile b", e => e.map(x => x.textContent.trim()).join("|")); if (labels !== "My Day|Inspection|Task Observation|Mentoring|Hazard|Positive|Trade Assistants|PARRON Radio") throw new Error("tiles: " + labels);
   await settle(page); await shot(page, "01-home");
 });
 await step("Inspection tile opens the list with category chips", async () => {
   await page.click(".tile >> text=Inspection"); await page.waitForSelector("#lib .card");
-  const n = await page.$$eval("#lib .card", e => e.length); if (n !== 25) throw new Error("library cards: " + n);
-  const nums = await page.$$eval("#lib .card .n", e => e.map(x => x.textContent)); if (nums.includes("24") || nums.includes("23")) throw new Error("24 / 23 should not be in the list"); if (nums.slice(22, 25).join(",") !== "25,26,27") throw new Error("order: " + nums.join(","));
+  const n = await page.$$eval("#lib .card", e => e.length); if (n !== 24) throw new Error("library cards: " + n);
+  const nums = await page.$$eval("#lib .card .n", e => e.map(x => x.textContent)); if (nums.includes("24") || nums.includes("23") || nums.includes("22")) throw new Error("24 / 23 should not be in the list"); if (nums.slice(21, 24).join(",") !== "25,26,27") throw new Error("order: " + nums.join(","));
   await settle(page); await shot(page, "01b-inspections");
   await page.click("#libcats >> text=Fire, chemicals & environment"); await settle(page);
   const env = await page.$$eval("#lib .card .n", e => e.map(x => x.textContent)); if (!env.includes("25") || !env.includes("27")) throw new Error("env category: " + env);
@@ -278,6 +285,63 @@ await step("My Day repeating reminder: monthly, emailed on the day, banner on ho
   const m = relay.mail.slice(before).find(x => /Reminder: Re-print the SWMS/.test(x.subject || "")); if (!m || m.to !== "darren.frizzell@genus.com.au") throw new Error("reminder email not sent");
   await page.evaluate(() => go("#home")); await page.waitForSelector(".remind"); if (!/Re-print the SWMS/.test(await page.textContent(".remind"))) throw new Error("home banner missing");
   await settle(page); await shot(page, "20-home-reminder");
+});
+await step("Trade Assistants: fuel register – start of day, end of day, sign and send to the Project Admin", async () => {
+  await page.evaluate(() => go("#inspections")); await page.waitForSelector("#lib .card");
+  if (/Firefighting Water Trailer|Fuel, Hours/.test(await page.textContent("#lib"))) throw new Error("TA forms should not be in the inspection list");
+  await page.evaluate(() => go("#home")); await page.click(".tile >> text=Trade Assistants"); await page.waitForSelector(".tacard");
+  if (!/Firefighting Water Trailer/.test(await page.textContent("#app"))) throw new Error("fire trailer missing from TA page");
+  await settle(page); await shot(page, "21-ta-page");
+  await page.click(".tacard button.btn.o"); await page.waitForSelector(".fa");
+  const fixed = await page.textContent(".fixed"); if (!/PWF – 1084/.test(fixed) || !/Day/.test(fixed)) throw new Error("fixed details: " + fixed);
+  // saving with nothing filled in lists what is missing
+  await page.click("text=Save start of day"); await page.waitForSelector(".sheet"); if (!/WL46/.test(await page.textContent(".sheet"))) throw new Error("missing list"); await page.evaluate(() => closeSheet());
+  const n = await page.$$eval(".fa", e => e.length); if (n !== 9) throw new Error("assets: " + n);
+  // WL46 + GEN02 used; GEN01 pre-start not done (needs a reason); the rest N/A
+  for (let i = 0; i < 9; i++) await page.click(`#fa-${i} .seg >> nth=0 >> button:has-text("${i === 0 || i === 2 ? "Yes" : i === 1 ? "No" : "N/A"}")`);
+  await page.fill('#fa-0 [data-fu="0|hs"]', "8567.3"); await page.fill('#fa-2 [data-fu="2|hs"]', "9780.7");
+  await page.fill('#fa-1 [data-fu="1|cmt"]', "Genset fault – reported to Supervisor");
+  await page.setInputFiles('#fa-0 input[type=file] >> nth=1', path.join(root, "icon-192.png")); await page.waitForSelector("#fa-0 .photos img");
+  await settle(page); await shot(page, "22-fuel-start");
+  await page.click("text=Save start of day"); await page.waitForSelector(".tacard .tstep.done");
+  if (!/Saved at/.test(await page.textContent(".tacard"))) throw new Error("start of day not shown as saved");
+  await page.click(".tacard button.btn.o"); await page.waitForSelector('[data-fu="0|fuel"]');
+  await page.fill('[data-fu="0|he"]', "8575.1"); await page.fill('[data-fu="0|fuel"]', "40"); await page.fill('[data-fu="0|cmt"]', "Fuelled pod (Badgingarra Roadhouse)");
+  await page.fill('[data-fu="2|fuel"]', "90"); await page.fill('[data-fu="1|fuel"]', "12.5");
+  if ((await page.textContent("#ftot")).trim() !== "142.5") throw new Error("total: " + await page.textContent("#ftot"));
+  if (!/7.8 hrs/.test(await page.textContent("#fhr-0"))) throw new Error("hours run not shown");
+  await settle(page); await shot(page, "23-fuel-end");
+  await page.click("#fstage >> text=Review & sign"); await page.waitForSelector("#sig");
+  const sig = await page.$("#sig"); await sig.scrollIntoViewIfNeeded(); const b = await sig.boundingBox();
+  await page.mouse.move(b.x + 20, b.y + 30); await page.mouse.down(); await page.mouse.move(b.x + 120, b.y + 60); await page.mouse.move(b.x + 200, b.y + 25); await page.mouse.up();
+  await page.fill("#fvName", "Matt Smith"); if (await page.inputValue("#fvPos") !== "Senior Civil Supervisor") throw new Error("verifier role not filled");
+  if (!/amie\.smith@genus\.com\.au/.test(await page.textContent("#app"))) throw new Error("Amie not shown as recipient");
+  await page.waitForFunction(() => !document.querySelector("#bShare").disabled, null, { timeout: 15000 }).catch(async e => { throw new Error("send not ready: " + JSON.stringify(await page.evaluate(() => problems(CUR)))); });
+  const pdf = await page.evaluate(async () => { PDFBLOB = null; const b = await buildPDF(CUR); const t = await b.text(); return { size: b.size, land: /\/MediaBox \[0 0 841/.test(t) }; });
+  if (pdf.size < 5000 || !pdf.land) throw new Error("fuel PDF: " + JSON.stringify(pdf));
+  if (SHOTS) fs.writeFileSync(path.join(out, "fuel-register.pdf"), Buffer.from(await page.evaluate(async () => { PDFBLOB = null; const b = await buildPDF(CUR); return Array.from(new Uint8Array(await b.arrayBuffer())); })));
+  await settle(page); await shot(page, "24-fuel-review");
+  const before = relay.mail.length; await page.click("#bShare"); await page.waitForFunction(() => location.hash === "#home", null, { timeout: 15000 });
+  const m = relay.mail.slice(before).find(x => /Fuel, Hours/.test(x.subject || ""));
+  if (!m || m.to !== "amie.smith@genus.com.au,darren.frizzell@genus.com.au") throw new Error("register email: " + (m && m.to));
+  if (!/142.5 L/.test(m.subject) || !/PRE-START NOT DONE/.test(m.subject)) throw new Error("subject: " + m.subject);
+  const rows = relay.sheet("Fuel").getLastRow() - 1; if (rows !== 9) throw new Error("fuel rows logged: " + rows);
+  await page.evaluate(() => go("#ta")); await page.waitForSelector(".tacard"); if (!/register has been sent/.test(await page.textContent("#app"))) throw new Error("TA page should show today's register as sent");
+});
+await step("PARRON Radio: shuffle play, next, skip unavailable song, keeps playing across screens", async () => {
+  await page.evaluate(() => { localStorage.removeItem("radio"); go("#home"); }); await page.click(".tile >> text=PARRON Radio"); await page.waitForSelector(".rlist button");
+  const n = await page.$$eval(".rlist button", e => e.length); if (n !== 26) throw new Error("songs: " + n);
+  if (!/Vehicles &? ?&?amp;? ?Driving|Vehicles & Driving/.test(await page.textContent("#app"))) throw new Error("driving note missing");
+  await page.waitForFunction(() => window._yt, null, { timeout: 10000 });
+  await page.click("#rBig"); await page.waitForFunction(() => RADIO.playing, null, { timeout: 5000 });
+  const first = await page.evaluate(() => radioSong().t); await page.click(".rc >> nth=2"); await page.waitForFunction(t => radioSong().t !== t, first);
+  await page.evaluate(() => _ytErr()); // embedding refused → falls back or skips, never stops
+  await page.waitForFunction(() => RADIO.playing); await page.evaluate(() => _ytEnd()); await page.waitForFunction(() => RADIO.playing);
+  await page.evaluate(() => window.scrollTo(0, 0)); await settle(page); await shot(page, "25-radio");
+  await page.evaluate(() => go("#home")); await page.waitForSelector("#radioDock:not(.hide):not(.full)");
+  if (!(await page.evaluate(() => document.body.classList.contains("radio-on")))) throw new Error("mini player not shown on home");
+  await settle(page); await shot(page, "26-home-radio");
+  await page.click("#radioDock [aria-label='Stop and close']"); await page.waitForSelector("#radioDock.hide", { state: "attached" });
 });
 await step("CSV exports", async () => {
   const [dl] = await Promise.all([page.waitForEvent("download"), page.evaluate(() => exportActions())]);
