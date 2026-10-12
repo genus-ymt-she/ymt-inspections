@@ -1,0 +1,15 @@
+name: DFES probe
+on:
+  push:
+    branches: [claude/github-app-upgrade-9zm1in]
+    paths: [.github/workflows/dfes-probe.yml]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: |
+          sudo apt-get install -y -qq poppler-utils >/dev/null
+          curl -sSL -m 60 -A "Mozilla/5.0" -o d.pdf https://www.dfes.wa.gov.au/documents/WA-Fire-Weather-Districts-and-Local-Government-Authorities.pdf; ls -l d.pdf; file d.pdf
+          pdftotext -layout d.pdf d.txt; grep -n -i -B3 -A3 "dandaragan\|lesueur\|watheroo\|coorow\|gingin" d.txt | head -120
+          curl -sSL -m 60 -A "Mozilla/5.0" "https://www.dandaragan.wa.gov.au/services/emergency-management/bushfire.aspx" -o s.html; grep -o 'href="[^"]*\.pdf[^"]*"' s.html | head; grep -i -o '[^<>]\{0,200\}weather zone[^<>]\{0,300\}' s.html | head
