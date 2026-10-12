@@ -1,5 +1,5 @@
 /* PARRON service worker – network first, falls back to the cached copy so the app works with no signal. */
-const C = "parron-v3.4.1";
+const C = "parron-v3.5.0";
 const FILES = [
   "./",
   "./index.html",
@@ -18,6 +18,7 @@ const FILES = [
   "./js/data/assets.js",
   "./js/data/templates.js",
   "./js/data/emergency.js",
+  "./js/data/reference.js",
   "./assets/emergency/drsabcd.jpg",
   "./assets/emergency/evacuation.jpg",
   "./assets/traffic/intersection.jpg",
@@ -39,6 +40,9 @@ const FILES = [
   "./js/app/myday.js",
   "./js/app/weather.js",
   "./js/app/emergency.js",
+  "./js/app/sitestatus.js",
+  "./js/app/history.js",
+  "./js/app/reference.js",
   "./js/app/fuel.js",
   "./js/app/radio.js",
   "./js/app/dashboard.js",

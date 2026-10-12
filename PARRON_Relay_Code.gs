@@ -50,6 +50,13 @@ const OBS_HEAD = ['Logged', 'Date', 'Month', 'Report ID', 'Type', 'Name', 'Locat
   'Consequence', 'Likelihood', 'Risk score', 'Risk level', 'Immediate action', 'Status', 'Owner', 'Owner email', 'Due', 'Photo links'];
 const FUEL_HEAD = ['Logged', 'Date', 'Report ID', 'Recorded by', 'Asset ID', 'Description', 'Pre-start', 'Hours basis', 'Hour meter start',
   'Hour meter end', 'Hours', 'Flow meter', 'Fuel (L)', 'Comments', 'Verified by'];
+const SITESTAT_HEAD = ['Set at', 'Date', 'FDR', 'Total Fire Ban', 'HVMB', 'Set by', 'Check type', 'Note'];
+const HIST_HEAD = ['Date', 'Prepared at', 'Fact 1 year', 'Fact 1', 'Fact 1 link', 'Fact 2 year', 'Fact 2', 'Fact 2 link', 'Fact 3 year', 'Fact 3', 'Fact 3 link', 'Facts (JSON)'];
+const FDR_LEVELS = ['No Rating', 'Moderate', 'High', 'Extreme', 'Catastrophic'];
+const HISTORY_HOUR = 4;                       // "This day in history" prepared between 4 and 5 am Perth time
+// Words that keep an event off the pre-start list – edit here
+const HISTORY_EXCLUDE = ['murder', 'massacre', 'killed', 'killing', 'kills', 'terrorist', 'terrorism', 'bombing', 'bomb', 'shooting', 'shot dead', 'assassinat', 'executed', 'execution',
+  'genocide', 'rape', 'suicide', 'war crime', 'hostage', 'behead', 'lynch', 'stabbing', 'torture', 'slaughter', 'atrocit', 'holocaust', 'abduct', 'kidnap', 'died', 'deaths', 'dead', 'crash', 'disaster'];
 const REM_HEAD = ['ID', 'Name', 'Email', 'Reminder', 'Repeat', 'Time', 'Created', 'Last sent', 'Active'];
 const ST = { spot: 'Closed on spot', open: 'Open', closed: 'Closed', verified: 'Verified' };
 
@@ -62,6 +69,7 @@ function setup() {
   ScriptApp.newTrigger('weeklyDigest').timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(WEEKLY_HOUR).inTimezone(TZ).create();
   ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'remindersRun') ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('remindersRun').timeBased().atHour(REMINDER_HOUR).everyDays(1).inTimezone(TZ).create();
+  installHistoryTrigger();
   if (ARCHIVE_PDFS) folder_('PARRON – Reports');
   const pin = PropertiesService.getScriptProperties().getProperty('MANAGER_PIN');
   MailApp.sendEmail(TO, 'PARRON relay v3 is connected',
@@ -70,6 +78,8 @@ function setup() {
     '\nWeekly summary: every Monday between 7 and 8 am (Perth time).' +
     '\nPersonal reminders: emailed between 5 and 6 am (Perth time).' +
     '\nWeekly fuel, hours & pre-start register: Mondays to ' + FUEL_TO + '.' +
+    '\nThis day in history: prepared every day between 4 and 5 am (Perth time)' + (PropertiesService.getScriptProperties().getProperty('HISTORY_EMAIL') ? ' and emailed to ' + PropertiesService.getScriptProperties().getProperty('HISTORY_EMAIL') : '') + '.' +
+    '\nToday on site status PIN: ' + (PropertiesService.getScriptProperties().getProperty('STATUS_PIN') ? 'set' : 'NOT SET – add STATUS_PIN under Script properties so the site status can be updated.') +
     '\nFire Danger Rating: ' + (fdrFetch_(true).today ? 'reading from the Bureau of Meteorology' : 'could not be read automatically – set it in the app (Manager mode) or choose the district') +
     '\nManager PIN: ' + (pin ? 'set' : 'NOT SET – add MANAGER_PIN under Project Settings > Script properties.') +
     '\nSite access code: ' + (PropertiesService.getScriptProperties().getProperty('SITE_CODE') ? 'set' : 'not set – add SITE_CODE under Script properties so only your team can read the project log.'));
@@ -80,8 +90,8 @@ function book_() {
   let ss, id = p.getProperty('SHEET_ID');
   if (id) { try { ss = SpreadsheetApp.openById(id); } catch (e) { ss = null; } }
   if (!ss) { ss = SpreadsheetApp.create('PARRON – Inspection Log (YMT)'); p.setProperty('SHEET_ID', ss.getId()); }
-  sheet_(ss, 'Sent', SENT_HEAD); sheet_(ss, 'Status', STAT_HEAD); sheet_(ss, 'Findings', FIND_HEAD); sheet_(ss, 'Observations', OBS_HEAD); sheet_(ss, 'Reminders', REM_HEAD); sheet_(ss, 'Fuel', FUEL_HEAD);
-  const s1 = ss.getSheetByName('Sheet1'); if (s1 && ss.getSheets().length > 6) ss.deleteSheet(s1);
+  sheet_(ss, 'Sent', SENT_HEAD); sheet_(ss, 'Status', STAT_HEAD); sheet_(ss, 'Findings', FIND_HEAD); sheet_(ss, 'Observations', OBS_HEAD); sheet_(ss, 'Reminders', REM_HEAD); sheet_(ss, 'Fuel', FUEL_HEAD); sheet_(ss, 'Site Status', SITESTAT_HEAD); sheet_(ss, 'This Day', HIST_HEAD);
+  const s1 = ss.getSheetByName('Sheet1'); if (s1 && ss.getSheets().length > 8) ss.deleteSheet(s1);
   return ss;
 }
 function sheet_(ss, name, head) {
@@ -115,6 +125,7 @@ function doPost(e) {
     if (d.action === 'observation') return observation_(d);
     if (d.action === 'reminder') return reminder_(d);
     if (d.action === 'fdr') return fdrSet_(d);
+    if (d.action === 'setStatus') return setStatus_(d);
     if (d.action === 'pin') return out_({ ok: pinOK_(d.pin), error: pinOK_(d.pin) ? '' : 'Incorrect PIN' });
     return send_(d);
   } catch (err) {
@@ -338,8 +349,10 @@ function upsert_(ss, uid, m, state, sentAt) {
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  if (['weather', 'dashboard', 'reports', 'photo'].includes(p.action) && p.key === KEY && !codeOK_(p.code)) return out_({ ok: false, error: 'Site code required', needCode: true });
+  if (['weather', 'dashboard', 'reports', 'photo', 'getStatus', 'getHistory'].includes(p.action) && p.key === KEY && !codeOK_(p.code)) return out_({ ok: false, error: 'Site code required', needCode: true });
   if (p.action === 'weather') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_({ ok: true, fdr: fdrFetch_(false) }); }
+  if (p.action === 'getStatus') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_(Object.assign({ ok: true }, statusOut_())); }
+  if (p.action === 'getHistory') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_(history_(false)); }
   if (p.action === 'reports') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_({ ok: true, reports: reports_() }); }
   if (p.action === 'photo') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return photo_(p.id); }
   if (p.action !== 'dashboard') return out_({ ok: true, service: 'PARRON relay', v: 3, emailsLeftToday: MailApp.getRemainingDailyQuota() });
@@ -392,10 +405,12 @@ function dailyDigest() {
   const fmt = v => Utilities.formatDate(new Date(v), TZ, 'dd/MM HH:mm');
   const st = s => s === 'outbox' ? 'Finished – waiting for signal' : 'Started – not sent';
   const dmy = s => s ? s.split('-').reverse().join('/') : '';
+  const SS = statusDigest_(today);
   const byName = {}; sentToday.forEach(r => { byName[r[5]] = (byName[r[5]] || []).concat(`${no_(r[6])} ${r[7]}`); });
   const tile = (n, l, c) => `<td style="padding:10px;text-align:center;border:1px solid #D0D5DD"><div style="font-size:22px;font-weight:700;color:${c}">${n}</div><div style="font-size:11px;color:#5B6675">${l}</div></td>`;
   const html = `<div style="font-family:Arial,sans-serif;color:#1B2430;max-width:820px">
     <div style="background:#112B4E;color:#fff;padding:12px 14px;border-bottom:4px solid #EC7723"><div style="font-size:12px;color:#EC7723;font-weight:700">PARRON | DAILY SUMMARY</div><div style="font-size:18px;font-weight:700">${Utilities.formatDate(now, TZ, 'EEEE d MMMM yyyy')}</div></div>
+    <div style="border:1px solid #D0D5DD;border-left:4px solid #EC7723;padding:8px 12px;margin:12px 0;font-size:13px"><b>Today on site – fire status:</b> ${SS.L.length ? SS.line.map(esc_).join(' &nbsp;|&nbsp; ') : '<b style="color:#C62828">No status set today</b>'}${SS.L.length && SS.noMidday ? '<br><b style="color:#C62828">⚠ No midday re-check recorded</b>' : ''}</div>
     <table style="border-collapse:collapse;width:100%;margin:12px 0"><tr>${tile(sentToday.length, 'Sent today', '#2E7D32')}${tile(open.length, 'Not sent', '#C62828')}${tile(overdue.length, 'Actions overdue', '#C62828')}${tile(toVerify.length, 'Awaiting verification', '#E39A00')}</tr></table>
     <h3 style="color:#C62828">Not sent – started today (${openToday.length})</h3>${t(openToday.map(r => [r[1], `${no_(r[2])} ${r[3]}`, r[4], fmt(r[5]), st(r[7])]), ['Name', 'Inspection', 'Location', 'Started', 'Status'])}
     <h3 style="color:#C62828">Still not sent – from earlier days (${openOlder.length})</h3>${t(openOlder.map(r => [r[1], `${no_(r[2])} ${r[3]}`, r[4], fmt(r[5]), st(r[7])]), ['Name', 'Inspection', 'Location', 'Started', 'Status'])}
@@ -525,6 +540,93 @@ function weeklyDigest() {
 }
 
 /* ---------- helpers ---------- */
+/* ---------- Today on site: FDR / Total Fire Ban / Harvest & Vehicle Movement Ban (BFMP §10.1–10.4) ---------- */
+function statusPinOK_(pin) {
+  const P = PropertiesService.getScriptProperties(); const real = P.getProperty('STATUS_PIN'); if (!real) return false;
+  const c = CacheService.getScriptCache(); const fails = Number(c.get('spin_fail') || 0); if (fails >= 10) return false;
+  if (String(pin || '') === String(real)) { c.remove('spin_fail'); return true; }
+  c.put('spin_fail', String(fails + 1), 900); return false;
+}
+function statusRow_(r) { return { at: iso_(r[0]), date: dstr_(r[1]), fdr: r[2], tfb: r[3], hvmb: r[4], by: r[5], type: r[6], note: r[7] }; }
+function statusOut_() {
+  const rows = rows_(book_().getSheetByName('Site Status')).filter(r => r[0]); const today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+  const all = rows.map(statusRow_);
+  return { status: all.length ? all[all.length - 1] : null, today: all.filter(x => x.date === today) };
+}
+function setStatus_(d) {
+  if (!PropertiesService.getScriptProperties().getProperty('STATUS_PIN')) return out_({ ok: false, error: 'Status PIN not set up – add STATUS_PIN in the relay Script properties' });
+  if (!statusPinOK_(d.pin)) return out_({ ok: false, error: 'Incorrect status PIN', badPin: true });
+  const fdr = FDR_LEVELS.find(x => x.toLowerCase() === String(d.fdr || '').toLowerCase());
+  const yn = v => /^y/i.test(String(v || '')) ? 'Yes' : /^n/i.test(String(v || '')) ? 'No' : '';
+  const type = ['Morning', 'Midday', 'Change'].find(x => x.toLowerCase() === String(d.type || '').toLowerCase());
+  if (!fdr || !yn(d.tfb) || !yn(d.hvmb) || !type || !clean_(d.by)) return out_({ ok: false, error: 'Status incomplete' });
+  const now = new Date();
+  book_().getSheetByName('Site Status').appendRow([now, "'" + Utilities.formatDate(now, TZ, 'yyyy-MM-dd'), fdr, yn(d.tfb), yn(d.hvmb), clean_(d.by), type, str_(d.note, 300)]);
+  return out_(Object.assign({ ok: true }, statusOut_()));
+}
+/* status history for the 6 pm summary */
+function statusDigest_(today) {
+  const L = rows_(book_().getSheetByName('Site Status')).filter(r => r[0]).map(statusRow_).filter(x => x.date === today);
+  const line = L.map(x => `${Utilities.formatDate(new Date(x.at), TZ, 'HH:mm')} ${x.type}: ${x.fdr} · TFB ${x.tfb} · HVMB ${x.hvmb} – ${x.by}`);
+  return { L, line, noMidday: !L.some(x => x.type === 'Midday') };
+}
+
+/* ---------- This day in history (pre-start) – Wikipedia "On this day", prepared 4–5 am Perth ---------- */
+const HIST_AU = /\b(Australia|Australian|Australians|Western Australia|Perth|Fremantle|Sydney|Melbourne|Brisbane|Adelaide|Hobart|Darwin|Canberra|Queensland|Tasmania|New South Wales|Kalgoorlie|Geraldton|Broome|Pilbara|Kimberley)\b/i;
+const HIST_SCI = /(scien|engineer|technolog|space|NASA|satellite|rocket|spacecraft|astronaut|computer|internet|telescope|invent|patent|discover|expedition|explor|aviat|aircraft|airline|flight|railway|bridge|tunnel|electric|power station|radio|television|telephone|Olympic|World Cup|cricket|football|rugby|championship|Grand Prix|tennis|record|mountain|summit|Antarctic)/i;
+function histOK_(t) { const s = String(t || '').toLowerCase(); return s.length > 20 && !HISTORY_EXCLUDE.some(w => s.includes(w)); }
+function histFact_(e, born) {
+  const p = (e.pages || [])[0] || {}; const link = (p.content_urls && p.content_urls.desktop && p.content_urls.desktop.page) || ('https://en.wikipedia.org/wiki/Special:Search?search=' + encodeURIComponent(String(e.text || '').slice(0, 80)));
+  let text = String(e.text || '').replace(/\s+/g, ' ').trim(); if (born) text = 'Born: ' + text.replace(/\.$/, '') + '.';
+  if (text.length > 300) { const cut = text.slice(0, 300); const i = cut.lastIndexOf('. '); text = (i > 80 ? cut.slice(0, i + 1) : cut.replace(/\s+\S*$/, '') + '…'); }
+  return { year: Number(e.year) || '', text, link, au: HIST_AU.test(text), sci: HIST_SCI.test(text) };
+}
+/* three pre-start friendly facts: one Australian/WA, one science/engineering/exploration/sport, one general – spread across centuries */
+function pickHistory_(events, births) {
+  const ev = (events || []).filter(e => histOK_(e.text)).map(e => histFact_(e, false));
+  const bo = (births || []).filter(e => histOK_(e.text)).map(e => histFact_(e, true));
+  const out = []; const used = new Set(); const cent = f => Math.floor((Number(f.year) || 0) / 100);
+  const take = f => { if (f && !used.has(f.text)) { out.push(f); used.add(f.text); return true; } return false; };
+  const pick = (list, test) => { const L = list.filter(f => !used.has(f.text) && test(f)); return L.find(f => !out.some(o => cent(o) === cent(f))) || L[0]; };
+  take(pick(ev, f => f.au)); take(pick(ev, f => f.sci && !f.au)); take(pick(ev, f => !f.au && !f.sci));
+  while (out.length < 3) { const f = pick(ev, () => true) || pick(bo, () => true); if (!f || !take(f)) break; }
+  const pool = ev.concat(bo).filter(f => !used.has(f.text)).slice(0, 25);
+  return { facts: out.slice(0, 3), pool };
+}
+function histFetch_(kind, mm, dd) {
+  const r = UrlFetchApp.fetch(`https://en.wikipedia.org/api/rest_v1/feed/onthisday/${kind}/${mm}/${dd}`, { muteHttpExceptions: true, headers: { 'Api-User-Agent': 'PARRON-YMT site safety app' } });
+  if (r.getResponseCode() !== 200) return [];
+  try { return JSON.parse(r.getContentText())[kind] || []; } catch (e) { return []; }
+}
+function history_(fresh) {
+  const now = new Date(); const date = Utilities.formatDate(now, TZ, 'yyyy-MM-dd'); const sh = book_().getSheetByName('This Day');
+  const rows = rows_(sh); const i = rows.findIndex(r => dstr_(r[0]) === date);
+  if (i >= 0 && !fresh) { try { const j = JSON.parse(rows[i][11]); return { ok: true, date, facts: j.facts, pool: j.pool || [], prepared: iso_(rows[i][1]) }; } catch (e) {} }
+  const mm = Utilities.formatDate(now, TZ, 'MM'), dd = Utilities.formatDate(now, TZ, 'dd');
+  const ev = histFetch_('events', mm, dd); const bo = ev.filter(e => histOK_(e.text)).length >= 3 ? [] : histFetch_('births', mm, dd);
+  const pk = pickHistory_(ev, bo); if (!pk.facts.length) return { ok: false, error: 'Wikipedia feed unavailable' };
+  const F = k => pk.facts[k] || {}; const row = ["'" + date, now];
+  for (let k = 0; k < 3; k++) row.push(F(k).year || '', F(k).text || '', F(k).link || '');
+  row.push(JSON.stringify({ facts: pk.facts, pool: pk.pool }));
+  if (i >= 0) sh.getRange(i + 2, 1, 1, row.length).setValues([row]); else sh.appendRow(row);
+  return { ok: true, date, facts: pk.facts, pool: pk.pool, prepared: now.toISOString() };
+}
+/* time-driven, 4–5 am Perth: get today's facts ready for the 6 am pre-start (and email them if HISTORY_EMAIL is set) */
+function prepareHistory() {
+  const h = history_(true); const to = PropertiesService.getScriptProperties().getProperty('HISTORY_EMAIL');
+  if (!h.ok || !to) return h;
+  const date = Utilities.formatDate(new Date(), TZ, 'EEEE d MMMM yyyy');
+  MailApp.sendEmail({ to, name: 'PARRON Site Inspections', subject: `Pre-start – This day in history ${Utilities.formatDate(new Date(), TZ, 'dd/MM/yyyy')}`,
+    htmlBody: mailWrap_('This day in history', date.toUpperCase(), h.facts.map((f, i) => `<p style="font-size:16px;line-height:1.5"><b>${i + 1}. ${esc_(String(f.year))}</b> – ${esc_(f.text)}<br><a href="${f.link}">Read more</a></p>`).join('') + '<p style="font-size:12px;color:#5B6675">Source: Wikipedia – On this day (CC BY-SA). Check facts before reading if unsure.</p>'),
+    body: h.facts.map((f, i) => `${i + 1}. ${f.year} – ${f.text}\n${f.link}`).join('\n\n') });
+  return h;
+}
+/* one-off: create (or re-create) the 4–5 am trigger without running the full setup */
+function installHistoryTrigger() {
+  ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'prepareHistory') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('prepareHistory').timeBased().atHour(HISTORY_HOUR).everyDays(1).inTimezone(TZ).create();
+}
+
 /* hazard reports and positive observations for the in-app list (last 13 months, newest first) */
 const driveId_ = u => (String(u).match(/\/d\/([\w-]{1,80})/) || [])[1] || '';
 function reports_() {

@@ -122,3 +122,27 @@ Insights (Lead indicators) and the hazard form also link to it.
 - Everything in both tabs is in the offline cache – it opens with no signal once PARRON has been opened online.
 - Content is in `js/data/emergency.js`; maps in `assets/traffic/`. When the ERP / TARP is revised, update that file
   (and bump the cache version in `sw.js`).
+
+## Today on site – FDR / TFB / HVMB status (v3.5)
+
+- Panel at the top of Home. Set by anyone with the **status PIN** (Update → pick FDR, TFB, HVMB, Morning / Midday / Change, PIN).
+- The PIN lives only in the relay: Apps Script → Project Settings → Script Properties → `STATUS_PIN`. It is never in GitHub
+  or the app. The phone remembers it after the first correct entry ("Forget" removes it). 10 wrong PINs lock it for 15 minutes.
+- Every change is a new row in the **Site Status** sheet. Next check: Morning → 12:00; Midday / Change → 05:30 next day.
+  Overdue → orange banner. Nothing set today → grey "NOT SET TODAY" and restrictions are hidden.
+- The 6 pm daily email opens with today's status history and flags "No midday re-check recorded".
+- `config.json` → `hvmbUrl`: the Shire of Dandaragan HVMB page (leave blank until known).
+
+## This day in history (v3.5)
+
+- The relay prepares three facts at 4–5 am Perth (`prepareHistory`, created by `setup` or `installHistoryTrigger`) from
+  Wikipedia "On this day" and saves them to the **This Day** sheet. Violent / tragic events are filtered out
+  (`HISTORY_EXCLUDE` in the relay and `HIST_EXCLUDE` in `js/app/history.js` – keep them the same).
+- Optional Script Property `HISTORY_EMAIL` – the facts are emailed there each morning for the pre-start.
+- If the relay hasn't prepared them, the app reads Wikipedia directly. Facts are cached on the phone for the day.
+
+## Reference – SNN, 330 kV, ChemAlert (v3.5)
+
+- Content is in `js/data/reference.js` (verbatim). The 330 kV MAD image goes in `img/mad.png` (add it to `sw.js` FILES
+  and bump the cache). Until then the card shows "MAD values: refer to your Western Power permit / ESSR".
+- `config.json` → `chemAlertUrl`: the ChemAlert login/search link. It opens in the browser – no credentials are stored.

@@ -3,7 +3,10 @@
 let RELAY={url:"",key:"",v:0};
 try{const c=JSON.parse(ls("relayCfg")||"null");if(c&&c.url)RELAY=Object.assign({v:0},c)}catch(e){}
 async function loadRelay(){try{const r=await fetch("config.json?v="+Date.now(),{cache:"no-store"});if(!r.ok)return;const c=await r.json();
-  if(c&&typeof c.relayUrl==="string"){const url=c.relayUrl.trim();RELAY={url,key:c.key||"",v:url===RELAY.url?RELAY.v:0};ls("relayCfg",JSON.stringify(RELAY))}}catch(e){}}
+  if(c&&typeof c.relayUrl==="string"){const url=c.relayUrl.trim();RELAY={url,key:c.key||"",v:url===RELAY.url?RELAY.v:0};ls("relayCfg",JSON.stringify(RELAY))}
+  if(c)ls("appCfg",JSON.stringify({hvmbUrl:String(c.hvmbUrl||"").trim(),chemAlertUrl:String(c.chemAlertUrl||"").trim()}))}catch(e){}}
+/* links that can change without a rebuild (config.json) */
+const appCfg=()=>lsJ("appCfg",{});
 /* site access code (set by the SHE Manager in the relay's Script properties) – sent with every relay request */
 const siteCode=()=>(ls("siteCode")||"").trim();
 function relayQ(q){return `${RELAY.url}?${q}&key=${encodeURIComponent(RELAY.key)}${siteCode()?`&code=${encodeURIComponent(siteCode())}`:""}`}

@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRelay } from "./gas-mock.mjs";
+import { EVENTS, BIRTHS } from "./fixtures/onthisday.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SHOTS = process.argv.includes("--shots");
@@ -21,7 +22,8 @@ const srv = http.createServer((req, res) => {
 }).listen(0);
 const port = srv.address().port;
 // Google's servers are refused by the BoM, so the relay finds nothing; the app reads the GitHub feed instead
-const relay = createRelay({ pin: "2468", fetch: () => null });
+const relay = createRelay({ pin: "2468", fetch: url => /onthisday\/events/.test(url) ? { body: JSON.stringify(EVENTS) } : /onthisday\/births/.test(url) ? { body: JSON.stringify(BIRTHS) } : null });
+relay.props.set("STATUS_PIN", "4321");
 const perth = n => new Date(Date.now() + 8 * 3600e3 + n * 864e5).toISOString().slice(0, 10);
 const FEED = { source: "Bureau of Meteorology", issued: perth(0) + "T04:35:00+08:00", districts: {
   Lesueur: [{ date: perth(-1), rating: "Moderate" }, { date: perth(0), rating: "High", fbi: 31 }, { date: perth(1), rating: "Extreme", fbi: 55 }],
@@ -35,6 +37,7 @@ async function newPage(opts = {}) {
   const ctx = await browser.newContext({ viewport: opts.viewport || { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: "block", timezoneId: "Australia/Perth", locale: "en-AU", reducedMotion: opts.motion ? "no-preference" : "reduce", colorScheme: opts.dark ? "dark" : "light", acceptDownloads: true });
   await ctx.route(/api\.open-meteo\.com/, route => route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify(WX) }));
   await ctx.route(/raw\.githubusercontent\.com\/.*fdr\.json/, route => route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify(FEED) }));
+  await ctx.route(/en\.wikipedia\.org\/api\/rest_v1\/feed\/onthisday/, route => route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify(/births/.test(route.request().url()) ? BIRTHS : EVENTS) }));
   await ctx.route(/youtube\.com\/iframe_api/, route => route.fulfill({ status: 200, contentType: "text/javascript", body: `window.YT={PlayerState:{UNSTARTED:-1,ENDED:0,PLAYING:1,PAUSED:2,BUFFERING:3,CUED:5},
     Player:function(el,o){const self=this;window._yt={ids:[o.videoId],calls:[]};const e=document.getElementById(el);if(e)e.innerHTML='<div class="fakeyt"></div>';
       const st=v=>setTimeout(()=>o.events.onStateChange({data:v}),10);
@@ -48,8 +51,9 @@ async function newPage(opts = {}) {
     await route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify(body) });
   });
   const page = await ctx.newPage();
+  if (opts.clock) await page.clock.install({ time: opts.clock });
   page.on("pageerror", e => errors.push("pageerror: " + e.message));
-  page.on("console", m => { if (m.type() === "error" && !/favicon|404/.test(m.text())) errors.push("console: " + m.text()); });
+  page.on("console", m => { if (m.type() === "error" && !/favicon|404|net::ERR_FAILED|ERR_INTERNET_DISCONNECTED/.test(m.text())) errors.push("console: " + m.text()); });
   await page.addInitScript(n => { try { if (n) localStorage.setItem("inspector", n); } catch (e) {} }, opts.name ?? "Test Inspector");
   await page.goto(`http://localhost:${port}/${opts.hash || ""}`);
   await page.waitForFunction(() => document.querySelector("#app") && !document.querySelector("#app .skel"));
@@ -438,6 +442,79 @@ await step("Traffic tab: five site maps, open full screen", async () => {
   await page.waitForFunction(() => [...document.querySelectorAll(".tmap img")].every(i => i.complete && i.naturalWidth > 0), null, { timeout: 15000 });
   await settle(page); await shot(page, "39-traffic");
   await page.click(".tmap >> nth=1"); await page.waitForSelector(".tmap-full img"); await page.click("text=Full screen"); await page.waitForSelector(".zoom img"); await page.click(".zoom .zb button >> nth=1");
+});
+const perthDay = (n = 0) => new Date(Date.now() + 8 * 3600e3 + n * 864e5).toISOString().slice(0, 10);
+const BAD_WORDS = ["murder", "massacre", "killed", "killing", "terrorist", "bombing", "shooting", "assassinat", "executed", "genocide", "rape", "suicide", "war crime", "hostage", "behead"];
+await step("Today on site: not set → wrong PIN rejected → Morning High / TFB No / HVMB Yes → HVMB box first, next check 12:00", async () => {
+  await page.evaluate(() => { localStorage.removeItem("siteStatus"); localStorage.removeItem("statusPin"); SITEST = null; go("#home"); }); await page.waitForSelector("#stp .st-panel");
+  if (!/NOT SET TODAY/.test(await page.textContent("#stp"))) throw new Error("should start NOT SET TODAY");
+  const first = await page.evaluate(() => document.querySelector("#app").firstElementChild.id); if (first !== "stp") throw new Error("status panel is not at the top of Home");
+  await page.click("#stp .st-upd"); await page.waitForSelector(".st-pick");
+  await page.click(".st-pick button:has-text('High')"); await page.click(".seg[data-k=tfb] button:has-text('No')"); await page.click(".seg[data-k=hvmb] button:has-text('Yes')"); await page.click(".seg[data-k=type] button:has-text('Morning')");
+  await page.fill("#stPin", "1111"); await page.click("#stSave"); await page.waitForFunction(() => /Incorrect status PIN/.test(document.querySelector("#toast").textContent));
+  if (relay.sheet("Site Status").getLastRow() !== 1) throw new Error("wrong PIN saved a row");
+  await settle(page); await shot(page, "40-status-set");
+  await page.fill("#stPin", "4321"); await page.click("#stSave"); await page.waitForSelector("#stp .st-fdr");
+  const t = await page.textContent("#stp"); if (!/High/.test(t) || !/Next check due 12:00/.test(t) || !/Set by Test Inspector/.test(t)) throw new Error("panel: " + t);
+  if (!/DECLARED/.test(await page.textContent("#stp .st-chip.on"))) throw new Error("HVMB chip");
+  await page.evaluate(() => window.scrollTo(0, 0)); await settle(page); await shot(page, "41-status-home");
+  await page.click("#stp .st-panel"); await page.waitForSelector(".st-box");
+  const boxes = await page.$$eval(".st-box", e => e.map(x => x.className)); if (!/hv/.test(boxes[0]) || boxes.length !== 2) throw new Error("boxes: " + boxes);
+  const d = await page.textContent("#app"); for (const w of ["An HVMB overrides TFB conditions and exemptions", "Lookout nominated at pre-start; regular monitoring of warnings; midday re-check.", "DFES TFB Hotline 1800 709 355", "New declarations are broadcast on UHF 24 and override this screen."]) if (!d.includes(w)) throw new Error("detail missing: " + w);
+  await settle(page); await shot(page, "42-status-detail");
+});
+await step("Today on site: after 12:00 → overdue banner; next day → NOT SET TODAY; offline → last known", async () => {
+  const at = Date.parse(perthDay() + "T11:00:00+08:00");
+  const c = await newPage({ clock: at, hash: "#home" }); await c.waitForSelector("#stp .st-fdr");
+  // status from the relay was set (real time) today as a Morning check – the clock page sees it at 11:00, 12:30 and the next morning
+  await c.evaluate(() => { const s = SITEST.status; s.at = new Date(new Date().setHours(6, 10, 0, 0)).toISOString(); ls("siteStatus", JSON.stringify(SITEST)); });
+  await c.route(/action=getStatus/, r => r.abort());
+  await c.evaluate(() => go("#status")); await c.waitForSelector(".st-panel");
+  if (await c.$(".st-late")) throw new Error("should not be overdue at 11:00");
+  await c.clock.setFixedTime(Date.parse(perthDay() + "T12:30:00+08:00")); await c.evaluate(() => { go("#home"); route(); }); await c.waitForSelector("#stp .st-late");
+  if (!/Check overdue – confirm with the site office before relying on this\./.test(await c.textContent("#stp"))) throw new Error("overdue text");
+  if (!/Last known – may be out of date/.test(await c.textContent("#stp"))) throw new Error("offline marker");
+  await settle(c); await shot(c, "43-status-overdue");
+  await c.clock.setFixedTime(Date.parse(perthDay(1) + "T07:00:00+08:00")); await c.evaluate(() => route()); await c.waitForSelector("#stp .notset");
+  if (!/NOT SET TODAY – ?|NOT SET TODAY/.test(await c.textContent("#stp")) || !/Do not rely on yesterday's rating\. Check DFES \/ Shire before work\./.test(await c.textContent("#stp"))) throw new Error("not set today");
+  await c.evaluate(() => go("#status")); await c.waitForSelector(".st-panel.notset"); if (await c.$(".st-box")) throw new Error("restrictions should be hidden when not set today");
+  await settle(c); await shot(c, "44-status-notset");
+});
+await step("This day in history: three suitable facts from the relay, big text, Swap, cached; direct Wikipedia fallback", async () => {
+  await page.evaluate(() => { localStorage.removeItem("history"); HIST = null; go("#home"); }); await page.waitForFunction(() => HIST && HIST.facts && HIST.facts.length === 3, null, { timeout: 15000 });
+  if (await page.evaluate(() => HIST.src) !== "relay") throw new Error("should come from the relay");
+  await page.evaluate(() => go("#home")); await page.waitForSelector("#hcd .hist-card");
+  if (!/This day in history/.test(await page.textContent("#hcd"))) throw new Error("home card");
+  await page.click("#hcd .hist-card"); await page.waitForSelector(".hist-fact");
+  const facts = await page.$$eval(".hist-fact p", e => e.map(x => x.textContent)); if (facts.length !== 3) throw new Error("facts: " + facts.length);
+  for (const f of facts) if (BAD_WORDS.some(w => f.toLowerCase().includes(w))) throw new Error("excluded term: " + f);
+  if (parseFloat(await page.$eval(".hist-fact p", e => getComputedStyle(e).fontSize)) < 20) throw new Error("text not large");
+  await settle(page); await shot(page, "45-history");
+  await page.click(".hist-fact >> nth=0 >> text=Swap"); await page.waitForFunction(t => document.querySelector(".hist-fact p").textContent !== t, facts[0]);
+  if (await page.evaluate(() => JSON.parse(localStorage.getItem("history")).facts[0].text) === facts[0]) throw new Error("swap not saved");
+  await page.context().setOffline(true); await page.evaluate(() => go("#home")); await page.waitForSelector("#hcd .hist-card");
+  if (!/\d{4} – /.test(await page.textContent("#hcd"))) throw new Error("cached facts not shown offline"); await page.context().setOffline(false);
+  const w = await newPage({ hash: "#home" }); await w.route(/action=getHistory/, r => r.abort());
+  await w.evaluate(() => { localStorage.removeItem("history"); HIST = null; go("#history"); }); await w.waitForSelector(".hist-fact", { timeout: 15000 });
+  if (await w.evaluate(() => HIST.src) !== "wikipedia") throw new Error("fallback source: " + await w.evaluate(() => HIST.src));
+});
+await step("Reference: nine SNN cards with icons, 330 kV card with MAD fallback, ChemAlert button (not set / opens externally)", async () => {
+  await page.evaluate(() => go("#home")); await page.waitForSelector("#refsec .ref-list");
+  if (!/ChemAlert link not set – ask the SHE Manager/.test(await page.textContent("#refsec"))) throw new Error("ChemAlert not-set message");
+  await page.click("#refsec >> text=Safety Non-Negotiables"); await page.waitForSelector(".snn-card");
+  const cards = await page.$$eval(".snn-card", e => e.map(x => [x.querySelector("img").getAttribute("src"), x.querySelector("small").textContent, x.querySelector("b").textContent]));
+  if (cards.length !== 9) throw new Error("SNN cards " + cards.length);
+  const icons = await page.evaluate(() => SNN_CARDS.map(s => SNN_ICONS[s.c])); if (cards.some((c, i) => c[0] !== icons[i])) throw new Error("SNN icons");
+  if (cards[8][1] !== "Confined Spaces" || !/obtain authorisation before entering a confined space/.test(cards[8][2])) throw new Error("CS card: " + cards[8]);
+  if (!/Think Safe\. Work Safe\. Home Safe\./.test(await page.textContent("#app"))) throw new Error("SNN footer");
+  await settle(page); await shot(page, "46-snn");
+  await page.evaluate(() => go("#reference/330kv")); await page.waitForSelector(".hv-fallback", { timeout: 10000 });
+  if (!/MAD values: refer to your Western Power permit \/ ESSR/.test(await page.textContent(".hv-fallback"))) throw new Error("MAD fallback");
+  if (!/Reference only – your Western Power permit and the ESSR take precedence\./.test(await page.textContent("#app"))) throw new Error("330 footer");
+  await settle(page); await shot(page, "47-330kv");
+  await page.evaluate(() => { ls("appCfg", JSON.stringify({ chemAlertUrl: "https://example.com/chemalert" })); go("#reference/sds"); }); await page.waitForSelector(".ref-chem a");
+  const a = await page.$eval(".ref-chem a", e => [e.getAttribute("href"), e.getAttribute("target")]); if (a[0] !== "https://example.com/chemalert" || a[1] !== "_blank") throw new Error("ChemAlert link: " + a);
+  await page.evaluate(() => ls("appCfg", JSON.stringify({})));
 });
 await step("CSV exports", async () => {
   const [dl] = await Promise.all([page.waitForEvent("download"), page.evaluate(() => exportActions())]);

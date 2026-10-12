@@ -160,10 +160,6 @@ test("positive observation is logged but creates no action", () => {
   assert.equal(j.obs[0].type, "positive"); assert.equal(j.findings.length, 0);
 });
 
-test("setup creates the daily, Monday weekly and 5 am reminder triggers", () => {
-  const r = createRelay(); r.ctx.setup();
-  assert.deepEqual(r.triggers.sort(), ["dailyDigest", "remindersRun", "weeklyDigest"]);
-});
 
 test("weekly summary goes only to the SHE Manager with activity per person", () => {
   const r = createRelay();
@@ -294,4 +290,54 @@ test("hazard and positive reports can be listed and their photos opened (only re
   const ph = r.get({ action: "photo", key: r.key, id: hz.photos[0] }); assert.equal(ph.ok, true); assert.equal(ph.data, jpg);
   assert.equal(r.get({ action: "photo", key: r.key, id: "999" }).ok, false);        // not a report photo
   assert.equal(r.get({ action: "reports", key: "bad" }).ok, false);
+});
+
+import { EVENTS, BIRTHS } from "../fixtures/onthisday.mjs";
+const BAD = ["murder", "massacre", "killed", "killing", "terrorist", "bombing", "shooting", "assassinat", "executed", "genocide", "rape", "suicide", "war crime", "hostage", "behead"];
+
+test("site status: PIN required, every change kept as a row, today's history returned", () => {
+  const r = createRelay();
+  assert.match(r.post({ key: r.key, action: "setStatus", pin: "1234", fdr: "High", tfb: "No", hvmb: "Yes", type: "Morning", by: "Gary A" }).error, /STATUS_PIN/);
+  r.props.set("STATUS_PIN", "4321");
+  const bad = r.post({ key: r.key, action: "setStatus", pin: "1111", fdr: "High", tfb: "No", hvmb: "Yes", type: "Morning", by: "Gary A" });
+  assert.equal(bad.ok, false); assert.equal(bad.badPin, true);
+  assert.equal(r.post({ key: r.key, action: "setStatus", pin: "4321", fdr: "Hot", tfb: "No", hvmb: "Yes", type: "Morning", by: "Gary A" }).ok, false);   // invalid FDR
+  const a = r.post({ key: r.key, action: "setStatus", pin: "4321", fdr: "high", tfb: "No", hvmb: "Yes", type: "Morning", by: "Gary A", note: "Pre-start" });
+  assert.equal(a.ok, true); assert.equal(a.status.fdr, "High"); assert.equal(a.status.hvmb, "Yes"); assert.equal(a.status.type, "Morning");
+  r.post({ key: r.key, action: "setStatus", pin: "4321", fdr: "Extreme", tfb: "Yes", hvmb: "Yes", type: "Change", by: "Matt S" });
+  const g = r.get({ action: "getStatus", key: r.key });
+  assert.equal(g.ok, true); assert.equal(g.status.fdr, "Extreme"); assert.equal(g.today.length, 2); assert.equal(r.sheet("Site Status").getLastRow(), 3);
+  // 6 pm summary: status history at the top, flagged when there is no midday re-check
+  const before = r.mail.length; r.ctx.dailyDigest();
+  const m = r.mail.slice(before).find(x => /daily summary/.test(x.subject));
+  assert.match(m.htmlBody, /Morning: High · TFB No · HVMB Yes – Gary A/); assert.match(m.htmlBody, /No midday re-check recorded/);
+});
+
+test("this day in history: three suitable facts (AU, science, general), saved for today, emailed when HISTORY_EMAIL is set", () => {
+  const r = createRelay({ fetch: url => /onthisday\/events/.test(url) ? { body: JSON.stringify(EVENTS) } : /births/.test(url) ? { body: JSON.stringify(BIRTHS) } : null });
+  r.props.set("HISTORY_EMAIL", "gary.armitage@genus.com.au");
+  const h = r.ctx.prepareHistory();
+  assert.equal(h.ok, true); assert.equal(h.facts.length, 3);
+  for (const f of h.facts) { assert.ok(!BAD.some(w => f.text.toLowerCase().includes(w)), f.text); assert.ok(f.link.startsWith("https://en.wikipedia.org/")); }
+  assert.ok(h.facts.some(f => /Australia|Sydney|Perth/.test(f.text)), "one Australian fact");
+  assert.ok(h.facts.some(f => /Space|rocket|telescope|balloon|flight/i.test(f.text)), "one science / exploration fact");
+  assert.equal(new Set(h.facts.map(f => Math.floor(f.year / 100))).size, 3, "spread across centuries");
+  assert.ok(h.pool.length >= 2); assert.ok(!h.pool.some(f => BAD.some(w => f.text.toLowerCase().includes(w))));
+  assert.equal(r.sheet("This Day").getLastRow(), 2);
+  const m = r.mail.find(x => /Pre-start – This day in history/.test(x.subject)); assert.ok(m); assert.equal(m.to, "gary.armitage@genus.com.au");
+  const g = r.get({ action: "getHistory", key: r.key }); assert.equal(g.ok, true); assert.deepEqual(JSON.parse(JSON.stringify(g.facts.map(f => f.text))), JSON.parse(JSON.stringify(h.facts.map(f => f.text))));
+  assert.equal(r.sheet("This Day").getLastRow(), 2, "read back, not fetched again");
+});
+
+test("getHistory fetches on demand when the trigger has not run; tops up from births when few events", () => {
+  const few = { events: [EVENTS.events[3]] };
+  const r = createRelay({ fetch: url => /events/.test(url) ? { body: JSON.stringify(few) } : /births/.test(url) ? { body: JSON.stringify(BIRTHS) } : null });
+  const g = r.get({ action: "getHistory", key: r.key });
+  assert.equal(g.ok, true); assert.equal(g.facts.length, 2); assert.match(g.facts[1].text, /^Born: Jane Example/);
+  assert.equal(createRelay().get({ action: "getHistory", key: "x" }).ok, false);
+});
+
+test("setup creates the 4–5 am history trigger alongside the others", () => {
+  const r = createRelay(); r.ctx.setup();
+  assert.deepEqual(r.triggers.sort(), ["dailyDigest", "prepareHistory", "remindersRun", "weeklyDigest"]);
 });
