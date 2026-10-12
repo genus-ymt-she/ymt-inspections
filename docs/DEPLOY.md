@@ -167,6 +167,9 @@ Insights (Lead indicators) and the hazard form also link to it.
 - **Roster sheet:** created with the team and their patterns. Fill in **First day of a swing** (any past swing start date)
   for each person so people on R&R aren't chased. Flexible = Y (e.g. variable out days) counts the person as on site.
   Add rows for anyone else who should acknowledge alerts.
+- **Who must acknowledge:** *Everyone on the roster* (default) or *Choose people* – tick boxes for the team, with quick
+  picks for SHE team, Supervisors & managers and Trade Assistants. Only the people chosen get the Home banner and the email;
+  the register and daily email count only them. Stored in the *Must acknowledge* column.
 - Close an alert from its page (Manager mode) to take it off Home and the daily email; the register is kept.
 - Relay update required: paste the new `PARRON_Relay_Code.gs`, run `setup` once (creates the sheets and the roster), and
   redeploy as a new version.

@@ -861,6 +861,13 @@ nav.tabs a.em-tab.on .ic{stroke:var(--ua)}
 .al-st.ok{background:var(--c-soft);color:var(--c)}.al-st.wait{background:var(--ni-soft);color:var(--ink)}.al-st.rr{background:var(--surface-3);color:var(--ink-2)}
 .al-prog{height:8px;border-radius:99px;background:var(--surface-3);overflow:hidden;margin:8px 0 4px}.al-prog i{display:block;height:100%;background:var(--c)}
 .al-form .seg{display:grid;grid-template-columns:repeat(3,1fr)}
+.al-form .seg.al-who{grid-template-columns:1fr 1fr}
+.al-quick{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.al-people{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.al-person{display:flex;gap:8px;align-items:center;padding:7px 8px;font-size:14px;border:1.5px solid var(--line);border-radius:12px;cursor:pointer;background:var(--surface)}
+.al-person:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.al-person input{width:20px;height:20px;flex:none;accent-color:var(--accent)}
+.al-person span{display:flex;flex-direction:column;min-width:0}.al-person small{color:var(--muted);font-size:12px}
 .al-chk{display:flex;gap:10px;align-items:center;margin-top:14px;font-size:14px}
 .al-chk input{width:20px;height:20px}
 .al-pop{display:flex;flex-direction:column;gap:10px}.al-pop h3{margin:0;font-size:20px}

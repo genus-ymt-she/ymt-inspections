@@ -397,3 +397,14 @@ test("SHEQ alerts: a photo or PDF attachment is stored and only alert files can 
   assert.equal(r.get({ action: "alertFile", key: r.key, id: "999" }).ok, false);
   r.props.set("SITE_CODE", "Parron26"); assert.equal(r.get({ action: "alerts", key: r.key }).needCode, true);
 });
+
+test("SHEQ alerts: only the people chosen must acknowledge; R&R still applies to them", () => {
+  const r = createRelay(); r.ctx.book_();
+  r.sheet("Roster").getRange(5, 4).setValue("'" + perthYmd(-8));   // Matt on R&R
+  const a = r.post(alertPayload({ required: ["Lee Allen", "Matt Smith", "Jayden Mullan"], notify: ["lee.allen@genus.com.au", "matt.smith@genus.com.au"] }));
+  assert.deepEqual(JSON.parse(JSON.stringify(a.alerts[0].required)), ["Lee Allen", "Matt Smith", "Jayden Mullan"]);
+  assert.equal(r.mail.at(-1).bcc, "lee.allen@genus.com.au,matt.smith@genus.com.au");
+  const before = r.mail.length; r.ctx.dailyDigest();
+  const d = r.mail.slice(before).find(x => /daily summary/.test(x.subject)).htmlBody;
+  assert.match(d, /0 of 2/); assert.match(d, /Lee Allen, Jayden Mullan/); assert.doesNotMatch(d, /Nicola Rucci/);
+});

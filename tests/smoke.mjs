@@ -568,6 +568,20 @@ await step("SHEQ Alerts: SHE Manager publishes a Critical alert → Home banner,
   // closing takes it off Home
   const id = await page.evaluate(() => ALERTS.alerts[0].id); await page.evaluate(i => go("#alerts/" + i), id); await page.click("text=Close this alert"); await page.click("#aYes");
   await page.waitForFunction(() => /Re-open this alert/.test(document.querySelector("#app").textContent), null, { timeout: 10000 });
+  // choose who must acknowledge: only Lee and Jayden – Nicola gets no banner and sees it "for information"
+  await page.evaluate(() => go("#alerts/new")); await page.waitForSelector("#alWho");
+  await page.fill("#alTitle", "Toolbox: new wheel wash procedure"); await page.fill("#alWhat", "The wheel wash procedure has changed.");
+  await page.click("#alWho button[data-v=pick]"); await page.waitForSelector(".al-person");
+  await page.click(".al-quick .chip[data-g=ta]"); await page.check(".al-person input[value='Lee Allen']");
+  if (!/3 people must acknowledge/.test(await page.textContent("#alPickN"))) throw new Error("pick count: " + await page.textContent("#alPickN"));
+  await page.uncheck(".al-person input[value='Ben Herbert']");
+  await page.evaluate(() => document.querySelector("#alPick").scrollIntoView({ block: "center" })); await settle(page); await shot(page, "52-alert-choose");
+  await page.click("#alPub"); await page.waitForFunction(() => /^#alerts\/SA-\d{4}-002$/.test(location.hash), null, { timeout: 15000 });
+  await page.waitForSelector(".al-reg"); if (!/2 people chosen to acknowledge/.test(await page.textContent("#app")) || !/0 of 2 on site/.test(await page.textContent("#app"))) throw new Error("register for chosen people");
+  await o.evaluate(async () => { await alRefresh(); go("#home"); route(); }); await o.waitForSelector("#stp");
+  if (await o.$("#alb .al-banner")) throw new Error("Nicola was not chosen – no banner");
+  await o.evaluate(() => go("#alerts")); await o.waitForSelector(".al-item"); if (!/For information/.test(await o.textContent("#app"))) throw new Error("for information label");
+  await l.evaluate(async () => { await alRefresh(); go("#home"); route(); }); await l.waitForSelector("#alb .al-banner", { timeout: 10000 });
 });
 await step("CSV exports", async () => {
   const [dl] = await Promise.all([page.waitForEvent("download"), page.evaluate(() => exportActions())]);
