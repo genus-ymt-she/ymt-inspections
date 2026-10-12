@@ -32,7 +32,7 @@ const errors = [];
 const browser = await chromium.launch();
 
 async function newPage(opts = {}) {
-  const ctx = await browser.newContext({ viewport: opts.viewport || { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: "block", timezoneId: "Australia/Perth", locale: "en-AU", colorScheme: opts.dark ? "dark" : "light", acceptDownloads: true });
+  const ctx = await browser.newContext({ viewport: opts.viewport || { width: 390, height: 844 }, deviceScaleFactor: 2, serviceWorkers: "block", timezoneId: "Australia/Perth", locale: "en-AU", reducedMotion: opts.motion ? "no-preference" : "reduce", colorScheme: opts.dark ? "dark" : "light", acceptDownloads: true });
   await ctx.route(/api\.open-meteo\.com/, route => route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify(WX) }));
   await ctx.route(/raw\.githubusercontent\.com\/.*fdr\.json/, route => route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify(FEED) }));
   await ctx.route(/youtube\.com\/iframe_api/, route => route.fulfill({ status: 200, contentType: "text/javascript", body: `window.YT={PlayerState:{UNSTARTED:-1,ENDED:0,PLAYING:1,PAUSED:2,BUFFERING:3,CUED:5},
@@ -360,6 +360,43 @@ await step("PARRON Radio: shuffle play, next, skip unavailable song, keeps playi
   if (!(await page.evaluate(() => document.body.classList.contains("radio-on")))) throw new Error("mini player not shown on home");
   await settle(page); await shot(page, "26-home-radio");
   await page.click("#radioDock [aria-label='Stop and close']"); await page.waitForSelector("#radioDock.hide", { state: "attached" });
+});
+await step("site access code: asked once when the SHE Manager turns it on, then sent with every request", async () => {
+  relay.props.set("SITE_CODE", "Parron26");
+  await page.evaluate(() => { localStorage.removeItem("siteCode"); localStorage.removeItem("fdr"); go("#home"); });
+  await page.waitForSelector("#scIn", { timeout: 15000 });
+  await settle(page); await shot(page, "28-site-code");
+  await page.fill("#scIn", "parron26"); await page.click("#scOk");
+  await page.evaluate(() => go("#insights")); await page.waitForSelector(".kpis", { timeout: 15000 });
+  if (await page.$("#scIn")) throw new Error("asked again after the right code");
+  const r = await page.evaluate(async () => relayPost({ payload: { action: "status", uid: "sc1", state: "draft", meta: { name: "T" } } }, false)); if (!r.ok) throw new Error("post with code: " + JSON.stringify(r));
+  relay.props.delete("SITE_CODE"); await page.evaluate(() => localStorage.removeItem("siteCode"));
+});
+await step("Insights: needs-attention strip, quieter report buttons", async () => {
+  await page.evaluate(() => go("#insights")); await page.waitForSelector(".attn");
+  const t = await page.textContent(".attn"); if (!/Needs attention|All actions on track/.test(t)) throw new Error("attention strip: " + t);
+  if ((await page.$$(".reports .btn")).length !== 2) throw new Error("report buttons");
+  await page.evaluate(() => window.scrollTo(0, 0)); await settle(page); await shot(page, "29-insights-attention");
+});
+await step("inspection list: compact by default, detailed on request (remembered)", async () => {
+  await page.evaluate(() => { localStorage.removeItem("libView"); go("#inspections"); }); await page.waitForSelector("#lib.compact .card");
+  if (await page.$("#lib .card .x > span")) throw new Error("compact view should hide the description");
+  await settle(page); await shot(page, "30-inspections-compact");
+  await page.click(".vtog button >> nth=1"); await page.waitForSelector("#lib.detail .card .x > span");
+  if (await page.evaluate(() => localStorage.getItem("libView")) !== "detail") throw new Error("view not remembered");
+  await page.click(".vtog button >> nth=0");
+});
+await step("offline banner shows, then confirms when signal is back", async () => {
+  await page.evaluate(() => go("#home")); await page.waitForSelector(".hero");
+  await page.context().setOffline(true); await page.waitForSelector("#offbar.off:not([hidden])");
+  await settle(page); await shot(page, "31-offline-banner");
+  await page.context().setOffline(false); await page.waitForSelector("#offbar.back:not([hidden])");
+});
+await step("motion: entrance, count-up and success tick run (and are skipped for reduced motion)", async () => {
+  const m = await newPage({ motion: true, hash: "#home" }); await m.waitForSelector(".tiles .tile.rise");
+  await m.evaluate(() => celebrate("Report sent", "Emailed to the SHE Manager")); await m.waitForSelector(".done-ov .done-tick");
+  await m.waitForTimeout(900); await shot(m, "32-success-tick");
+  if (await page.$(".tile.rise")) throw new Error("reduced-motion page should not animate");
 });
 await step("CSV exports", async () => {
   const [dl] = await Promise.all([page.waitForEvent("download"), page.evaluate(() => exportActions())]);

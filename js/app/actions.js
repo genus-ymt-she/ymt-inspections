@@ -1,7 +1,7 @@
 "use strict";
 /* ---------- Corrective action register ---------- */
 let ACTF={f:"open",q:"",mine:false};
-const ACT_FILTERS=[["open","Open",f=>isOpen(f)],["overdue","Overdue",isOverdue],["week","Due ≤ 7 days",f=>{const n=daysTo(f.due);return isOpen(f)&&n!==null&&n>=0&&n<=7}],
+const ACT_FILTERS=[["open","Open",f=>isOpen(f)],["overdue","Overdue",isOverdue],["high","High / Critical",f=>isOpen(f)&&(f.level==="High"||f.level==="Critical")],["week","Due ≤ 7 days",f=>{const n=daysTo(f.due);return isOpen(f)&&n!==null&&n>=0&&n<=7}],
   ["verify","To verify",f=>f.status===ST.closed],["closed","Closed",f=>f.status!==ST.open],["all","All",()=>true]];
 const statusPill=f=>f.status===ST.open?(isOverdue(f)?`<span class="pill ua">Overdue</span>`:`<span class="pill open">Open</span>`):f.status===ST.closed?`<span class="pill closed">Closed · to verify</span>`:f.status===ST.verified?`<span class="pill ver">${ic("check","s")} Verified</span>`:`<span class="pill spot">Closed on spot</span>`;
 function actLevelColor(f){const lv=riskLevel(f.level);return lv?lv.color:f.rating==="UA"?"var(--ua)":"var(--ni)"}

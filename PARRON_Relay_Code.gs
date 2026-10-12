@@ -11,6 +11,9 @@
  * UPDATING FROM v2: paste over the old code, Save, choose "setup" and click Run once (it adds the new
  *   sheet columns and asks for Drive permission), then Deploy > Manage deployments > Edit (pencil)
  *   > Version: New version > Deploy. The web app link stays the same – no app change needed.
+ * SITE ACCESS CODE (recommended): Script properties > Add property SITE_CODE = a word or code of 6+ characters.
+ *   Phones then need the code once (Settings > Site access code) before they can send or read the project log.
+ *   Leave it unset to allow any phone with the app link.
  * MANAGER PIN: Project Settings (cog, left bar) > Script properties > Add property
  *   MANAGER_PIN = a 4–8 digit PIN. It unlocks verify / re-open / reassign in the app. It is never
  *   stored in this file or in GitHub.
@@ -68,7 +71,8 @@ function setup() {
     '\nPersonal reminders: emailed between 5 and 6 am (Perth time).' +
     '\nWeekly fuel, hours & pre-start register: Mondays to ' + FUEL_TO + '.' +
     '\nFire Danger Rating: ' + (fdrFetch_(true).today ? 'reading from the Bureau of Meteorology' : 'could not be read automatically – set it in the app (Manager mode) or choose the district') +
-    '\nManager PIN: ' + (pin ? 'set' : 'NOT SET – add MANAGER_PIN under Project Settings > Script properties.'));
+    '\nManager PIN: ' + (pin ? 'set' : 'NOT SET – add MANAGER_PIN under Project Settings > Script properties.') +
+    '\nSite access code: ' + (PropertiesService.getScriptProperties().getProperty('SITE_CODE') ? 'set' : 'not set – add SITE_CODE under Script properties so only your team can read the project log.'));
 }
 
 function book_() {
@@ -103,6 +107,7 @@ function doPost(e) {
     if (!e || !e.postData || e.postData.contents.length > 30 * 1024 * 1024) return out_({ ok: false, error: 'Too large' });
     const d = JSON.parse(e.postData.contents);
     if (d.key !== KEY) return out_({ ok: false, error: 'Not authorised' });
+    if (!codeOK_(d.code)) return out_({ ok: false, error: 'Site code required', needCode: true });
     if (!rate_()) return out_({ ok: false, error: 'Busy – try again in a minute' });
     lock.waitLock(25000);
     if (d.action === 'status') { status_(d); return out_({ ok: true }); }
@@ -333,6 +338,7 @@ function upsert_(ss, uid, m, state, sentAt) {
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
+  if ((p.action === 'weather' || p.action === 'dashboard') && p.key === KEY && !codeOK_(p.code)) return out_({ ok: false, error: 'Site code required', needCode: true });
   if (p.action === 'weather') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_({ ok: true, fdr: fdrFetch_(false) }); }
   if (p.action !== 'dashboard') return out_({ ok: true, service: 'PARRON relay', v: 3, emailsLeftToday: MailApp.getRemainingDailyQuota() });
   if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' });
@@ -517,6 +523,8 @@ function weeklyDigest() {
 }
 
 /* ---------- helpers ---------- */
+/* site access code: kept in Script properties (SITE_CODE), never in the code or on GitHub; not case-sensitive */
+function codeOK_(c) { const s = PropertiesService.getScriptProperties().getProperty('SITE_CODE'); if (!s) return true; return String(c || '').trim().toUpperCase() === String(s).trim().toUpperCase(); }
 function pinOK_(pin) {
   const want = PropertiesService.getScriptProperties().getProperty('MANAGER_PIN'); if (!want) return false;
   const c = CacheService.getScriptCache(); const fails = Number(c.get('pinfail') || 0);

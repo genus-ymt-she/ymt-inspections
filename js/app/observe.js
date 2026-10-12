@@ -56,4 +56,4 @@ async function sendObs(){const o=OBS;const p=obsProblems(o);if(p.length){toast("
     payload:{action:"observation",uid,reportId:rid,to:recipient(),subject,text,html:obsHtml(o,k,rid,me),meta:{name:me,no:H?"HZ":"PO",title,location:o.location,started:new Date(o.at).toISOString()},
       obs:{type:o.type,description:o.description.trim(),immediate:o.immediate,category:o.category,recognised:o.recognised},photos:o.photos.map(x=>x.split(",")[1]),findings,report,alert:{supervisorEmail:sup?sup.email:""}}};
   await dbPut("outbox",item);OBS=null;toast("Sending…",1500);
-  const r=await sendItem(item);toast(r.ok?(H?"✓ Hazard report sent":"✓ Thanks – observation sent"):"No connection – saved in the Outbox and will send automatically",5000);go("#home")}
+  const r=await sendItem(item);if(r.ok)celebrate(H?"Hazard report sent":"Observation sent",H?"The SHE Manager has been told":"Thanks for recognising good work");else toast("No connection – saved in the Outbox and will send automatically",5000);go("#home")}

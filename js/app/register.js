@@ -15,7 +15,7 @@ let REG_BUSY=null;
 async function regRefresh(force,month){if(!directOn()||navigator.onLine===false)return false;
   if(!force&&!month&&Date.now()-(REG.at||0)<60e3)return false;if(REG_BUSY)return REG_BUSY;
   REG_BUSY=(async()=>{try{await flushUpdates();const m=month||monthKey(new Date());
-    const r=await fetch(`${RELAY.url}?action=dashboard&month=${m}&key=${encodeURIComponent(RELAY.key)}`,{redirect:"follow"});const j=await r.json();if(!j.ok)throw new Error(j.error||"Error");
+    const r=await fetch(relayQ(`action=dashboard&month=${m}`),{redirect:"follow"});const j=await r.json();if(j.needCode)askSiteCode();if(!j.ok)throw new Error(j.error||"Error");
     if(j.v>=3&&RELAY.v<3){RELAY.v=j.v;RELAY.vAt=Date.now();ls("relayCfg",JSON.stringify(RELAY))}
     ls("dash_"+m,JSON.stringify(j));
     const before=JSON.stringify(REG.findings);

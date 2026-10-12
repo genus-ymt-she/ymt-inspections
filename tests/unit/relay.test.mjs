@@ -268,3 +268,15 @@ test("Monday fuel summary totals last week by asset, keeps the latest register p
   assert.match(m.subject, /70 L/); assert.match(m.htmlBody, /Totals by asset/); assert.match(m.htmlBody, /WL46 I.T Loader/);
   assert.doesNotMatch(m.htmlBody, /999/); assert.equal(m.attachments[0].type, "text/csv");
 });
+
+test("site access code: when SITE_CODE is set, sends and reads need it (not case-sensitive)", () => {
+  const r = createRelay();
+  assert.equal(r.post(report()).ok, true);                       // no code set – open as before
+  r.props.set("SITE_CODE", "Parron26");
+  const no = r.post({ ...report(), uid: "x2" }); assert.equal(no.ok, false); assert.equal(no.needCode, true);
+  assert.equal(r.get({ action: "dashboard", key: r.key }).needCode, true);
+  assert.equal(r.get({ action: "weather", key: r.key }).needCode, true);
+  assert.equal(r.post({ ...report(), uid: "x3", code: " parron26 " }).ok, true);
+  assert.equal(r.get({ action: "dashboard", key: r.key, code: "PARRON26" }).ok, true);
+  assert.equal(r.get({}).ok, true);                               // connection check still answers
+});
