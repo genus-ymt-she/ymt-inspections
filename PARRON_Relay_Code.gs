@@ -59,7 +59,7 @@ const HISTORY_EXCLUDE = ['murder', 'massacre', 'killed', 'killing', 'kills', 'te
   'genocide', 'rape', 'suicide', 'war crime', 'hostage', 'behead', 'lynch', 'stabbing', 'torture', 'slaughter', 'atrocit', 'holocaust', 'abduct', 'kidnap', 'died', 'deaths', 'dead', 'crash', 'disaster'];
 /* SHEQ Alerts – read and acknowledge. Published by the SHE Manager (Manager PIN); acknowledged by name on each phone.
    The Roster sheet says who is on site each day, so people on R&R are not chased (fill in "First day of a swing"). */
-const ALERT_HEAD = ['Alert ID', 'Published', 'Type', 'Priority', 'Title', 'What happened', 'What you must do', 'Attachment', 'Attachment type', 'Published by', 'Active', 'Closed'];
+const ALERT_HEAD = ['Alert ID', 'Published', 'Type', 'Priority', 'Title', 'What happened', 'What you must do', 'Attachment', 'Attachment type', 'Published by', 'Active', 'Closed', 'Must acknowledge'];
 const ACK_HEAD = ['Acknowledged', 'Alert ID', 'Name'];
 const ROSTER_HEAD = ['Name', 'Days on', 'Days off', 'First day of a swing', 'Flexible (Y/N)', 'Notes'];
 const ROSTER_SEED = [['Darren Frizzell', 8, 6, '', 'N', '8 on / 6 off – swing starts Monday'], ['Lee Allen', 8, 6, '', 'N', '8 on / 6 off – swing starts Monday'],
@@ -660,7 +660,7 @@ function roster_(ymd) {
     return { name, on: pos < on, back: pos < on ? '' : dayAdd_(ymd, cyc - pos), flex };
   });
 }
-function alertRow_(r) { return { id: r[0], at: iso_(r[1]), type: r[2], priority: r[3], title: r[4], what: r[5], must: r[6], file: driveId_(r[7]), fileType: r[8], by: r[9], active: r[10] !== 'No', closed: iso_(r[11]) }; }
+function alertRow_(r) { return { id: r[0], at: iso_(r[1]), type: r[2], priority: r[3], title: r[4], what: r[5], must: r[6], file: driveId_(r[7]), fileType: r[8], by: r[9], active: r[10] !== 'No', closed: iso_(r[11]), required: String(r[12] || '').split('\n').map(clean_).filter(Boolean) }; }
 function alertsOut_() {
   const ss = book_(); const acks = rows_(ss.getSheetByName('Alert Acks')).filter(r => r[0]);
   const all = rows_(ss.getSheetByName('SHEQ Alerts')).filter(r => r[0]).map(alertRow_);
@@ -686,7 +686,8 @@ function publishAlert_(d) {
     const bytes = Utilities.base64Decode(f.data); if (bytes.length > 8 * 1024 * 1024) return out_({ ok: false, error: 'Attachment over 8 MB' });
     try { link = folder_('PARRON – Alerts').createFile(Utilities.newBlob(bytes, ftype, `${id}_${str_(f.name || 'attachment', 80)}`.replace(/[^\w.-]+/g, '_'))).getUrl(); } catch (e) { link = ''; ftype = ''; }
   }
-  sh.appendRow([id, now, type, pri, title, str_(d.what, 4000), str_(d.must, 4000), link, ftype, clean_(d.by) || 'SHE Manager', 'Yes', '']);
+  const required = (Array.isArray(d.required) ? d.required : []).map(clean_).filter(Boolean).slice(0, 80);
+  sh.appendRow([id, now, type, pri, title, str_(d.what, 4000), str_(d.must, 4000), link, ftype, clean_(d.by) || 'SHE Manager', 'Yes', '', required.join('\n')]);
   const bcc = String(Array.isArray(d.notify) ? d.notify.join(',') : d.notify || '').split(/[,;]/).map(e => e.trim().toLowerCase())
     .filter(e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && ALLOWED.test(e) && e !== TO.toLowerCase()).slice(0, 60).join(',');
   if (d.email !== false) {
@@ -724,13 +725,15 @@ function alertFile_(id) {
   const b = DriveApp.getFileById(id).getBlob(); const bytes = b.getBytes(); if (bytes.length > 8 * 1024 * 1024) return out_({ ok: false, error: 'Too large' });
   return out_({ ok: true, type: r[8] || b.getContentType(), data: Utilities.base64Encode(bytes) });
 }
+/* who must acknowledge an alert: the people chosen when it was published, or everyone on the roster (with their roster status) */
+function alertPeople_(a, R) { return a.required && a.required.length ? a.required.map(n => R.find(p => sameName_(p.name, n)) || { name: n, on: null, back: '', flex: false }) : R; }
 /* active alerts, who on site has not acknowledged (people on R&R are not counted) – for the daily and weekly emails */
 function alertsDigest_(today, includeAll) {
   const ss = book_(); const acks = rows_(ss.getSheetByName('Alert Acks')).filter(r => r[0]); const R = roster_(today);
   const since = Date.now() - (includeAll ? 7 : 30) * 864e5;
   const rows = rows_(ss.getSheetByName('SHEQ Alerts')).filter(r => r[0]).map(alertRow_)
     .filter(a => includeAll ? (a.active || new Date(a.at).getTime() >= since) && new Date(a.at).getTime() >= Date.now() - 30 * 864e5 : a.active && new Date(a.at).getTime() >= since)
-    .map(a => { const done = acks.filter(r => r[1] === a.id).map(r => r[2]); const expected = R.filter(p => p.on !== false);
+    .map(a => { const done = acks.filter(r => r[1] === a.id).map(r => r[2]); const expected = alertPeople_(a, R).filter(p => p.on !== false);
       const waiting = expected.filter(p => !done.some(n => sameName_(n, p.name))).map(p => p.name + (p.flex ? ' (flexible)' : ''));
       return { id: a.id, title: a.title, priority: a.priority, expected: expected.length, acked: expected.length - waiting.length, waiting }; });
   return { rows: includeAll ? rows : rows.filter(a => a.waiting.length) };
