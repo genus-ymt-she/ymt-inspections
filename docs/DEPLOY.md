@@ -69,7 +69,7 @@ Each person picks their own name the first time they open PARRON (*Settings → 
 The rating comes from the Bureau of Meteorology's public fire weather district forecast (product IDW15100).
 A GitHub Action (`.github/workflows/fdr.yml`) downloads it every 30 minutes and publishes `fdr.json` on the
 `fdr-data` branch; phones read it from there. No Google script change is needed for this.
-- The district is set in `js/app/config.js` (`SITE.fdrDistrict`, currently **Watheroo** – Badgingarra / Shire of Dandaragan).
+- The district is set in `js/app/config.js` (`SITE.fdrDistrict`, currently **Lesueur** – Hill River, coastal part of the Shire of Dandaragan; Badgingarra town itself is just inside Watheroo).
 - To override for a day (Manager mode): tap the **Fire Danger** box → **Set today's rating** → **Save for everyone**.
   Choose **– use the Bureau of Meteorology –** to go back to the official rating.
 - GitHub pauses scheduled Actions after 60 days with no repository activity. If the rating stops updating, open

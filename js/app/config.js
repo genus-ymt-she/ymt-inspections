@@ -8,12 +8,14 @@ const CONFIG = {
   project: "J1084 – Parron Wind Farm Connection Assets – Yerramullah Terminal (YMT)",
   projectShort: "YMT – Yerramullah Terminal",
   jobNo: "J1084",
-  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "3.2"
+  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "3.2.1"
 };
 
 /* Site location for the home-screen weather (forecast for this point) and the Bureau of Meteorology
-   fire weather district used for the Fire Danger Rating (Badgingarra – Shire of Dandaragan – is in Watheroo) */
-const SITE = { name: "Badgingarra", lat: -30.39, lon: 115.50, fdrDistrict: "Watheroo" };
+   fire weather district used for the Fire Danger Rating. The site is at Hill River (Shire of Dandaragan): the coastal part
+   of the Shire is in the Lesueur district and the inland part in Watheroo – the boundary runs roughly along the Brand Highway
+   near Badgingarra (DFES fire weather districts; BoM district boundaries IDM00007). */
+const SITE = { name: "Badgingarra", lat: -30.39, lon: 115.50, fdrDistrict: "Lesueur" };
 /* Official Fire Danger Ratings for every WA district, refreshed every 30 min by .github/workflows/fdr.yml */
 const FDR_FEED = "https://raw.githubusercontent.com/genus-ymt-she/ymt-inspections/fdr-data/fdr.json";
 

@@ -177,16 +177,16 @@ test("weekly summary goes only to the SHE Manager with activity per person", () 
 const BOM_XML = `<?xml version="1.0"?><product><amoc><issue-time-local tz="WST">2026-10-11T16:20:00+08:00</issue-time-local></amoc><forecast>
 <area aac="WA_PW009" description="Central West" type="public-district"><forecast-period index="0"><text type="forecast">Sunny.</text></forecast-period></area>
 <area aac="WA_FW010" description="Lower West Inland" type="fire-district"><forecast-period index="0"><text type="fire_danger">Moderate</text></forecast-period><forecast-period index="1"><text type="fire_danger">High</text></forecast-period></area>
-<area aac="WA_FW007" description="Watheroo" type="fire-district"><forecast-period index="0" start-time-local="2026-10-11T00:00:00+08:00"><text type="fire_danger">High</text></forecast-period><forecast-period index="1"><text type="fire_danger">Extreme</text></forecast-period></area>
+<area aac="WA_FW007" description="Lesueur" type="fire-district"><forecast-period index="0" start-time-local="2026-10-11T00:00:00+08:00"><text type="fire_danger">High</text></forecast-period><forecast-period index="1"><text type="fire_danger">Extreme</text></forecast-period></area>
 </forecast></product>`;
 
-test("Fire Danger Rating is read from the BoM fire-district areas (Watheroo by default)", () => {
+test("Fire Danger Rating is read from the BoM fire-district areas (Lesueur by default – Hill River site)", () => {
   const seen = [];
   const r = createRelay({ fetch: (url) => { seen.push(url); return /IDW15100/.test(url) && url.startsWith("https") ? { body: BOM_XML } : null; } });
   const j = r.get({ action: "weather", key: r.key });
   assert.equal(j.ok, true);
-  assert.equal(j.fdr.area, "Watheroo"); assert.equal(j.fdr.today, "High"); assert.equal(j.fdr.tomorrow, "Extreme");
-  assert.deepEqual(j.fdr.areas, ["Lower West Inland", "Watheroo"]); assert.equal(j.fdr.want, "");
+  assert.equal(j.fdr.area, "Lesueur"); assert.equal(j.fdr.today, "High"); assert.equal(j.fdr.tomorrow, "Extreme");
+  assert.deepEqual(j.fdr.areas, ["Lower West Inland", "Lesueur"]); assert.equal(j.fdr.want, "");
   assert.equal(j.fdr.source, "Bureau of Meteorology");
   assert.ok(seen.some(u => /reg\.bom\.gov\.au\/fwo\/IDW15100/.test(u)), "reads the fire-district product");
   assert.equal(r.get({ action: "weather", key: "bad" }).ok, false);
