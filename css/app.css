@@ -65,7 +65,7 @@ body.task main{padding-bottom:150px}
 /* ---------- bottom navigation ---------- */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:35;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);
   border-top:1px solid var(--line);padding:6px 8px calc(env(safe-area-inset-bottom) + 6px)}
-nav.tabs .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+nav.tabs .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr);gap:2px}
 nav.tabs a{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0 5px;border-radius:14px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.01em;min-height:52px}
 nav.tabs a .ic{width:24px;height:24px}
 nav.tabs a.on{color:var(--brand);background:var(--accent-soft)}
@@ -703,7 +703,8 @@ body.radio-on main{padding-bottom:180px}
 .repph .ph img{width:100%;height:100%;object-fit:cover;border-radius:10px;cursor:zoom-in}
 
 /* ---------- bottom nav: five tabs; Emergency in red ---------- */
-nav.tabs a{font-size:12px;letter-spacing:0}
+nav.tabs a{font-size:11.5px;letter-spacing:-.01em}
+@media (max-width:360px){nav.tabs a{font-size:10.5px}nav.tabs .in{gap:0}}
 nav.tabs a.em-tab{color:var(--ua)}
 nav.tabs a.em-tab .ic{stroke:var(--ua)}
 nav.tabs a.em-tab.on{background:var(--ua-soft);color:var(--ua)}
@@ -765,7 +766,7 @@ nav.tabs a.em-tab.on .ic{stroke:var(--ua)}
 .tmap-full img{width:100%;border-radius:12px;display:block}
 .em-tile.em-heat{border-left-color:var(--accent)}.em-heat .ti{background:var(--accent-soft);color:var(--accent)}
 
-/* ---------- Today on site (fire status) ---------- */
+/* ---------- HVMB & Fire Status ---------- */
 .st-panel{position:relative;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--brand);border-radius:20px;padding:14px;margin:0 0 12px;box-shadow:var(--shadow-1);cursor:pointer}
 .st-panel.ban{border-left-color:var(--ua)}
 .st-panel.late{border-left-color:var(--accent)}
@@ -820,3 +821,9 @@ nav.tabs a.em-tab.on .ic{stroke:var(--ua)}
 .hv-mad img{width:100%;border-radius:10px;cursor:zoom-in}
 .hv-fallback{border:2px dashed var(--line);border-radius:12px;padding:16px;text-align:center;font-weight:800;color:var(--ink-2)}
 .hv-list{margin:0;padding-left:20px}.hv-list li{margin:8px 0;line-height:1.45}
+
+/* Home: outbox shortcut */
+.home-ob{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border-left:4px solid var(--accent)}
+.home-ob span{flex:1;display:flex;flex-direction:column}.home-ob small{color:var(--muted)}
+.st-src{margin-top:8px;font-size:12.5px;color:var(--muted);display:flex;gap:6px;align-items:flex-start;line-height:1.35}
+.st-src .ic{flex:none;margin-top:1px}

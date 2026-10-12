@@ -36,7 +36,7 @@ async function sendDirect(){const d=CUR;const b=$("#bShare");if(!PDFFILE){toast(
     await dbPut("outbox",item);await dbDel("drafts",d.id);{const q=getPings();if(q[d.id]){q[d.id].state="outbox";ls("pings",JSON.stringify(q))}else queuePing(d,"outbox")}
     const r=await sendItem(item);
     if(r.ok){celebrate(t.kind==="fuel"?"Register sent":"Report sent",t.kind==="fuel"?"Emailed to the Project Admin":"Emailed to the SHE Manager")}else toast("No connection – report saved in the Outbox and will send automatically",6500);
-    go("#home")}catch(e){console.error(e);toast("Could not send – report kept. Try again or use Other ways to send",6500);if(b){b.disabled=false;b.textContent="Send report"}}}
+    go("#inspect")}catch(e){console.error(e);toast("Could not send – report kept. Try again or use Other ways to send",6500);if(b){b.disabled=false;b.textContent="Send report"}}}
 async function relayPost(item,noCors){const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),60000);
   try{const r=await fetch(RELAY.url,{method:"POST",body:JSON.stringify({...item.payload,key:RELAY.key,...(siteCode()?{code:siteCode()}:{})}),signal:ctl.signal,redirect:"follow",...(noCors?{mode:"no-cors"}:{})});
     if(noCors)return {ok:true,unconfirmed:true};const j=await r.json().catch(()=>({ok:false,error:"Bad reply"}));if(j&&j.needCode)askSiteCode();return j}finally{clearTimeout(tm)}}
@@ -53,9 +53,9 @@ let FLUSHING=false;
 async function flushOutbox(manual){await flushPings();if(FLUSHING)return;FLUSHING=true;let sent=0,left=0;
   try{const items=await dbAll("outbox");for(const it of items){const r=await sendItem(it);r.ok?sent++:left++}}finally{FLUSHING=false}
   if(sent)toast(`✓ ${sent} report(s) from the Outbox sent`,4000);else if(manual&&left)toast("Still no connection – will keep trying",4000);
-  if(sent&&(location.hash||"#home")==="#home")viewHome();return {sent,left}}
+  if(sent&&["","#home","#inspect"].includes(location.hash))route();return {sent,left}}
 
 async function markSent(){const d=CUR;if(!await ask2("Close this inspection?","Confirm the report has been sent another way. The inspection is closed on this phone and its open items go on the Action register.","Close inspection"))return;const t=tabByNum(d.tab);const s=stats(d);const REC=t.kind==="record"||t.kind==="fuel";
   const findings=findingsOf(d),report=reportFacts(d);findings.forEach(f=>rememberContact(f.owner,f.ownerEmail));
   await dbPut("sent",{id:d.id,reportId:reportId(d),title:`${pad(t.num)} – ${t.short}`,location:d.details.location,sentAt:Date.now(),ua:REC?0:s.UA,ni:REC?0:s.NI,snn:REC?0:s.snnN,no:pad(t.num),inspector:d.details.inspector,findings,report});
-  await dbDel("drafts",d.id);queuePing(d,"sent",{reportId:reportId(d),report,findings});await loadLocalSent();updateBadges();toast("Inspection closed");go("#home")}
+  await dbDel("drafts",d.id);queuePing(d,"sent",{reportId:reportId(d),report,findings});await loadLocalSent();updateBadges();toast("Inspection closed");go("#inspect")}

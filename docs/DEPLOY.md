@@ -123,15 +123,16 @@ Insights (Lead indicators) and the hazard form also link to it.
 - Content is in `js/data/emergency.js`; maps in `assets/traffic/`. When the ERP / TARP is revised, update that file
   (and bump the cache version in `sw.js`).
 
-## Today on site – FDR / TFB / HVMB status (v3.5)
+## HVMB & Fire Status – HVMB / TFB / FDR (v3.5, renamed v3.6)
 
-- Panel at the top of Home. Set by anyone with the **status PIN** (Update → pick FDR, TFB, HVMB, Morning / Midday / Change, PIN).
+- Panel at the top of Home. Set from the Shire of Dandaragan HVMB text message by the SHE Manager or anyone registered
+  for Shire notifications (register: `hvmbUrl` in config.json). Set by anyone with the **status PIN** (Update → pick FDR, TFB, HVMB, Morning / Midday / Change, PIN).
 - The PIN lives only in the relay: Apps Script → Project Settings → Script Properties → `STATUS_PIN`. It is never in GitHub
   or the app. The phone remembers it after the first correct entry ("Forget" removes it). 10 wrong PINs lock it for 15 minutes.
 - Every change is a new row in the **Site Status** sheet. Next check: Morning → 12:00; Midday / Change → 05:30 next day.
   Overdue → orange banner. Nothing set today → grey "NOT SET TODAY" and restrictions are hidden.
 - The 6 pm daily email opens with today's status history and flags "No midday re-check recorded".
-- `config.json` → `hvmbUrl`: the Shire of Dandaragan HVMB page (leave blank until known).
+- `config.json` → `hvmbUrl`: the Shire of Dandaragan HVMB text-notification sign-up page.
 
 ## This day in history (v3.5)
 
@@ -146,3 +147,10 @@ Insights (Lead indicators) and the hazard form also link to it.
 - Content is in `js/data/reference.js` (verbatim). The 330 kV MAD image goes in `img/mad.png` (add it to `sw.js` FILES
   and bump the cache). Until then the card shows "MAD values: refer to your Western Power permit / ESSR".
 - `config.json` → `chemAlertUrl`: the ChemAlert login/search link. It opens in the browser – no credentials are stored.
+
+## Home and Inspect tabs (v3.6)
+
+- **Home** (opens first): HVMB & Fire Status, This day in history, welcome / weather / FDR, reminders, My Day,
+  Inspect & report shortcut, PARRON Radio, Reference (SNN, 330 kV, ChemAlert).
+- **Inspect**: Inspection library, Task Observation, Mentoring, Hazard, Positive, Trade Assistants, Outbox, drafts in
+  progress and recently sent. Sending or saving an inspection returns here.

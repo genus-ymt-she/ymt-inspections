@@ -64,12 +64,23 @@ const shot = async (page, name) => { if (SHOTS) await page.screenshot({ path: pa
 const settle = page => page.waitForTimeout(450);
 
 const page = await newPage();
-await step("home shows hero and the eight tiles (no long list)", async () => {
+await step("Home opens first: HVMB & Fire Status, history, welcome, My Day, Inspect & report, Radio, Reference", async () => {
   await page.waitForSelector(".hero"); await page.waitForSelector(".tiles .tile");
   if (await page.$("#lib")) throw new Error("inspection list should not be on home");
-  const n = await page.$$eval(".tiles .tile", e => e.length); if (n !== 8) throw new Error("tiles: " + n);
-  const labels = await page.$$eval(".tiles .tile b", e => e.map(x => x.textContent.trim()).join("|")); if (labels !== "My Day|Inspection|Task Observation|Mentoring|Hazard|Positive|Trade Assistants|PARRON Radio") throw new Error("tiles: " + labels);
+  if (!await page.$("nav.tabs a[data-t=home].on")) throw new Error("Home tab not active");
+  const order = await page.evaluate(() => ["#stp", "#hcd", ".hero", ".tile.myday", "#refsec"].map(q => { const e = document.querySelector(q); return e ? e.getBoundingClientRect().top + scrollY : -1; }));
+  if (order.some(x => x < 0) || order.some((x, i) => i && x <= order[i - 1])) throw new Error("home order: " + order);
+  if (!/HVMB & Fire Status/.test(await page.textContent("#stp"))) throw new Error("status panel title");
+  if (!/Shire of Dandaragan HVMB text message/.test(await page.textContent("#stp"))) throw new Error("Shire SMS note missing");
+  const labels = await page.$$eval(".tiles .tile b", e => e.map(x => x.textContent.trim()).join("|")); if (labels !== "My Day|Inspect & report|PARRON Radio") throw new Error("home tiles: " + labels);
   await settle(page); await shot(page, "01-home");
+});
+await step("Inspect tab holds the six inspection and report tiles", async () => {
+  await page.click("nav.tabs >> text=Inspect"); await page.waitForFunction(() => location.hash === "#inspect"); await page.waitForSelector(".tiles .tile");
+  if (!await page.$("nav.tabs a[data-t=inspect].on")) throw new Error("Inspect tab not active");
+  const labels = await page.$$eval(".tiles .tile b", e => e.map(x => x.textContent.trim()).join("|")); if (labels !== "Inspection|Task Observation|Mentoring|Hazard|Positive|Trade Assistants") throw new Error("inspect tiles: " + labels);
+  if (await page.$("#stp")) throw new Error("status panel should be on Home only");
+  await settle(page); await shot(page, "01b-inspect");
 });
 await step("Inspection tile opens the list with category chips", async () => {
   await page.click(".tile >> text=Inspection"); await page.waitForSelector("#lib .card");
@@ -94,12 +105,12 @@ await step("library search filters templates", async () => {
   await page.fill("#libq", ""); await settle(page);
 });
 await step("Mentoring tile opens the discussion record", async () => {
-  await page.evaluate(() => go("#home")); await page.waitForSelector(".tiles .tile"); await page.click(".tile >> text=Mentoring");
+  await page.evaluate(() => go("#inspect")); await page.waitForSelector(".tiles .tile"); await page.click(".tile >> text=Mentoring");
   await page.waitForFunction(() => location.hash.startsWith("#insp/") && CUR && CUR.tab === 23);
   await page.evaluate(async () => { await dbDel("drafts", CUR.id); go("#home"); });
 });
 await step("inspection 24 – observation record is required, shown in review, email and PDF", async () => {
-  await page.evaluate(() => go("#home")); await page.waitForSelector(".tiles .tile"); await page.click(".tile >> text=Task Observation"); await page.waitForSelector("#narr textarea");
+  await page.evaluate(() => go("#inspect")); await page.waitForSelector(".tiles .tile"); await page.click(".tile >> text=Task Observation"); await page.waitForSelector("#narr textarea");
   const p0 = await page.evaluate(() => problems(CUR));
   for (const want of ["Observation record – What was observed", "Observation record – Positives – what went well", "Overall – was the task performed safely?"]) if (!p0.includes(want)) throw new Error("missing check: " + want);
   await page.fill('[data-d="location"]', "Switchyard bay 3");
@@ -157,7 +168,7 @@ await step("review screen, signature and PDF", async () => {
 });
 await step("send directly through the relay (findings reach the log)", async () => {
   await page.click("#bShare");
-  await page.waitForFunction(() => (location.hash === "#home" || location.hash === ""), null, { timeout: 30000 });
+  await page.waitForFunction(() => location.hash === "#inspect", null, { timeout: 30000 });
   const j = relay.get({ action: "dashboard", key: relay.key });
   if (j.findings.length !== 2) throw new Error("findings logged: " + j.findings.length);
   if (!relay.mail.length || !relay.mail[0].attachments) throw new Error("no email with PDF");
@@ -224,7 +235,7 @@ await step("quick hazard report (Critical) goes to the register and alerts", asy
   await page.selectOption(".pp select", "Paul Delaney");
   await page.setInputFiles('#obPh input[type=file] >> nth=1', path.join(root, "icon-192.png")); await page.waitForSelector("#obPh .photos img");
   await settle(page); await shot(page, "09-hazard-report");
-  await page.click("text=Send hazard report"); await page.waitForFunction(() => location.hash === "#home" || location.hash === "", null, { timeout: 20000 });
+  await page.click("text=Send hazard report"); await page.waitForFunction(() => location.hash === "#inspect", null, { timeout: 20000 });
   const sent = relay.mail.slice(before);
   if (!sent.find(m => /^URGENT/.test(m.subject || ""))) throw new Error("no urgent alert for Critical hazard");
   if (!sent.find(m => m.to === "paul.delaney@genus.com.au")) throw new Error("owner not emailed");
@@ -235,7 +246,7 @@ await step("positive observation is logged", async () => {
   await page.evaluate(() => go("#report/positive")); await page.waitForSelector("#obLoc");
   await page.fill("#obLoc", "Laydown area 2"); await page.fill("#app textarea >> nth=0", "Crew stopped work when wind exceeded the lift plan limit");
   await page.click(".chip >> text=Speaking up / stop work");
-  await page.click("text=Send observation"); await page.waitForFunction(() => location.hash === "#home" || location.hash === "", null, { timeout: 20000 });
+  await page.click("text=Send observation"); await page.waitForFunction(() => location.hash === "#inspect", null, { timeout: 20000 });
   const j = relay.get({ action: "dashboard", key: relay.key });
   if (j.obs.length !== 2) throw new Error("observations logged: " + j.obs.length);
 });
@@ -321,7 +332,7 @@ await step("My Day repeating reminder: monthly, emailed on the day, banner on ho
 await step("Trade Assistants: fuel register – start of day, end of day, sign and send to the Project Admin", async () => {
   await page.evaluate(() => go("#inspections")); await page.waitForSelector("#lib .card");
   if (/Firefighting Water Trailer|Fuel, Hours/.test(await page.textContent("#lib"))) throw new Error("TA forms should not be in the inspection list");
-  await page.evaluate(() => go("#home")); await page.click(".tile >> text=Trade Assistants"); await page.waitForSelector(".tacard");
+  await page.evaluate(() => go("#inspect")); await page.click(".tile >> text=Trade Assistants"); await page.waitForSelector(".tacard");
   if (!/Firefighting Water Trailer/.test(await page.textContent("#app"))) throw new Error("fire trailer missing from TA page");
   await settle(page); await shot(page, "21-ta-page");
   await page.click(".tacard button.btn.o"); await page.waitForSelector(".fa");
@@ -356,7 +367,7 @@ await step("Trade Assistants: fuel register – start of day, end of day, sign a
   if (pdf.size < 5000 || !pdf.land) throw new Error("fuel PDF: " + JSON.stringify(pdf));
   if (SHOTS) fs.writeFileSync(path.join(out, "fuel-register.pdf"), Buffer.from(await page.evaluate(async () => { PDFBLOB = null; const b = await buildPDF(CUR); return Array.from(new Uint8Array(await b.arrayBuffer())); })));
   await settle(page); await shot(page, "24-fuel-review");
-  const before = relay.mail.length; await page.click("#bShare"); await page.waitForFunction(() => location.hash === "#home", null, { timeout: 15000 });
+  const before = relay.mail.length; await page.click("#bShare"); await page.waitForFunction(() => location.hash === "#inspect", null, { timeout: 15000 });
   const m = relay.mail.slice(before).find(x => /Fuel, Hours/.test(x.subject || ""));
   if (!m || m.to !== "amie.smith@genus.com.au,darren.frizzell@genus.com.au") throw new Error("register email: " + (m && m.to));
   if (!/Start of day: [0-9:]+ \(Jayden Mullan\)/.test(m.body) || !/\(Ben Herbert\)/.test(m.body)) throw new Error("who did each half: " + m.body.slice(0, 400));
@@ -499,7 +510,8 @@ await step("This day in history: three suitable facts from the relay, big text, 
   if (await w.evaluate(() => HIST.src) !== "wikipedia") throw new Error("fallback source: " + await w.evaluate(() => HIST.src));
 });
 await step("Reference: nine SNN cards with icons, 330 kV card with MAD fallback, ChemAlert button (not set / opens externally)", async () => {
-  await page.evaluate(() => go("#home")); await page.waitForSelector("#refsec .ref-list");
+  if (await page.evaluate(() => appCfg().chemAlertUrl) !== "https://chemalert.rmt.com.au/genus/login/") throw new Error("config.json chemAlertUrl not loaded");
+  await page.evaluate(() => { ls("appCfg", "{}"); go("#home"); }); await page.waitForSelector("#refsec .ref-list");
   if (!/ChemAlert link not set – ask the SHE Manager/.test(await page.textContent("#refsec"))) throw new Error("ChemAlert not-set message");
   await page.click("#refsec >> text=Safety Non-Negotiables"); await page.waitForSelector(".snn-card");
   const cards = await page.$$eval(".snn-card", e => e.map(x => [x.querySelector("img").getAttribute("src"), x.querySelector("small").textContent, x.querySelector("b").textContent]));

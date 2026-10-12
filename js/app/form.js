@@ -1,6 +1,6 @@
 "use strict";
 /* ---------- inspection form ---------- */
-function backHome(d){return {icon:"back",label:"Save",aria:"Save and go home",fn:()=>{save(d,true);queuePing(d,"draft");toast("Saved on this phone");go("#home")}}}
+function backHome(d){return {icon:"back",label:"Save",aria:"Save and go home",fn:()=>{save(d,true);queuePing(d,"draft");toast("Saved on this phone");go("#inspect")}}}
 function viewInsp(d){const t=tabByNum(d.tab);if(t.kind==="record")return viewRecord(d);if(t.kind==="fuel")return viewFuel(d);setHeader(`${pad(t.num)} · ${t.short}`,"Site inspection",backHome(d));
   const D=d.details;const hide=t.hideStd||[];let h=`<div class="band"><b>${esc(t.title)}</b>${esc(t.scope)}</div>`+voiceCardHTML("insp")+keyHTML();
   if(t.fixed)h+=`<div class="card"><div class="lock">${ic("lock","s")} Inspection details (fixed)</div><div class="fixed">${t.fixed.map(f=>`<div><small>${esc(f[0])}</small><span>${esc(f[1])}</span></div>`).join("")}</div></div>`;
