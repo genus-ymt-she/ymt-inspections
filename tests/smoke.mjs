@@ -243,6 +243,20 @@ await step("Insights shows lead indicators (no targets)", async () => {
 await step("monthly HSE summary PDF builds", async () => {
   const n = await page.evaluate(() => buildMonthlyPDF(DASH.j).size); if (n < 15000) throw new Error("monthly pdf bytes " + n); console.log("      monthly pdf bytes", n);
 });
+await step("weekly report: Monday 6 am to Sunday 6 pm, across months, PDF and KPI text", async () => {
+  await page.evaluate(() => go("#insights")); await page.waitForFunction(() => DASH.j && document.querySelector(".kpis") && !document.querySelector("#app .skel"), null, { timeout: 15000 }); await page.waitForTimeout(800);
+  await page.click("button:has-text(\"Weekly report\")"); await page.waitForSelector("#wkSel");
+  const opts = await page.$$eval("#wkSel option", o => o.map(x => x.textContent)); if (opts.length !== 12 || !/Mon .* – Sun /.test(opts[0])) throw new Error("weeks: " + opts.slice(0, 2));
+  // window boundaries: Monday 06:00 to Sunday 18:00
+  const b = await page.evaluate(() => { const s = wkStart(new Date(2026, 9, 1, 12)); const e = wkEnd(s); return [s.toString(), e.toString(), wkStart(new Date(2026, 9, 5, 5, 59)).getDate(), wkNo(s)]; });
+  if (!/Mon Sep 28 2026 06:00/.test(b[0]) || !/Sun Oct 04 2026 18:00/.test(b[1]) || b[2] !== 5 || b[3] !== 40) throw new Error("week window: " + b.join(" | "));
+  await page.selectOption("#wkSel", { index: 0 }); await page.waitForFunction(() => !document.querySelector("#wkPdf").disabled, null, { timeout: 15000 });
+  const kv = await page.textContent("#wkPrev"); if (!/Inspections completed\s*[1-9]/.test(kv) || !/Hazard reports/.test(kv)) throw new Error("weekly preview: " + kv.slice(0, 300));
+  const t = await page.evaluate(() => weeklyText(WK.data)); if (!/^PARRON weekly report – Week \d+/.test(t) || !/Positive observations: [1-9]/.test(t)) throw new Error("weekly text: " + t);
+  const size = await page.evaluate(async () => (await buildWeeklyPDF(WK.data).arrayBuffer()).byteLength); if (size < 20000) throw new Error("weekly pdf " + size);
+  if (SHOTS) fs.writeFileSync(path.join(out, "weekly.pdf"), Buffer.from(await page.evaluate(async () => Array.from(new Uint8Array(await buildWeeklyPDF(WK.data).arrayBuffer())))));
+  await settle(page); await shot(page, "27-weekly-report"); await page.evaluate(() => closeSheet());
+});
 await step("My Day: private planner – add, tick, edit, per-person, never sent", async () => {
   const postsBefore = JSON.stringify(relay.mail).length;
   await page.evaluate(() => go("#home")); await page.waitForSelector(".tile.myday"); await page.click(".tile.myday");
