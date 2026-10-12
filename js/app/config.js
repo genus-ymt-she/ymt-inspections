@@ -8,7 +8,7 @@ const CONFIG = {
   project: "J1084 – Parron Wind Farm Connection Assets – Yerramullah Terminal (YMT)",
   projectShort: "YMT – Yerramullah Terminal",
   jobNo: "J1084",
-  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "3.7.2"
+  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "3.7.3"
 };
 
 /* Site location for the home-screen weather (forecast for this point) and the Bureau of Meteorology
@@ -68,7 +68,7 @@ const TEAM = [
   { name: "Joey Ryan",         role: "Grad Project Manager",         email: "joey.ryan@genus.com.au", site: true },
   { name: "Matthew Smith",     role: "Senior Civil Supervisor",      email: "matt.smith@genus.com.au", site: true },
   { name: "Paul Delaney",      role: "Civil Supervisor",             email: "paul.delaney@genus.com.au", site: true },
-  { name: "Corey Shotter",     role: "Senior Electrical Supervisor", email: "cory.shotter@genus.com.au", site: true },
+  { name: "Corey Shotter",     role: "Senior Electrical Supervisor", email: "corey.shotter@genus.com.au", site: true },
   { name: "Zane Patten",       role: "Electrical Supervisor",        email: "zane.patten@genus.com.au", site: true },
   { name: "Steven Pugh",       role: "Supervisor (Electrical)",      email: "steven.pugh@genus.com.au", site: true },
   { name: "Amie Smith",        role: "Project Admin",                email: "amie.smith@genus.com.au", site: true },
