@@ -112,3 +112,13 @@ Insights (Lead indicators) and the hazard form also link to it.
 - Needs the latest relay code (paste, Save, Deploy → Manage deployments → Edit → New version). Before that, the list shows the
   last two months without photos.
 - Photos are read from the relay's Drive folder; only photos that belong to a logged report can be opened.
+
+## Emergency Management and Traffic Management tabs
+
+- **Emergency** (red, bottom bar): Call 000, UHF 24 alarm call, site location for 000 (address, Plus Code, GPS, meet point),
+  the 16 emergency situation cards (ERP Appendix B, verbatim), muster points, emergency contacts (ERP Appendix A – Genus
+  personnel left out because the app is a public link) and the Adverse Weather & Site Access TARP (J1084-HSE-TRP-YMT-0001 Rev A).
+- **Traffic**: the five site layout maps (tap for full screen, pinch to zoom).
+- Everything in both tabs is in the offline cache – it opens with no signal once PARRON has been opened online.
+- Content is in `js/data/emergency.js`; maps in `assets/traffic/`. When the ERP / TARP is revised, update that file
+  (and bump the cache version in `sw.js`).

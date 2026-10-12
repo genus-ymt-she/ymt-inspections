@@ -5,7 +5,7 @@ let CUR=null,ROUTE_SEQ=0;
 const stale=seq=>seq!==ROUTE_SEQ;
 window.addEventListener("hashchange",route);
 function go(h){if(location.hash===h)route();else location.hash=h}
-async function route(){const seq=++ROUTE_SEQ;const h=location.hash||"#home";const [v,id]=h.slice(1).split("/");window.scrollTo(0,0);closeSheet();
+async function route(){const seq=++ROUTE_SEQ;const h=location.hash||"#home";const [v,id,id2]=h.slice(1).split("/");window.scrollTo(0,0);closeSheet();
   if(v!=="insp"){const b=document.getElementById("bar");if(b)b.remove()}
   document.body.classList.toggle("task",v==="insp"||v==="review"||v==="report");setNav(v);
   if(v==="insp"){const d=await dbGet("drafts",id);if(!d)return go("#home");CUR=d;return viewInsp(d)}
@@ -20,8 +20,10 @@ async function route(){const seq=++ROUTE_SEQ;const h=location.hash||"#home";cons
   if(v==="report")return viewReport(id||"hazard");
   if(v==="actions")return viewActions(id?decodeURIComponent(id):"");
   if(v==="reports")return viewReports(id);
+  if(v==="emergency")return viewEmergency(id,id2);
+  if(v==="traffic")return viewTraffic(id);
   return viewHome()}
-function setNav(v){const m={home:"home","":"home",inspections:"home",myday:"home",ta:"home",radio:"home",insights:"insights",dash:"insights",actions:"actions",reports:"actions"};const k=m[v]||"";
+function setNav(v){const m={home:"home","":"home",inspections:"home",myday:"home",ta:"home",radio:"home",insights:"insights",dash:"insights",actions:"actions",reports:"actions",emergency:"emergency",traffic:"traffic"};const k=m[v]||"";
   document.querySelectorAll("#tabs a").forEach(a=>{const on=a.dataset.t===k;a.classList.toggle("on",on);if(on)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
 function setHeader(title,sub,btn){$("#hTitle").textContent=title;$("#hSub").textContent=sub;const b=$("#hBtn");
   if(btn){b.innerHTML=(btn.icon?ic(btn.icon):"")+(btn.label?`<span>${esc(btn.label)}</span>`:"");b.setAttribute("aria-label",btn.aria||btn.label||"");b.onclick=btn.fn;b.classList.remove("hide")}else b.classList.add("hide")}
