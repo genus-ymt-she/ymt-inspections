@@ -13,7 +13,7 @@ const wkISO=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 function wkList(){const now=new Date();const cur=wkStart(now);if(now<cur)cur.setDate(cur.getDate()-7);const L=[];for(let i=0;i<12;i++){const s=new Date(cur);s.setDate(s.getDate()-7*i);L.push(s)}return L}
 function wkDefault(){const L=wkList();return wkEnd(L[0])<=new Date()?L[0]:L[1]}
 async function wkMonth(m){
-  try{const r=await fetch(`${RELAY.url}?action=dashboard&month=${m}&key=${encodeURIComponent(RELAY.key)}`,{redirect:"follow"});const j=await r.json();if(!j.ok)throw new Error(j.error);ls("dash_"+m,JSON.stringify(j));return j}
+  try{const r=await fetch(relayQ(`action=dashboard&month=${m}`),{redirect:"follow"});const j=await r.json();if(j.needCode)askSiteCode();if(!j.ok)throw new Error(j.error);ls("dash_"+m,JSON.stringify(j));return j}
   catch(e){const c=lsJ("dash_"+m,null);if(c)return c;throw e}}
 async function wkLoad(s){const e=wkEnd(s);const ms=[...new Set([monthKey(s),monthKey(e)])];const js=await Promise.all(ms.map(wkMonth));
   const inW=v=>{const t=new Date(v).getTime();return t>=s.getTime()&&t<=e.getTime()};const uniq=(list,k)=>{const seen=new Set();return list.filter(x=>{const id=k(x);if(seen.has(id))return false;seen.add(id);return true})};

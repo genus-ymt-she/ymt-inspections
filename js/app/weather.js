@@ -22,7 +22,7 @@ function fdrFromFeed(feed,want){const D=(feed&&feed.districts)||{};const name=D[
   return{today:on(todayISO()),tomorrow:on(isoPlus(1)),area:name,areas:Object.keys(D).sort(),issued:feed.issued||"",source:"Bureau of Meteorology"}}
 async function fdrRefresh(force){const F=lsJ("fdr",null);if(!force&&F&&F.date===todayISO()&&Date.now()-F.at<20*60e3)return false;if(navigator.onLine===false)return false;
   // the relay holds the SHE Manager's manual rating and district choice; the feed holds the official ratings
-  const rel=(directOn()&&v3())?fetch(`${RELAY.url}?action=weather&key=${encodeURIComponent(RELAY.key)}`,{redirect:"follow"}).then(r=>r.json()).then(j=>j.ok?j.fdr:null).catch(()=>null):Promise.resolve(null);
+  const rel=(directOn()&&v3())?fetch(relayQ("action=weather"),{redirect:"follow"}).then(r=>r.json()).then(j=>{if(j.needCode)askSiteCode();return j.ok?j.fdr:null}).catch(()=>null):Promise.resolve(null);
   const feed=fetch(FDR_FEED,{cache:"no-cache"}).then(r=>r.ok?r.json():null).catch(()=>null);
   const [R,B]=await Promise.all([rel,feed]);if(!R&&!B)return false;
   let out=R&&R.manual?R:fdrFromFeed(B,R&&R.want)||(R&&R.today?R:null);
@@ -30,7 +30,7 @@ async function fdrRefresh(force){const F=lsJ("fdr",null);if(!force&&F&&F.date===
   if(R&&R.manual&&!out.areas){const f=fdrFromFeed(B,R.want);if(f)out={...out,areas:f.areas,area:out.area||f.area,tomorrow:out.tomorrow||f.tomorrow}}
   ls("fdr",JSON.stringify({at:Date.now(),date:todayISO(),...out,canPick:!!(R&&"want" in R)}));return true}
 function wxHTML(){const W=lsJ("wx",null),F=lsJ("fdr",null);const fresh=F&&F.date===todayISO();const rating=fresh?fdrNorm(F.today):"";const col=FDR_COL[rating];
-  const fdr=`<button class="fdr" style="${col?`--fb:${col[0]};--fi:${col[1]}`:""}" onclick="fdrInfo()" aria-label="Fire danger rating">
+  const fdr=`<button class="fdr ${/^(Extreme|Catastrophic)$/.test(rating)?"hot":""}" style="${col?`--fb:${col[0]};--fi:${col[1]}`:""}" onclick="fdrInfo()" aria-label="Fire danger rating">
     <span class="fl">FIRE DANGER</span><b>${esc(rating||(F&&F.today?fdrNorm(F.today):"Check FDR"))}</b>${fresh&&F.tomorrow?`<span class="ft">Tomorrow: ${esc(fdrNorm(F.tomorrow))}</span>`:`<span class="ft">${fresh?esc(F.area||""):"Tap for details"}</span>`}</button>`;
   if(!W)return `<div class="wx">${fdr}<div class="wxm"><span class="muted" style="color:rgba(255,255,255,.8)">${ic("wifioff","s")} Weather loads when online</span></div></div>`;
   const c=W.cur||{},d=W.day||{};const [txt,icn]=WX_CODE(+(c.weather_code??d.code));

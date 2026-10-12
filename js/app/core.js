@@ -4,6 +4,17 @@ let RELAY={url:"",key:"",v:0};
 try{const c=JSON.parse(ls("relayCfg")||"null");if(c&&c.url)RELAY=Object.assign({v:0},c)}catch(e){}
 async function loadRelay(){try{const r=await fetch("config.json?v="+Date.now(),{cache:"no-store"});if(!r.ok)return;const c=await r.json();
   if(c&&typeof c.relayUrl==="string"){const url=c.relayUrl.trim();RELAY={url,key:c.key||"",v:url===RELAY.url?RELAY.v:0};ls("relayCfg",JSON.stringify(RELAY))}}catch(e){}}
+/* site access code (set by the SHE Manager in the relay's Script properties) – sent with every relay request */
+const siteCode=()=>(ls("siteCode")||"").trim();
+function relayQ(q){return `${RELAY.url}?${q}&key=${encodeURIComponent(RELAY.key)}${siteCode()?`&code=${encodeURIComponent(siteCode())}`:""}`}
+let SC_ASKED=0;
+function askSiteCode(force){if(!force&&(document.getElementById("scIn")||Date.now()-SC_ASKED<60e3))return;SC_ASKED=Date.now();
+  const s=sheet(`<h3>${ic("lock","s")} Site access code</h3><p class="muted">The project log is protected. Enter the site access code from your SHE Manager – you only need to do this once on this phone.</p>
+   <label class="f" for="scIn">Site access code</label><input class="t" id="scIn" autocomplete="off" autocapitalize="characters" value="${esc(siteCode())}">
+   <button class="btn o w" id="scOk">${ic("check","s")} Save code</button>`);
+  const i=s.querySelector("#scIn");setTimeout(()=>i.focus(),150);
+  const ok=()=>{const v=i.value.trim();if(!v){toast("Enter the code",2500);return}ls("siteCode",v);closeSheet();toast("Site code saved");SC_ASKED=0;flushOutbox();if(!/^#(insp|review|report)/.test(location.hash))route()};
+  s.querySelector("#scOk").onclick=ok;i.addEventListener("keydown",e=>{if(e.key==="Enter")ok()})}
 const directOn=()=>/^https:\/\/script\.google(usercontent)?\.com\//.test(RELAY.url)||/^https?:\/\/localhost/.test(RELAY.url);
 /* v3 relays add the shared action register, action emails and Manager PIN. Older relays are detected so
    v3-only requests are never sent to them (an old relay would treat them as a report). */

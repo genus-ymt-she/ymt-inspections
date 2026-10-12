@@ -92,3 +92,14 @@ Home → **PARRON Radio** shuffles the project playlist (`RADIO_SONGS` in `js/ap
 YouTube uploads in YouTube's own player – no music is stored in PARRON. If a video is ever removed, the player tries the next listed
 upload, then skips the song. Music needs signal and pauses when the phone is locked (a phone limit for web apps); *Open in YouTube* hands
 the playlist to the YouTube app instead.
+
+## Site access code (protects the project log)
+
+The app key is visible in this public repository, so on its own it would let anyone who finds the link read the project log.
+The site access code closes that gap without any IT involvement:
+1. Paste the latest `PARRON_Relay_Code.gs`, Save, then **Deploy → Manage deployments → ✏ Edit → New version → Deploy**.
+2. **Project Settings → Script properties → Add script property:** `SITE_CODE` = a word or code of 6+ characters (not case-sensitive).
+3. The next time each phone opens PARRON it asks for the code once (it is also under **Settings → Connection → Site access code**).
+   Reports waiting in the Outbox send as soon as the code is entered.
+- Give the code to the team in person or by text – never put it in GitHub.
+- To change it, edit `SITE_CODE`; every phone asks for the new code on its next request. Delete the property to switch the check off.

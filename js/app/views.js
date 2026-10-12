@@ -25,8 +25,16 @@ function setNav(v){const m={home:"home","":"home",inspections:"home",myday:"home
 function setHeader(title,sub,btn){$("#hTitle").textContent=title;$("#hSub").textContent=sub;const b=$("#hBtn");
   if(btn){b.innerHTML=(btn.icon?ic(btn.icon):"")+(btn.label?`<span>${esc(btn.label)}</span>`:"");b.setAttribute("aria-label",btn.aria||btn.label||"");b.onclick=btn.fn;b.classList.remove("hide")}else b.classList.add("hide")}
 const SETTINGS_BTN={icon:"settings",aria:"Settings",fn:()=>go("#settings")};
-function render(h){const a=$("#app");a.innerHTML=h;a.classList.remove("fade");void a.offsetWidth;a.classList.add("fade")}
-function setNet(){const n=$("#net");if(!n)return;const on=navigator.onLine!==false;n.classList.toggle("off",!on);n.title=on?"Online":"Offline – everything is saved on this phone"}
+function render(h){const a=$("#app");a.innerHTML=h;a.classList.remove("fade");void a.offsetWidth;a.classList.add("fade");motionIn(a)}
+let NET_ON=true;
+function setNet(){const hd=document.querySelector("header.top");if(hd)document.documentElement.style.setProperty("--hdr",hd.offsetHeight+"px");const n=$("#net");if(!n)return;const on=navigator.onLine!==false;n.classList.toggle("off",!on);n.title=on?"Online":"Offline – everything is saved on this phone";
+  // a clear banner instead of relying on the small dot
+  const b=$("#offbar");if(b){clearTimeout(setNet._t);
+    if(!on){b.className="offbar off";b.innerHTML=`${ic("wifioff","s")}<span><b>Offline</b> – your work is saved on this phone and sends when you have signal</span>`;b.hidden=false}
+    else if(!NET_ON){b.className="offbar back";b.innerHTML=`${ic("check","s")}<span><b>Back online</b> – sending anything waiting</span>`;b.hidden=false;setNet._t=setTimeout(()=>{b.hidden=true},3500)}
+    else b.hidden=true;
+    document.body.classList.toggle("is-off",!on)}
+  NET_ON=on}
 window.addEventListener("online",setNet);window.addEventListener("offline",setNet);
 
 /* ---------- home ---------- */
@@ -47,13 +55,13 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   {const due=mdDueReminders();if(due.length)h+=`<button class="remind" onclick="go('#myday')">${ic("clock")}<div><b>Reminder${due.length>1?"s":""} today</b>${due.slice(0,3).map(x=>`<span>${esc(x.text)}${x.time?` · ${esc(x.time)}`:""}</span>`).join("")}${due.length>3?`<span>+${due.length-3} more</span>`:""}</div>${ic("chev")}</button>`}
   {const n=mdTodayCount();h+=`<div class="tiles">
    <button class="tile wide myday" onclick="go('#myday')"><span class="ti">${ic("cal","l")}</span><span class="tw"><b>My Day ${ic("lock","s")}</b><small>${n?`${n} to do today`:"Plan your day"} · private to you</small></span>${ic("chev")}</button>
-   <button class="tile wide" onclick="go('#inspections')"><span class="ti" style="background:var(--info-soft);color:var(--info)">${ic("clipboard","l")}</span><span class="tw"><b>Inspection</b><small>${LIB_TABS().length} forms · browse by category</small></span>${ic("chev")}</button>
-   <button class="tile" onclick="startInsp(24)"><span class="ti" style="background:var(--accent-soft);color:var(--accent)">${ic("eye","l")}</span><b>Task Observation</b><span>Observe a crew</span></button>
-   <button class="tile" onclick="startInsp(23)"><span class="ti" style="background:#EEE8FB;color:#6B47C9">${ic("users","l")}</span><b>Mentoring</b><span>Discussion record</span></button>
-   <button class="tile" onclick="go('#report/hazard')"><span class="ti" style="background:var(--ua-soft);color:var(--ua)">${ic("alert","l")}</span><b>Hazard</b><span>Quick report</span></button>
-   <button class="tile" onclick="go('#report/positive')"><span class="ti" style="background:var(--c-soft);color:var(--c)">${ic("star","l")}</span><b>Positive</b><span>Observation</span></button>
-   <button class="tile" onclick="go('#ta')"><span class="ti" style="background:#FFF1E0;color:#B85C00">${ic("hardhat","l")}</span><b>Trade Assistants</b><span>Fuel register · fire trailer</span></button>
-   <button class="tile radio ${RADIO.playing?"on":""}" onclick="go('#radio')"><span class="ti" style="background:#E7F0FF;color:#1F5FD1">${ic("radio","l")}</span><b>PARRON Radio</b><span>${RADIO.playing?"Now playing":"Shuffle play"}</span></button></div>`;}
+   <button class="tile wide" onclick="go('#inspections')"><span class="ti t-info">${ic("clipboard","l")}</span><span class="tw"><b>Inspection</b><small>${LIB_TABS().length} forms · browse by category</small></span>${ic("chev")}</button>
+   <button class="tile" onclick="startInsp(24)"><span class="ti t-accent">${ic("eye","l")}</span><b>Task Observation</b><span>Observe a crew</span></button>
+   <button class="tile" onclick="startInsp(23)"><span class="ti t-purple">${ic("users","l")}</span><b>Mentoring</b><span>Discussion record</span></button>
+   <button class="tile" onclick="go('#report/hazard')"><span class="ti t-red">${ic("alert","l")}</span><b>Hazard</b><span>Quick report</span></button>
+   <button class="tile" onclick="go('#report/positive')"><span class="ti t-green">${ic("star","l")}</span><b>Positive</b><span>Observation</span></button>
+   <button class="tile" onclick="go('#ta')"><span class="ti t-amber">${ic("hardhat","l")}</span><b>Trade Assistants</b><span>Fuel register · fire trailer</span></button>
+   <button class="tile radio ${RADIO.playing?"on":""}" onclick="go('#radio')"><span class="ti t-blue">${ic("radio","l")}</span><b>PARRON Radio</b><span>${RADIO.playing?"Now playing":"Shuffle play"}</span></button></div>`;}
   if(ob.length)h+=`<div class="outbox">${ic("inbox")}<div><b>Outbox – ${ob.length} report${ob.length>1?"s":""} waiting to send</b><div class="muted" style="margin:4px 0 8px">${ob.map(o=>`${esc(o.title)} · ${esc(o.location)}`).join("<br>")}<br>They send automatically when the phone has signal${ob[0].lastError?` (last try: ${esc(ob[0].lastError)})`:""}.</div><button class="btn o s" onclick="flushOutbox(true)">${ic("send","s")} Send now</button></div></div>`;
   {const sod=new Date();sod.setHours(0,0,0,0);const stale=drafts.filter(d=>d.created<sod.getTime());
    if(stale.length)h+=`<div class="alert red">${ic("clock")}<div><b>${stale.length} unsent inspection${stale.length>1?"s":""} started before today.</b> Finish and send ${stale.length>1?"them":"it"} – or delete if no longer needed.</div></div>`}
@@ -76,8 +84,10 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
 async function viewInspections(){const seq=ROUTE_SEQ;setHeader("Inspections",`${LIB_TABS().length} forms · pick one to start`,{icon:"back",aria:"Back",fn:()=>go("#home")});
   const sentAll=(await dbAll("sent")).sort((a,b)=>b.sentAt-a.sentAt);if(stale(seq))return;
   render(`<div class="search">${ic("search")}<input id="libq" type="search" placeholder="Search inspections, e.g. crane, permit, fire" value="${esc(LIB.q)}" autocomplete="off" aria-label="Search inspections"></div>
-   <div class="chips scroll" id="libcats"></div><div class="lib" id="lib"></div>`);
+   <div class="libbar"><div class="chips scroll" id="libcats"></div><div class="vtog" role="group" aria-label="List view">${[["compact","layers","Compact view"],["detail","clipboard","Detailed view"]].map(([k,i,l])=>`<button class="${libView()===k?"on":""}" aria-label="${l}" aria-pressed="${libView()===k}" onclick="setLibView('${k}')">${ic(i,"s")}</button>`).join("")}</div></div><div class="lib ${libView()}" id="lib"></div>`);
   const q=$("#libq");q.addEventListener("input",()=>{LIB.q=q.value;renderLib(sentAll)});renderLib(sentAll)}
+const libView=()=>ls("libView")||"compact";
+function setLibView(v){ls("libView",v);document.querySelectorAll(".vtog button").forEach((b,i)=>{const on=(i===0)===(v==="compact");b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)});const l=$("#lib");if(l){l.className="lib "+v;renderLib(window._sent)}}
 const LIB_TABS=()=>TABS.filter(t=>!HOME_TILE_FORMS.includes(t.num));
 function catOf(t){const c=CATEGORIES.find(c=>c.nums.includes(t.num));return c?c.key:"other"}
 function renderLib(sentAll){const box=$("#lib");if(!box)return;const q=LIB.q.trim().toLowerCase();
@@ -87,8 +97,8 @@ function renderLib(sentAll){const box=$("#lib");if(!box)return;const q=LIB.q.tri
   $("#libcats").innerHTML=cats.map(c=>{const n=LIB_TABS().filter(t=>(c.key==="all"||catOf(t)===c.key)&&match(t)).length;return n||c.key==="all"?`<button class="chip ${LIB.cat===c.key?"on":""}" onclick="LIB.cat='${c.key}';renderLib(window._sent)">${esc(c.label)}<span class="c">${n}</span></button>`:""}).join("");
   window._sent=sentAll;
   const list=LIB_TABS().filter(t=>(LIB.cat==="all"||catOf(t)===LIB.cat)&&match(t));
-  box.innerHTML=list.length?list.map(t=>{const REC=t.kind==="record";const nq=REC?0:allQ(t).length;const snn=REC?0:allQ(t).filter(x=>(x.snn||[]).length).length;const ls_=last[pad(t.num)];
-    return `<div class="card tap" onclick="startInsp(${t.num})" role="button" tabindex="0" onkeydown="if(event.key==='Enter')startInsp(${t.num})"><div class="tab"><div class="n">${pad(t.num)}</div><div class="x"><b>${esc(t.short)}</b><span>${esc(t.scope)}</span>
+  box.innerHTML=list.length?list.map((t,i)=>{const REC=t.kind==="record";const nq=REC?0:allQ(t).length;const snn=REC?0:allQ(t).filter(x=>(x.snn||[]).length).length;const ls_=last[pad(t.num)];
+    return `<div class="card tap" style="--i:${Math.min(i,12)}" onclick="startInsp(${t.num})" role="button" tabindex="0" onkeydown="if(event.key==='Enter')startInsp(${t.num})"><div class="tab"><div class="n">${pad(t.num)}</div><div class="x"><b>${esc(t.short)}</b>${libView()==="compact"?"":`<span>${esc(t.scope)}</span>`}
       <div class="libmeta">${REC?`<span class="tag">Record</span>`:`<span class="tag">${nq} items</span>`}${snn?`<span class="tag o">${snn} SNN</span>`:""}${ls_?`<span class="tag g">Sent ${ago(new Date(ls_).toISOString())}</span>`:""}</div></div>${ic("chev")}</div></div>`}).join("")
     :`<div class="card empty" style="grid-column:1/-1">${ic("search")}<b>No inspections match “${esc(LIB.q)}”</b>Try a different word.</div>`}
 async function startInsp(num){
@@ -129,10 +139,13 @@ async function viewSettings(){setHeader("Settings","This phone only",{icon:"back
    ${isManager()?`<button class="btn g w" onclick="mgrOff()">Turn off on this phone</button>`:`<label class="f" for="mPin">Manager PIN</label><input class="t" id="mPin" type="password" inputmode="numeric" autocomplete="off" maxlength="12"><button class="btn w" onclick="mgrOn()">${ic("lock","s")} Turn on</button>`}</div>
   <h2>Connection</h2><div class="card"><div class="set">${ic("send")}<div><b>Direct send</b><span id="cState">${directOn()?"On – reports email automatically":"Not set up – reports are shared via Outlook"}</span></div></div>
    <div class="set">${ic("layers")}<div><b>Project log</b><span id="rState">${directOn()?(v3()?"Connected – shared actions, action emails and Insights":"Checking…"):"Not connected"}</span></div></div>
+   ${directOn()?`<div class="set">${ic("lock")}<div><b>Site access code</b><span>${siteCode()?"Saved on this phone":"Not entered – only needed once the SHE Manager turns it on"}</span></div><button class="btn g s" onclick="askSiteCode(true)">${siteCode()?"Change":"Enter"}</button></div>`:""}
    ${directOn()?`<button class="btn g w" onclick="testRelay()">${ic("refresh","s")} Test connection</button>`:""}</div>
   <h2>Install on your phone</h2><div class="card"><ol class="steps"><li><b>iPhone:</b> open this page in Safari › Share › <i>Add to Home Screen</i>.</li><li><b>Android:</b> open in Chrome › ⋮ menu › <i>Install app</i>.</li><li>Open it once with coverage. After that it works with no signal – reports send when you are back in range.</li></ol></div>
-  <h2>Data on this phone</h2><div class="card"><div class="set">${ic("download")}<div><b>Back up my data</b><span>Drafts and sent history as a file – useful before changing phones.</span></div><button class="btn g s" onclick="backupData()">Back up</button></div></div>
+  <h2>Data on this phone</h2><div class="card"><div class="set">${ic("download")}<div><b>Back up my data</b><span>Drafts and sent history as a file – useful before changing phones.</span></div><button class="btn g s" onclick="backupData()">Back up</button></div>
+   <div class="set">${ic("shield")}<div><b>Storage</b><span id="stState">Checking…</span></div></div></div>
   <p class="foot">PARRON v${esc(CONFIG.appVersion)}<br>${esc(CONFIG.project)}</p>`);
+  keepStorage().then(p=>{const e=$("#stState");if(e)e.textContent=p===true?"Kept permanently – the phone will not clear drafts or photos":p===false?"The phone may clear PARRON's data if space runs low – add PARRON to the home screen and send drafts promptly":"Send drafts promptly – this browser does not report storage status"});
   if(directOn()&&!v3())relayVersion(true).then(()=>{const e=$("#rState");if(e)e.textContent=v3()?"Connected – shared actions, action emails and Insights":"Relay v2 – update the relay script to share actions and send action emails"})}
 function saveSettings(){const r=$("#sRec").value.trim();
   if(r&&r!==CONFIG.recipient)ls("recipientOverride",r);else lsDel("recipientOverride");

@@ -35,11 +35,11 @@ async function sendDirect(){const d=CUR;const b=$("#bShare");if(!PDFFILE){toast(
       payload:{uid:d.id,meta:pingMeta(d),reportId:reportId(d),to:sendTo(d),subject:subject(d),text:bodyText(d),html:htmlBody(d),filename:fileName(d),pdf:await blobToB64(PDFFILE),report,findings,alert:alertInfo(d),...(t.kind==="fuel"?{fuel:fuelPayload(d)}:{})}};
     await dbPut("outbox",item);await dbDel("drafts",d.id);{const q=getPings();if(q[d.id]){q[d.id].state="outbox";ls("pings",JSON.stringify(q))}else queuePing(d,"outbox")}
     const r=await sendItem(item);
-    if(r.ok){toast(t.kind==="fuel"?"✓ Register sent":"✓ Report sent to the SHE Manager",4500)}else toast("No connection – report saved in the Outbox and will send automatically",6500);
+    if(r.ok){celebrate(t.kind==="fuel"?"Register sent":"Report sent",t.kind==="fuel"?"Emailed to the Project Admin":"Emailed to the SHE Manager")}else toast("No connection – report saved in the Outbox and will send automatically",6500);
     go("#home")}catch(e){console.error(e);toast("Could not send – report kept. Try again or use Other ways to send",6500);if(b){b.disabled=false;b.textContent="Send report"}}}
 async function relayPost(item,noCors){const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),60000);
-  try{const r=await fetch(RELAY.url,{method:"POST",body:JSON.stringify({...item.payload,key:RELAY.key}),signal:ctl.signal,redirect:"follow",...(noCors?{mode:"no-cors"}:{})});
-    if(noCors)return {ok:true,unconfirmed:true};const j=await r.json().catch(()=>({ok:false,error:"Bad reply"}));return j}finally{clearTimeout(tm)}}
+  try{const r=await fetch(RELAY.url,{method:"POST",body:JSON.stringify({...item.payload,key:RELAY.key,...(siteCode()?{code:siteCode()}:{})}),signal:ctl.signal,redirect:"follow",...(noCors?{mode:"no-cors"}:{})});
+    if(noCors)return {ok:true,unconfirmed:true};const j=await r.json().catch(()=>({ok:false,error:"Bad reply"}));if(j&&j.needCode)askSiteCode();return j}finally{clearTimeout(tm)}}
 async function sendItem(item){if(!directOn())return {ok:false,error:"Direct send not set up"};
   if(navigator.onLine===false)return {ok:false,error:"Offline"};
   let res;try{res=await relayPost(item,false)}catch(e){

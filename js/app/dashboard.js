@@ -13,7 +13,7 @@ async function viewDash(){const seq=ROUTE_SEQ;setHeader("Insights","Project HSE 
   render(`<div class="dctl"><select class="t" id="dMonth" aria-label="Month">${months.map(m=>`<option value="${m}" ${m===DASH.month?"selected":""}>${monthLabel(m)}</option>`).join("")}</select><select class="t" id="dPerson" aria-label="Person"><option value="">Everyone</option></select></div><div id="dbody">${cache?"":`<div class="skel" style="height:120px"></div><div class="skel" style="height:220px"></div><div class="skel"></div>`}</div>`);
   $("#dMonth").onchange=e=>{DASH.month=e.target.value;DASH.person="";viewDash()};
   if(cache)renderDash(cache,true);
-  try{const u=`${RELAY.url}?action=dashboard&month=${DASH.month}&key=${encodeURIComponent(RELAY.key)}`;const r=await fetch(u,{redirect:"follow"});const j=await r.json();
+  try{const r=await fetch(relayQ(`action=dashboard&month=${DASH.month}`),{redirect:"follow"});const j=await r.json();if(j.needCode)askSiteCode();
     if(!j.ok)throw new Error(j.error||"Error");ls("dash_"+DASH.month,JSON.stringify(j));
     if(j.v>=3){REG={at:Date.now(),v:j.v,findings:j.findings||[],trend:j.trend||[],month:j.month};ls("reg",JSON.stringify(REG));if(RELAY.v<3){RELAY.v=j.v;ls("relayCfg",JSON.stringify(RELAY))}updateBadges()}
     if(location.hash==="#dash"||location.hash==="#insights")renderDash(j,false)}
@@ -27,9 +27,9 @@ function donutSVG(parts,centre,sub){const tot=parts.reduce((a,p)=>a+p.n,0);const
 function trendSVG(trend){const W=320,H=150,L=26,Rr=30,T=12,B=24;const n=trend.length||1;const bw=(W-L-Rr)/n;const mx=Math.max(4,...trend.map(t=>t.inspections));
   const y=v=>T+(H-T-B)*(1-v/mx),yp=v=>T+(H-T-B)*(1-v/100);
   const grid=[0,.5,1].map(f=>`<line class="gl" x1="${L}" x2="${W-Rr}" y1="${T+(H-T-B)*f}" y2="${T+(H-T-B)*f}"/><text x="${L-6}" y="${T+(H-T-B)*f+4}" text-anchor="end">${Math.round(mx*(1-f))}</text><text x="${W-Rr+6}" y="${T+(H-T-B)*f+4}">${Math.round(100*(1-f))}%</text>`).join("");
-  const bars=trend.map((t,i)=>{const x=L+i*bw+bw*.2,w=bw*.6,yy=y(t.inspections);return `<rect x="${x}" y="${yy}" width="${w}" height="${H-B-yy}" rx="4" fill="var(--brand-2)" opacity="${i===n-1?1:.55}"><title>${monthLabel(t.month)}: ${t.inspections} inspections</title></rect><text x="${x+w/2}" y="${H-8}" text-anchor="middle">${monthShort(t.month)}</text>${t.inspections?`<text x="${x+w/2}" y="${yy-4}" text-anchor="middle" style="font-weight:800;fill:var(--ink)">${t.inspections}</text>`:""}`}).join("");
+  const bars=trend.map((t,i)=>{const x=L+i*bw+bw*.2,w=bw*.6,yy=y(t.inspections);return `<rect x="${x}" y="${yy}" width="${w}" height="${H-B-yy}" rx="4" class="bar" style="--i:${i}" fill="var(--brand-2)" opacity="${i===n-1?1:.55}"><title>${monthLabel(t.month)}: ${t.inspections} inspections</title></rect><text x="${x+w/2}" y="${H-8}" text-anchor="middle">${monthShort(t.month)}</text>${t.inspections?`<text x="${x+w/2}" y="${yy-4}" text-anchor="middle" style="font-weight:800;fill:var(--ink)">${t.inspections}</text>`:""}`}).join("");
   const pts=trend.map((t,i)=>t.avgPct==null?null:[L+i*bw+bw/2,yp(t.avgPct),t]).filter(Boolean);
-  const line=pts.length>1?`<polyline points="${pts.map(p=>p[0]+","+p[1]).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>`:"";
+  const line=pts.length>1?`<polyline class="ln" pathLength="1" points="${pts.map(p=>p[0]+","+p[1]).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>`:"";
   const dots=pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.5"><title>${monthLabel(p[2].month)}: ${p[2].avgPct}% average compliance</title></circle>`).join("");
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Inspections and compliance, last 6 months">${grid}${bars}${line}${dots}</svg>`}
 function hbars(rows,max){max=max||Math.max(1,...rows.map(r=>r.parts.reduce((a,p)=>a+p.n,0)));
@@ -50,7 +50,11 @@ function renderDash(j,cached){DASH.j=j;const key=nameKey;const disp={};
   const D=dashData(j);const V3=j.v>=3;const trend=j.trend||[];const prev=trend.length>1?trend[trend.length-2]:null;
   const all=V3?(j.findings||[]):regAll();const rs=regStats(all);
   const spotN=D.F.filter(f=>f.status===ST.spot).length;
-  let h=`<div class="kpis">
+  // what needs attention first – each chip opens the matching action list
+  const att=[[rs.overdue,"overdue","Overdue","clock","bad"],[rs.highOpen,"high","High / Critical open","alert","bad"],[rs.toVerify,"verify","To verify","shield","warn"]].filter(a=>a[0]);
+  let h=`<div class="attn ${att.length?"":"ok"}">${att.length?`<b class="al">${ic("alert","s")} Needs attention</b>${att.map(([n,f,l,i,c])=>`<button class="ach ${c}" onclick="ACTF.f='${f}';go('#actions')"><b>${n}</b>${esc(l)}</button>`).join("")}`
+    :`<b class="al">${ic("circlecheck","s")} All actions on track</b><span>Nothing overdue, no High / Critical open, nothing waiting to verify.</span>`}</div>
+  <div class="kpis">
    <div class="kpi" style="--kc:var(--brand-2)"><div class="l">${ic("clipboard","s")} INSPECTIONS</div><div class="v">${D.sent.length}</div><div class="d">${D.P?"sent":delta(D.sent.length,prev&&prev.inspections,"",true)||"sent this month"}</div></div>
    <div class="kpi" style="--kc:${D.avgPct===null?"var(--na)":D.avgPct>=90?"var(--c)":D.avgPct>=75?"var(--ni)":"var(--ua)"}"><div class="l">${ic("gauge","s")} COMPLIANCE</div><div class="v">${D.avgPct===null?"–":D.avgPct}<small>${D.avgPct===null?"":"%"}</small></div><div class="d">${D.P?"average":delta(D.avgPct,prev&&prev.avgPct,"%",true)||"average score"}</div></div>
    <div class="kpi" style="--kc:var(--ua)"><div class="l">${ic("alert","s")} FINDINGS</div><div class="v">${D.ua+D.ni}</div><div class="d"><b style="color:var(--ua)">${D.ua} UA</b> · ${D.ni} NI${D.snn?` · <b style="color:var(--accent)">${D.snn} SNN</b>`:""}</div></div>
@@ -59,7 +63,7 @@ function renderDash(j,cached){DASH.j=j;const key=nameKey;const disp={};
    <button class="kpi" style="--kc:var(--ua)" onclick="ACTF.f='overdue';go('#actions')"><div class="l">${ic("clock","s")} OVERDUE</div><div class="v" style="color:${rs.overdue?"var(--ua)":"inherit"}">${rs.overdue}</div><div class="d">${rs.dueWeek} due in 7 days</div></button>
    <div class="kpi" style="--kc:var(--brand)"><div class="l">${ic("trend","s")} AVG DAYS TO CLOSE</div><div class="v">${rs.avgClose===null?"–":rs.avgClose}</div><div class="d">raised → closed out</div></div>
    <button class="kpi" style="--kc:var(--accent)" onclick="ACTF.f='verify';go('#actions')"><div class="l">${ic("shield","s")} TO VERIFY</div><div class="v">${rs.toVerify}</div><div class="d">${rs.verified} verified</div></button></div>`;
-  h+=`<div class="row2" style="margin:0 0 8px"><button class="btn o" onclick="monthlyPDF()">${ic("file","s")} Monthly report</button><button class="btn o" onclick="weeklyReport()">${ic("cal","s")} Weekly report</button></div><button class="btn g w" style="margin:0 0 12px" onclick="copySafetySummary()">${ic("copy","s")} Copy 2.1 text</button>`;
+  h+=`<div class="reports"><button class="btn g" onclick="weeklyReport()">${ic("cal","s")} Weekly report</button><button class="btn g" onclick="monthlyPDF()">${ic("file","s")} Monthly report</button><button class="linkbtn" onclick="copySafetySummary()">${ic("copy","s")} Copy 2.1 text</button></div>`;
   if(!V3)h+=`<div class="alert org">${ic("info")}<div><b>Relay v2 connected.</b> Trend, findings and action charts appear once the relay script is updated to v3.</div></div>`;
   h+=`<div class="grid-2">`;
   if(trend.length)h+=`<div class="chart"><h3>Inspections & compliance</h3><div class="sub">Last 6 months · whole project</div>${trendSVG(trend)}<div class="legend"><span><i style="background:var(--brand-2)"></i>Inspections sent</span><span><i style="background:var(--accent)"></i>Average compliance</span></div></div>`;
