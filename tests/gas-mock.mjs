@@ -72,7 +72,7 @@ export function createRelay({ pin = "2468", fetch: fetchHandler = null } = {}) {
     UrlFetchApp: { fetch: (url, opts) => { const r = fetchHandler ? fetchHandler(url, opts) : null; return { getResponseCode: () => r ? (r.code || 200) : 404, getContentText: () => r ? r.body : "" }; } },
     SpreadsheetApp: { create: (n) => (ss = new Spreadsheet(n)), openById: () => { if (!ss) throw new Error("missing"); return ss; } },
     PropertiesService: { getScriptProperties: () => ({ getProperty: k => props.has(k) ? props.get(k) : null, setProperty: (k, v) => props.set(k, v) }) },
-    CacheService: { getScriptCache: () => ({ get: k => cache.has(k) ? cache.get(k) : null, put: (k, v) => cache.set(k, v) }) },
+    CacheService: { getScriptCache: () => ({ get: k => cache.has(k) ? cache.get(k) : null, put: (k, v) => cache.set(k, v), remove: k => cache.delete(k) }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     MailApp: { sendEmail: (a, b, c) => mail.push(typeof a === "object" ? a : { to: a, subject: b, body: c }), getRemainingDailyQuota: () => 100 },
     DriveApp: { getFileById: id => { const f = files[+id - 1]; if (!f) throw new Error("no file"); return { getBlob: () => ({ getBytes: () => f.blob.getBytes(), getContentType: () => f.blob.type || "image/jpeg" }), getSize: () => f.bytes }; }, createFolder: mkFolder, getFolderById: id => { const f = folders.get(id); if (!f) throw new Error("no folder"); return f; } },

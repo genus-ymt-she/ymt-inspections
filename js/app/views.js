@@ -22,8 +22,11 @@ async function route(){const seq=++ROUTE_SEQ;const h=location.hash||"#home";cons
   if(v==="reports")return viewReports(id);
   if(v==="emergency")return viewEmergency(id,id2);
   if(v==="traffic")return viewTraffic(id);
+  if(v==="status")return viewStatus();
+  if(v==="history")return viewHistory();
+  if(v==="reference")return viewReference(id);
   return viewHome()}
-function setNav(v){const m={home:"home","":"home",inspections:"home",myday:"home",ta:"home",radio:"home",insights:"insights",dash:"insights",actions:"actions",reports:"actions",emergency:"emergency",traffic:"traffic"};const k=m[v]||"";
+function setNav(v){const m={home:"home","":"home",inspections:"home",myday:"home",ta:"home",radio:"home",insights:"insights",dash:"insights",actions:"actions",reports:"actions",emergency:"emergency",traffic:"traffic",status:"home",history:"home",reference:"home"};const k=m[v]||"";
   document.querySelectorAll("#tabs a").forEach(a=>{const on=a.dataset.t===k;a.classList.toggle("on",on);if(on)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
 function setHeader(title,sub,btn){$("#hTitle").textContent=title;$("#hSub").textContent=sub;const b=$("#hBtn");
   if(btn){b.innerHTML=(btn.icon?ic(btn.icon):"")+(btn.label?`<span>${esc(btn.label)}</span>`:"");b.setAttribute("aria-label",btn.aria||btn.label||"");b.onclick=btn.fn;b.classList.remove("hide")}else b.classList.add("hide")}
@@ -48,7 +51,7 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   const sentAll=(await dbAll("sent")).sort((a,b)=>b.sentAt-a.sentAt);const ob=await dbAll("outbox");if(stale(seq))return;
   const reg=regAll();const st=regStats(reg);const mine=reg.filter(f=>isMine(f)&&f.status==="Open");
   const mon=new Date();mon.setDate(1);mon.setHours(0,0,0,0);const sentMonth=sentAll.filter(s=>s.sentAt>=mon.getTime()).length;
-  let h=`<section class="hero"><div class="hi">${esc(greeting())}${me?",":""}</div><h1>${esc(firstName(me)||"Welcome")}</h1>
+  let h=`<div id="stp">${statusPanelHTML()}</div><div id="hcd">${historyCardHTML()}</div><section class="hero"><div class="hi">${esc(greeting())}${me?",":""}</div><h1>${esc(firstName(me)||"Welcome")}</h1>
    <div class="proj">${ic("pin","s")} ${esc(CONFIG.jobNo)} · ${esc(CONFIG.projectShort)} · ${new Date().toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"})}</div>
    ${wxHTML()}
    <div class="kp"><button onclick="document.getElementById('drafts')?.scrollIntoView({behavior:'smooth'})"><b>${drafts.length}</b><span>In progress</span></button>
@@ -65,6 +68,7 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
    <button class="tile" onclick="go('#report/positive')"><span class="ti t-green">${ic("star","l")}</span><b>Positive</b><span>Observation</span></button>
    <button class="tile" onclick="go('#ta')"><span class="ti t-amber">${ic("hardhat","l")}</span><b>Trade Assistants</b><span>Fuel register · fire trailer</span></button>
    <button class="tile radio ${RADIO.playing?"on":""}" onclick="go('#radio')"><span class="ti t-blue">${ic("radio","l")}</span><b>PARRON Radio</b><span>${RADIO.playing?"Now playing":"Shuffle play"}</span></button></div>`;}
+  h+=`<div id="refsec">${referenceHTML()}</div>`;
   if(ob.length)h+=`<div class="outbox">${ic("inbox")}<div><b>Outbox – ${ob.length} report${ob.length>1?"s":""} waiting to send</b><div class="muted" style="margin:4px 0 8px">${ob.map(o=>`${esc(o.title)} · ${esc(o.location)}`).join("<br>")}<br>They send automatically when the phone has signal${ob[0].lastError?` (last try: ${esc(ob[0].lastError)})`:""}.</div><button class="btn o s" onclick="flushOutbox(true)">${ic("send","s")} Send now</button></div></div>`;
   {const sod=new Date();sod.setHours(0,0,0,0);const stale=drafts.filter(d=>d.created<sod.getTime());
    if(stale.length)h+=`<div class="alert red">${ic("clock")}<div><b>${stale.length} unsent inspection${stale.length>1?"s":""} started before today.</b> Finish and send ${stale.length>1?"them":"it"} – or delete if no longer needed.</div></div>`}
@@ -82,6 +86,8 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   h+=`<p class="foot">PARRON v${esc(CONFIG.appVersion)} · Proactive Assessment, Reporting, Risk &amp; Observation Network<br>Works offline · Data stays on this phone until you send it</p>`;
   render(h);
   regRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home")viewHome()});
+  stRefresh().then(ch=>{const e=document.getElementById("stp");if(ch&&e&&!stale(seq))e.innerHTML=statusPanelHTML()});
+  histLoad().then(ch=>{const e=document.getElementById("hcd");if(ch&&e&&!stale(seq))e.innerHTML=historyCardHTML()});
   Promise.all([wxRefresh(),fdrRefresh()]).then(r=>{if(r.some(Boolean)&&(location.hash||"#home")==="#home"&&!stale(seq)){const w=document.querySelector(".hero .wx");if(w)w.outerHTML=wxHTML()}})}
 /* ---------- inspection library (own page: search + categories) ---------- */
 async function viewInspections(){const seq=ROUTE_SEQ;setHeader("Inspections",`${LIB_TABS().length} forms · pick one to start`,{icon:"back",aria:"Back",fn:()=>go("#home")});
