@@ -29,8 +29,8 @@ const WEEKLY_HOUR = 7;                        // weekly summary every Monday bet
 const REMINDER_HOUR = 5;                      // personal reminder emails between 5 and 6 am Perth time
 // Fire Danger Rating: Bureau of Meteorology forecast products tried in order (fire-district areas are read from
 // whichever responds). Choose the district once in the app (Settings > Fire Danger Rating, Manager mode).
-const FDR_PRODUCTS = ['IDW15100'];             // WA fire weather district forecast (Badgingarra is in Watheroo)
-const FDR_DEFAULT_AREA = /^Watheroo$/i;
+const FDR_PRODUCTS = ['IDW15100'];             // WA fire weather district forecast (Hill River site: Lesueur)
+const FDR_DEFAULT_AREA = /^Lesueur$/i;
 const ARCHIVE_PDFS = true;                    // save a copy of every report PDF to Google Drive
 const MAX_PER_MINUTE = 90;                    // simple flood protection for the public web app link
 const APP_URL = 'https://genus-ymt-she.github.io/ymt-inspections/';   // link used in action emails

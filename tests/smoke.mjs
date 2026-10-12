@@ -24,8 +24,8 @@ const port = srv.address().port;
 const relay = createRelay({ pin: "2468", fetch: () => null });
 const perth = n => new Date(Date.now() + 8 * 3600e3 + n * 864e5).toISOString().slice(0, 10);
 const FEED = { source: "Bureau of Meteorology", issued: perth(0) + "T04:35:00+08:00", districts: {
-  Watheroo: [{ date: perth(-1), rating: "Moderate" }, { date: perth(0), rating: "High", fbi: 31 }, { date: perth(1), rating: "Extreme", fbi: 55 }],
-  Lesueur: [{ date: perth(0), rating: "Moderate" }] } };
+  Lesueur: [{ date: perth(-1), rating: "Moderate" }, { date: perth(0), rating: "High", fbi: 31 }, { date: perth(1), rating: "Extreme", fbi: 55 }],
+  Watheroo: [{ date: perth(0), rating: "Moderate" }] } };
 const WX = { current: { temperature_2m: 27.4, relative_humidity_2m: 22, wind_speed_10m: 24, wind_direction_10m: 112, wind_gusts_10m: 41, weather_code: 1 },
   daily: { temperature_2m_max: [33.1, 30], temperature_2m_min: [14.2, 13], precipitation_probability_max: [10, 0], wind_speed_10m_max: [31, 20], wind_gusts_10m_max: [52, 30], wind_direction_10m_dominant: [100, 200], weather_code: [1, 0] } };
 const errors = [];
@@ -201,7 +201,7 @@ await step("home shows Badgingarra weather and the official FDR; manager can ove
   for (const want of ["High", "Tomorrow: Extreme", "27°", "ESE 24 km/h", "gusts 41", "10% rain", "Badgingarra"]) if (!t.includes(want)) throw new Error("weather strip missing " + want + ": " + t);
   await page.evaluate(() => window.scrollTo(0, 0)); await settle(page); await shot(page, "17-home-weather");
   await page.click(".fdr"); await page.waitForSelector(".fdrbig"); const info = await page.textContent(".sheet");
-  if (!/Watheroo/.test(info) || !/Bureau of Meteorology/.test(info) || !/Be ready to act/.test(info)) throw new Error("FDR details: " + info.slice(0, 200));
+  if (!/Lesueur/.test(info) || !/Bureau of Meteorology/.test(info) || !/Be ready to act/.test(info)) throw new Error("FDR details: " + info.slice(0, 200));
   await settle(page); await shot(page, "18-fdr-details");
   await page.selectOption("#fdrSet", "Extreme"); await page.click("text=Save for everyone"); await page.waitForFunction(() => /Extreme/.test(document.querySelector(".fdr").textContent), null, { timeout: 10000 });
   if (relay.get({ action: "weather", key: relay.key }).fdr.today !== "Extreme") throw new Error("manual FDR not stored");
