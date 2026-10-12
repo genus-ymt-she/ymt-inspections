@@ -64,7 +64,7 @@ export function createRelay({ pin = "2468", fetch: fetchHandler = null } = {}) {
   let ss = null;
   const folders = new Map();
   const mkFolder = (name) => { const id = "f" + (folders.size + 1); const f = { id, name, subs: new Map(), getId: () => id,
-    createFile: (blob) => { const url = `https://drive.google.com/file/d/${files.length + 1}`; files.push({ folder: name, name: blob.getName(), bytes: blob.getBytes().length, url }); return { getUrl: () => url }; },
+    createFile: (blob) => { const url = `https://drive.google.com/file/d/${files.length + 1}`; files.push({ folder: name, name: blob.getName(), bytes: blob.getBytes().length, url, blob }); return { getUrl: () => url }; },
     getFoldersByName: (n) => { const s = f.subs.get(n); let used = false; return { hasNext: () => !!s && !used, next: () => { used = true; return s; } }; },
     createFolder: (n) => { const s = mkFolder(name + "/" + n); f.subs.set(n, s); return s; } }; folders.set(id, f); return f; };
   const ctx = {
@@ -75,9 +75,9 @@ export function createRelay({ pin = "2468", fetch: fetchHandler = null } = {}) {
     CacheService: { getScriptCache: () => ({ get: k => cache.has(k) ? cache.get(k) : null, put: (k, v) => cache.set(k, v) }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     MailApp: { sendEmail: (a, b, c) => mail.push(typeof a === "object" ? a : { to: a, subject: b, body: c }), getRemainingDailyQuota: () => 100 },
-    DriveApp: { createFolder: mkFolder, getFolderById: id => { const f = folders.get(id); if (!f) throw new Error("no folder"); return f; } },
+    DriveApp: { getFileById: id => { const f = files[+id - 1]; if (!f) throw new Error("no file"); return { getBlob: () => ({ getBytes: () => f.blob.getBytes(), getContentType: () => f.blob.type || "image/jpeg" }), getSize: () => f.bytes }; }, createFolder: mkFolder, getFolderById: id => { const f = folders.get(id); if (!f) throw new Error("no folder"); return f; } },
     ScriptApp: { WeekDay: { MONDAY: 'MONDAY' }, getProjectTriggers: () => [], deleteTrigger() {}, newTrigger: (fn) => { const t = { fn, timeBased: () => t, atHour: () => t, everyDays: () => t, onWeekDay: () => t, inTimezone: () => t, create: () => (triggers.push(fn), t) }; return t; } },
-    Utilities: { formatDate, base64Decode: s => Buffer.from(s, "base64"), newBlob: (bytes, type, name) => ({ getBytes: () => bytes, getName: () => name, type }) },
+    Utilities: { formatDate, base64Decode: s => Buffer.from(s, "base64"), base64Encode: b => Buffer.from(b).toString("base64"), newBlob: (bytes, type, name) => ({ getBytes: () => bytes, getName: () => name, type }) },
     ContentService: { MimeType: { JSON: "json" }, createTextOutput: s => ({ content: s, setMimeType() { return this; } }) },
   };
   vm.createContext(ctx);

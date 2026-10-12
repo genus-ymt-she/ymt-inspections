@@ -218,6 +218,7 @@ await step("quick hazard report (Critical) goes to the register and alerts", asy
   await page.click("text=No – needs action");
   await page.fill("#app textarea >> nth=2", "Move drum into bunded storage");
   await page.selectOption(".pp select", "Paul Delaney");
+  await page.setInputFiles('#obPh input[type=file] >> nth=1', path.join(root, "icon-192.png")); await page.waitForSelector("#obPh .photos img");
   await settle(page); await shot(page, "09-hazard-report");
   await page.click("text=Send hazard report"); await page.waitForFunction(() => location.hash === "#home" || location.hash === "", null, { timeout: 20000 });
   const sent = relay.mail.slice(before);
@@ -233,6 +234,19 @@ await step("positive observation is logged", async () => {
   await page.click("text=Send observation"); await page.waitForFunction(() => location.hash === "#home" || location.hash === "", null, { timeout: 20000 });
   const j = relay.get({ action: "dashboard", key: relay.key });
   if (j.obs.length !== 2) throw new Error("observations logged: " + j.obs.length);
+});
+await step("submitted hazard and positive reports open in the app, with photos and the linked action", async () => {
+  await page.evaluate(() => { localStorage.removeItem("reps"); REPS = { at: 0, list: [], full: false }; go("#actions"); }); await page.waitForSelector(".acttabs");
+  await page.click(".acttabs >> text=Reports"); await page.waitForSelector(".replist .rep");
+  const n = await page.$$eval(".replist .rep", e => e.length); if (n < 2) throw new Error("reports listed: " + n);
+  await page.click(".chips >> text=Open hazards"); await page.waitForSelector(".replist .rep.hz");
+  await settle(page); await shot(page, "33-reports-list");
+  await page.click(".replist .rep.hz >> nth=0"); await page.waitForSelector(".rephead");
+  await page.waitForSelector("#repph img", { timeout: 15000 });
+  const t = await page.textContent("#app"); if (!/Unbunded fuel drum/.test(t) || !/Move drum into bunded storage/.test(t) || !/Paul Delaney/.test(t)) throw new Error("report detail: " + t.slice(0, 300));
+  await settle(page); await shot(page, "34-report-detail");
+  await page.click(".card.act"); await page.waitForSelector(".sheet"); if (!/Open the hazard report/.test(await page.textContent(".sheet"))) throw new Error("action has no link back to the report");
+  await page.evaluate(() => closeSheet());
 });
 await step("Insights shows lead indicators (no targets)", async () => {
   await page.evaluate(() => { REG.at = 0; go("#insights"); }); await page.waitForFunction(() => /HAZARD REPORTS/.test((document.querySelector("#dbody") || {}).textContent || ""));

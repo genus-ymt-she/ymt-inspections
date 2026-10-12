@@ -26,7 +26,8 @@ function drawReport(){const o=OBS;const H=o.type==="hazard";const k=riskOf(o.con
   else h+=`<div class="card"><label class="f">Person or crew recognised <span class="muted">· optional</span></label><input class="t" list="teamnames2" value="${esc(o.recognised)}" oninput="OBS.recognised=this.value" placeholder="e.g. Civil crew A, Joe Bloggs"><datalist id="teamnames2">${TEAM.map(p=>`<option value="${esc(p.name)}">`).join("")}</datalist>
     <label class="f">Category</label><div class="chips">${OBS_CATEGORIES.map(c=>`<button class="chip ${o.category===c?"on":""}" onclick="obsSet('category',OBS.category===${JSON.stringify(c).replace(/"/g,"&quot;")}?'':${JSON.stringify(c).replace(/"/g,"&quot;")},1)">${esc(c)}</button>`).join("")}</div></div>`;
   h+=`<button class="btn o w" style="margin-top:14px" onclick="sendObs()">${ic("send","s")} Send ${H?"hazard report":"observation"}</button>
-   <p class="muted" style="text-align:center">Goes straight to the SHE Manager. No signal? It waits in the Outbox and sends automatically.</p>`;
+   <p class="muted" style="text-align:center">Goes straight to the SHE Manager. No signal? It waits in the Outbox and sends automatically.</p>
+   <p style="text-align:center"><button class="linkbtn" onclick="go('#reports')">${ic("eye","s")} View submitted reports</button></p>`;
   render(h)}
 function obsType(t){if(OBS.type===t)return;const keep={location:OBS.location,description:OBS.description,photos:OBS.photos};OBS=Object.assign(newObs(t),keep);location.replace("#report/"+t);drawReport()}
 function obsSet(f,v,redraw){OBS[f]=v;if((f==="cons"||f==="like"||f==="fixed")&&OBS.fixed===false&&!OBS.due){const k=riskOf(OBS.cons,OBS.like);if(k)OBS.due=addDaysISO(k.days)}if(redraw)drawReport()}

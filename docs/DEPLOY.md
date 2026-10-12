@@ -103,3 +103,12 @@ The site access code closes that gap without any IT involvement:
    Reports waiting in the Outbox send as soon as the code is entered.
 - Give the code to the team in person or by text – never put it in GitHub.
 - To change it, edit `SITE_CODE`; every phone asks for the new code on its next request. Delete the property to switch the check off.
+
+## Hazard & positive reports in the app
+
+**Actions → Reports** lists every hazard report and positive observation sent from site (last 13 months), with search and filters
+(All / Hazards / Open hazards / Positive). Tap one to see the full report, its photos and the linked corrective action.
+Insights (Lead indicators) and the hazard form also link to it.
+- Needs the latest relay code (paste, Save, Deploy → Manage deployments → Edit → New version). Before that, the list shows the
+  last two months without photos.
+- Photos are read from the relay's Drive folder; only photos that belong to a logged report can be opened.
