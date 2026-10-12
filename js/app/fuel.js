@@ -207,7 +207,7 @@ async function buildFuelPDF(d){const {jsPDF}=window.jspdf;const doc=new jsPDF({u
   PDFBLOB=doc.output("blob");return PDFBLOB}
 
 /* ---------- Trade Assistants page ---------- */
-async function viewTA(){const seq=ROUTE_SEQ;setHeader("Trade Assistants","Daily register & fire trailer pre-start",{icon:"back",aria:"Back",fn:()=>go("#home")});
+async function viewTA(){const seq=ROUTE_SEQ;setHeader("Trade Assistants","Daily register & fire trailer pre-start",{icon:"back",aria:"Back",fn:()=>go("#inspect")});
   const drafts=await dbAll("drafts"),sent=await dbAll("sent");if(stale(seq))return;const today=todayISO();
   const fd=drafts.filter(x=>x.tab===28).sort((a,b)=>b.updated-a.updated);const fToday=fd.find(x=>fuelDate(x)===today);
   const fSent=sent.filter(s=>s.no==="28"&&new Date(s.sentAt).toDateString()===new Date().toDateString()).sort((a,b)=>b.sentAt-a.sentAt)[0];

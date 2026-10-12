@@ -16,6 +16,7 @@ async function route(){const seq=++ROUTE_SEQ;const h=location.hash||"#home";cons
   if(v==="myday")return viewMyDay();
   if(v==="ta")return viewTA();
   if(v==="radio")return viewRadio();
+  if(v==="inspect")return viewInspect();
   if(v==="inspections")return viewInspections();
   if(v==="report")return viewReport(id||"hazard");
   if(v==="actions")return viewActions(id?decodeURIComponent(id):"");
@@ -26,7 +27,7 @@ async function route(){const seq=++ROUTE_SEQ;const h=location.hash||"#home";cons
   if(v==="history")return viewHistory();
   if(v==="reference")return viewReference(id);
   return viewHome()}
-function setNav(v){const m={home:"home","":"home",inspections:"home",myday:"home",ta:"home",radio:"home",insights:"insights",dash:"insights",actions:"actions",reports:"actions",emergency:"emergency",traffic:"traffic",status:"home",history:"home",reference:"home"};const k=m[v]||"";
+function setNav(v){const m={home:"home","":"home",inspect:"inspect",inspections:"inspect",report:"inspect",ta:"inspect",myday:"home",radio:"home",insights:"insights",dash:"insights",actions:"actions",reports:"actions",emergency:"emergency",traffic:"traffic",status:"home",history:"home",reference:"home"};const k=m[v]||"";
   document.querySelectorAll("#tabs a").forEach(a=>{const on=a.dataset.t===k;a.classList.toggle("on",on);if(on)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
 function setHeader(title,sub,btn){$("#hTitle").textContent=title;$("#hSub").textContent=sub;const b=$("#hBtn");
   if(btn){b.innerHTML=(btn.icon?ic(btn.icon):"")+(btn.label?`<span>${esc(btn.label)}</span>`:"");b.setAttribute("aria-label",btn.aria||btn.label||"");b.onclick=btn.fn;b.classList.remove("hide")}else b.classList.add("hide")}
@@ -46,34 +47,49 @@ window.addEventListener("online",setNet);window.addEventListener("offline",setNe
 /* ---------- home ---------- */
 let LIB={q:"",cat:"all"};
 function ring(p,col){const r=18,c=2*Math.PI*r;return `<div class="ringw"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="${r}" fill="none" stroke="var(--surface-3)" stroke-width="5"/><circle cx="22" cy="22" r="${r}" fill="none" stroke="${col||"var(--accent)"}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(c*Math.max(0,Math.min(1,p))).toFixed(1)} ${c.toFixed(1)}"/></svg><b>${Math.round(p*100)}%</b></div>`}
+/* Home – the page PARRON opens to: site status (HVMB/TFB/FDR), this day in history, welcome, My Day, radio, reference */
 async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectShort,SETTINGS_BTN);
-  const me=ls("inspector")||"";const drafts=(await dbAll("drafts")).sort((a,b)=>b.updated-a.updated);
-  const sentAll=(await dbAll("sent")).sort((a,b)=>b.sentAt-a.sentAt);const ob=await dbAll("outbox");if(stale(seq))return;
+  const me=ls("inspector")||"";const drafts=await dbAll("drafts");const ob=await dbAll("outbox");if(stale(seq))return;
   const reg=regAll();const st=regStats(reg);const mine=reg.filter(f=>isMine(f)&&f.status==="Open");
-  const mon=new Date();mon.setDate(1);mon.setHours(0,0,0,0);const sentMonth=sentAll.filter(s=>s.sentAt>=mon.getTime()).length;
+  const mon=new Date();mon.setDate(1);mon.setHours(0,0,0,0);const sentMonth=(await dbAll("sent")).filter(s=>s.sentAt>=mon.getTime()).length;if(stale(seq))return;
   let h=`<div id="stp">${statusPanelHTML()}</div><div id="hcd">${historyCardHTML()}</div><section class="hero"><div class="hi">${esc(greeting())}${me?",":""}</div><h1>${esc(firstName(me)||"Welcome")}</h1>
    <div class="proj">${ic("pin","s")} ${esc(CONFIG.jobNo)} · ${esc(CONFIG.projectShort)} · ${new Date().toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"})}</div>
    ${wxHTML()}
-   <div class="kp"><button onclick="document.getElementById('drafts')?.scrollIntoView({behavior:'smooth'})"><b>${drafts.length}</b><span>In progress</span></button>
+   <div class="kp"><button onclick="go('#inspect')"><b>${drafts.length}</b><span>In progress</span></button>
    <button onclick="go('#actions')" class="${mine.length?"warn":""}"><b>${mine.length}</b><span>My actions</span></button>
    <button onclick="ACTF.f='overdue';go('#actions')" class="${st.overdue?"bad":""}"><b>${st.overdue}</b><span>Overdue</span></button>
    <button onclick="go('#insights')"><b>${sentMonth}</b><span>This month</span></button></div></section>`;
+  if(!me)h+=`<div class="alert blue">${ic("user")}<div><b>Who are you?</b> Pick your name once so it fills in on every report and your actions show here.<br><button class="btn o s" style="margin-top:8px" onclick="askName().then(()=>viewHome())">Pick my name</button></div></div>`;
   {const due=mdDueReminders();if(due.length)h+=`<button class="remind" onclick="go('#myday')">${ic("clock")}<div><b>Reminder${due.length>1?"s":""} today</b>${due.slice(0,3).map(x=>`<span>${esc(x.text)}${x.time?` · ${esc(x.time)}`:""}</span>`).join("")}${due.length>3?`<span>+${due.length-3} more</span>`:""}</div>${ic("chev")}</button>`}
+  if(ob.length)h+=`<button class="card tap home-ob" onclick="go('#inspect')">${ic("inbox")}<span><b>Outbox – ${ob.length} report${ob.length>1?"s":""} waiting to send</b><small>They send automatically when the phone has signal</small></span>${ic("chev")}</button>`;
   {const n=mdTodayCount();h+=`<div class="tiles">
    <button class="tile wide myday" onclick="go('#myday')"><span class="ti">${ic("cal","l")}</span><span class="tw"><b>My Day ${ic("lock","s")}</b><small>${n?`${n} to do today`:"Plan your day"} · private to you</small></span>${ic("chev")}</button>
+   <button class="tile wide" onclick="go('#inspect')"><span class="ti t-info">${ic("clipboard","l")}</span><span class="tw"><b>Inspect &amp; report</b><small>Inspections · observations · hazards${drafts.length?` · ${drafts.length} in progress`:""}</small></span>${ic("chev")}</button>
+   <button class="tile wide radio ${RADIO.playing?"on":""}" onclick="go('#radio')"><span class="ti t-blue">${ic("radio","l")}</span><span class="tw"><b>PARRON Radio</b><small>${RADIO.playing?"Now playing":"Shuffle play"}</small></span>${ic("chev")}</button></div>`}
+  h+=`<div id="refsec">${referenceHTML()}</div>`;
+  if(!recipientOK())h+=`<div class="alert red">${ic("alert")}<div><b>Report recipient not set.</b> Set it under Settings.</div></div>`;
+  h+=`<p class="foot">PARRON v${esc(CONFIG.appVersion)} · Proactive Assessment, Reporting, Risk &amp; Observation Network<br>Works offline · Data stays on this phone until you send it</p>`;
+  render(h);
+  regRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home"&&!stale(seq))viewHome()});
+  stRefresh().then(ch=>{const e=document.getElementById("stp");if(ch&&e&&!stale(seq))e.innerHTML=statusPanelHTML()});
+  histLoad().then(ch=>{const e=document.getElementById("hcd");if(ch&&e&&!stale(seq))e.innerHTML=historyCardHTML()});
+  Promise.all([wxRefresh(),fdrRefresh()]).then(r=>{if(r.some(Boolean)&&(location.hash||"#home")==="#home"&&!stale(seq)){const w=document.querySelector(".hero .wx");if(w)w.outerHTML=wxHTML()}})}
+/* Inspect tab – start an inspection or report, carry on a draft, see what was sent */
+async function viewInspect(){const seq=ROUTE_SEQ;setHeader("Inspect","Inspections, observations and reports",SETTINGS_BTN);
+  const me=ls("inspector")||"";const drafts=(await dbAll("drafts")).sort((a,b)=>b.updated-a.updated);
+  const sentAll=(await dbAll("sent")).sort((a,b)=>b.sentAt-a.sentAt);const ob=await dbAll("outbox");if(stale(seq))return;
+  let h=`<div class="tiles">
    <button class="tile wide" onclick="go('#inspections')"><span class="ti t-info">${ic("clipboard","l")}</span><span class="tw"><b>Inspection</b><small>${LIB_TABS().length} forms · browse by category</small></span>${ic("chev")}</button>
    <button class="tile" onclick="startInsp(24)"><span class="ti t-accent">${ic("eye","l")}</span><b>Task Observation</b><span>Observe a crew</span></button>
    <button class="tile" onclick="startInsp(23)"><span class="ti t-purple">${ic("users","l")}</span><b>Mentoring</b><span>Discussion record</span></button>
    <button class="tile" onclick="go('#report/hazard')"><span class="ti t-red">${ic("alert","l")}</span><b>Hazard</b><span>Quick report</span></button>
    <button class="tile" onclick="go('#report/positive')"><span class="ti t-green">${ic("star","l")}</span><b>Positive</b><span>Observation</span></button>
-   <button class="tile" onclick="go('#ta')"><span class="ti t-amber">${ic("hardhat","l")}</span><b>Trade Assistants</b><span>Fuel register · fire trailer</span></button>
-   <button class="tile radio ${RADIO.playing?"on":""}" onclick="go('#radio')"><span class="ti t-blue">${ic("radio","l")}</span><b>PARRON Radio</b><span>${RADIO.playing?"Now playing":"Shuffle play"}</span></button></div>`;}
-  h+=`<div id="refsec">${referenceHTML()}</div>`;
+   <button class="tile wide" onclick="go('#ta')"><span class="ti t-amber">${ic("hardhat","l")}</span><span class="tw"><b>Trade Assistants</b><small>Fuel register · fire trailer</small></span>${ic("chev")}</button></div>`;
   if(ob.length)h+=`<div class="outbox">${ic("inbox")}<div><b>Outbox – ${ob.length} report${ob.length>1?"s":""} waiting to send</b><div class="muted" style="margin:4px 0 8px">${ob.map(o=>`${esc(o.title)} · ${esc(o.location)}`).join("<br>")}<br>They send automatically when the phone has signal${ob[0].lastError?` (last try: ${esc(ob[0].lastError)})`:""}.</div><button class="btn o s" onclick="flushOutbox(true)">${ic("send","s")} Send now</button></div></div>`;
-  {const sod=new Date();sod.setHours(0,0,0,0);const stale=drafts.filter(d=>d.created<sod.getTime());
-   if(stale.length)h+=`<div class="alert red">${ic("clock")}<div><b>${stale.length} unsent inspection${stale.length>1?"s":""} started before today.</b> Finish and send ${stale.length>1?"them":"it"} – or delete if no longer needed.</div></div>`}
+  {const sod=new Date();sod.setHours(0,0,0,0);const old=drafts.filter(d=>d.created<sod.getTime());
+   if(old.length)h+=`<div class="alert red">${ic("clock")}<div><b>${old.length} unsent inspection${old.length>1?"s":""} started before today.</b> Finish and send ${old.length>1?"them":"it"} – or delete if no longer needed.</div></div>`}
   if(!recipientOK())h+=`<div class="alert red">${ic("alert")}<div><b>Report recipient not set.</b> Set it under Settings.</div></div>`;
-  if(!me)h+=`<div class="alert blue">${ic("user")}<div><b>Who are you?</b> Pick your name once so it fills in on every report and your actions show here.<br><button class="btn o s" style="margin-top:8px" onclick="askName().then(()=>viewHome())">Pick my name</button></div></div>`;
+  if(!me)h+=`<div class="alert blue">${ic("user")}<div><b>Who are you?</b> Pick your name once so it fills in on every report.<br><button class="btn o s" style="margin-top:8px" onclick="askName().then(()=>viewInspect())">Pick my name</button></div></div>`;
   if(drafts.length){h+=`<h2 id="drafts">Continue <span class="cnt">${drafts.length}</span></h2>`;
     drafts.forEach(d=>{const t=tabByNum(d.tab);const FUEL=t.kind==="fuel";const REC=t.kind==="record"||FUEL;const s=REC?null:stats(d);const p=FUEL?(FU(d).amAt?.5:.1):REC?Math.max(0,8-recProblems(d).length)/8:(s.total?s.rated/s.total:0);
       h+=`<div class="card tap draft" onclick="go('#insp/${d.id}')"><div class="tab">${ring(p)}<div class="x"><b>${pad(t.num)} · ${esc(t.short)}</b><span>${esc(d.details.location||"No location yet")} · ${fmtDT(d.details.datetime)}</span>
@@ -83,14 +99,9 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   if(recent.length){h+=`<h2>Recently sent <span class="cnt">${sentAll.length}</span></h2>`;
     recent.forEach(s=>{h+=`<div class="card flat"><div class="tab"><div class="n" style="background:var(--c)">${ic("check")}</div><div class="x"><b>${esc(s.title)}</b><span>${esc(s.reportId)} · ${esc(s.location)} · ${new Date(s.sentAt).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}</span>
       <div class="libmeta">${s.ua?`<span class="tag r">${s.ua} UA</span>`:""}${s.ni?`<span class="tag o">${s.ni} NI</span>`:""}${s.snn?`<span class="tag o">${s.snn} SNN</span>`:""}${!s.ua&&!s.ni&&s.ua!==undefined?`<span class="tag g">No findings</span>`:""}${s.via?`<span class="tag g">${ic("check","s")} Emailed</span>`:""}</div></div></div></div>`})}
-  h+=`<p class="foot">PARRON v${esc(CONFIG.appVersion)} · Proactive Assessment, Reporting, Risk &amp; Observation Network<br>Works offline · Data stays on this phone until you send it</p>`;
-  render(h);
-  regRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home")viewHome()});
-  stRefresh().then(ch=>{const e=document.getElementById("stp");if(ch&&e&&!stale(seq))e.innerHTML=statusPanelHTML()});
-  histLoad().then(ch=>{const e=document.getElementById("hcd");if(ch&&e&&!stale(seq))e.innerHTML=historyCardHTML()});
-  Promise.all([wxRefresh(),fdrRefresh()]).then(r=>{if(r.some(Boolean)&&(location.hash||"#home")==="#home"&&!stale(seq)){const w=document.querySelector(".hero .wx");if(w)w.outerHTML=wxHTML()}})}
+  render(h)}
 /* ---------- inspection library (own page: search + categories) ---------- */
-async function viewInspections(){const seq=ROUTE_SEQ;setHeader("Inspections",`${LIB_TABS().length} forms · pick one to start`,{icon:"back",aria:"Back",fn:()=>go("#home")});
+async function viewInspections(){const seq=ROUTE_SEQ;setHeader("Inspections",`${LIB_TABS().length} forms · pick one to start`,{icon:"back",aria:"Back",fn:()=>go("#inspect")});
   const sentAll=(await dbAll("sent")).sort((a,b)=>b.sentAt-a.sentAt);if(stale(seq))return;
   render(`<div class="search">${ic("search")}<input id="libq" type="search" placeholder="Search inspections, e.g. crane, permit, fire" value="${esc(LIB.q)}" autocomplete="off" aria-label="Search inspections"></div>
    <div class="libbar"><div class="chips scroll" id="libcats"></div><div class="vtog" role="group" aria-label="List view">${[["compact","layers","Compact view"],["detail","clipboard","Detailed view"]].map(([k,i,l])=>`<button class="${libView()===k?"on":""}" aria-label="${l}" aria-pressed="${libView()===k}" onclick="setLibView('${k}')">${ic(i,"s")}</button>`).join("")}</div></div><div class="lib ${libView()}" id="lib"></div>`);

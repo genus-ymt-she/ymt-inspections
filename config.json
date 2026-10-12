@@ -1,7 +1,7 @@
 {
- "_note": "Paste the Google Apps Script web app URL (ending /exec) into relayUrl. Leave key unchanged. hvmbUrl = Shire of Dandaragan harvest & vehicle movement ban page; chemAlertUrl = Genus ChemAlert login page (opens in the phone's browser).",
+ "_note": "Paste the Google Apps Script web app URL (ending /exec) into relayUrl. Leave key unchanged. hvmbUrl = Shire of Dandaragan HVMB text notification sign-up page; chemAlertUrl = Genus ChemAlert login page (opens in the phone's browser).",
  "relayUrl": "https://script.google.com/macros/s/AKfycbwmBAg35thgfpCAexRMCgPq2_ucgHg6Dy2qh-Ep3RvES27VKVefMCs9pyrPtiuXj1V8/exec",
  "key": "prn-ymt-7Qk2vX9m",
- "hvmbUrl": "",
- "chemAlertUrl": ""
+ "hvmbUrl": "https://www.dandaragan.wa.gov.au/forms/harvest-and-vehicle-movement-ban-notification/24",
+ "chemAlertUrl": "https://chemalert.rmt.com.au/genus/login/"
 }

@@ -4,10 +4,10 @@
    responsible person). Positive observations are logged as a lead indicator. Both work offline (Outbox). */
 let OBS=null;
 function newObs(type){return {type,location:"",description:"",immediate:"",fixed:null,action:"",owner:"",ownerEmail:"",due:"",cons:0,like:0,category:"",recognised:"",photos:[],at:Date.now()}}
-async function viewReport(type){if(!(ls("inspector")||"").trim()){const n=await askName();if(!n){go("#home");return}}
+async function viewReport(type){if(!(ls("inspector")||"").trim()){const n=await askName();if(!n){go("#inspect");return}}
   if(!OBS||OBS.type!==type)OBS=newObs(type==="positive"?"positive":"hazard");
   const H=OBS.type==="hazard";
-  setHeader(H?"Report a hazard":"Positive observation",H?"Quick report – goes to the SHE Manager":"Recognise good safety practice",{icon:"back",aria:"Back",fn:()=>{go("#home")}});
+  setHeader(H?"Report a hazard":"Positive observation",H?"Quick report – goes to the SHE Manager":"Recognise good safety practice",{icon:"back",aria:"Back",fn:()=>{go("#inspect")}});
   drawReport()}
 function drawReport(){const o=OBS;const H=o.type==="hazard";const k=riskOf(o.cons,o.like);
   const scale=(f,list)=>`<div class="rscale" role="group">${list.map(([v,l])=>`<button class="${+o[f]===v?"on":""}" aria-pressed="${+o[f]===v}" onclick="obsSet('${f}',${v},1)">${esc(l)}</button>`).join("")}</div>`;
@@ -57,4 +57,4 @@ async function sendObs(){const o=OBS;const p=obsProblems(o);if(p.length){toast("
     payload:{action:"observation",uid,reportId:rid,to:recipient(),subject,text,html:obsHtml(o,k,rid,me),meta:{name:me,no:H?"HZ":"PO",title,location:o.location,started:new Date(o.at).toISOString()},
       obs:{type:o.type,description:o.description.trim(),immediate:o.immediate,category:o.category,recognised:o.recognised},photos:o.photos.map(x=>x.split(",")[1]),findings,report,alert:{supervisorEmail:sup?sup.email:""}}};
   await dbPut("outbox",item);OBS=null;toast("Sending…",1500);
-  const r=await sendItem(item);if(r.ok)celebrate(H?"Hazard report sent":"Observation sent",H?"The SHE Manager has been told":"Thanks for recognising good work");else toast("No connection – saved in the Outbox and will send automatically",5000);go("#home")}
+  const r=await sendItem(item);if(r.ok)celebrate(H?"Hazard report sent":"Observation sent",H?"The SHE Manager has been told":"Thanks for recognising good work");else toast("No connection – saved in the Outbox and will send automatically",5000);go("#inspect")}
