@@ -15,6 +15,8 @@ test("every app script is loaded once and listed in the offline cache", () => {
   const sw = fs.readFileSync(path.join(root, "sw.js"), "utf8");
   for (const f of files) assert.ok(sw.includes(`"./${f}"`), `${f} missing from sw.js FILES`);
   for (const f of fs.readdirSync(path.join(root, "js/app"))) assert.ok(files.includes(`js/app/${f}`), `js/app/${f} is not loaded by index.html`);
+  // emergency and traffic content must open with no signal
+  for (const dir of ["assets/emergency", "assets/traffic"]) for (const f of fs.readdirSync(path.join(root, dir))) assert.ok(sw.includes(`"./${dir}/${f}"`), `${dir}/${f} missing from sw.js FILES`);
 });
 
 test("no two scripts declare the same top-level name, and none hide a browser global", () => {
