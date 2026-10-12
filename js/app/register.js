@@ -66,5 +66,6 @@ async function flushUpdates(){if(FLUSH_UPD||!directOn()||navigator.onLine===fals
       else{ls("fupd",JSON.stringify(rest));toast(`Change not saved: ${(r&&r.error)||"unknown error"}`,5000)}}}
   finally{FLUSH_UPD=false;updateBadges()}}
 
-function updateBadges(){const a=$("#bdgA");if(!a)return;const st=regStats(regAll());
+function updateBadges(){const hb=$("#bdgH");if(hb){const n=alUnread().length;hb.textContent=n;hb.classList.toggle("hide",!n)}
+  const a=$("#bdgA");if(!a)return;const st=regStats(regAll());
   a.textContent=st.overdue;a.classList.toggle("hide",!st.overdue)}

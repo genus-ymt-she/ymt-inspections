@@ -154,3 +154,19 @@ Insights (Lead indicators) and the hazard form also link to it.
   Inspect & report shortcut, PARRON Radio, Reference (SNN, 330 kV, ChemAlert).
 - **Inspect**: Inspection library, Task Observation, Mentoring, Hazard, Positive, Trade Assistants, Outbox, drafts in
   progress and recently sent. Sending or saving an inspection returns here.
+
+## SHEQ Alerts – read and acknowledge (v3.7)
+
+- **Publish:** Settings → Manager mode on → *Publish a SHEQ Alert* (or the + on the SHEQ Alerts page). Type, priority
+  (Critical / Important / Info), title, what happened, what you must do, optional photo or PDF (8 MB). Optionally emailed
+  to the project team (Genus addresses in `TEAM`, js/app/config.js).
+- **Everyone:** the newest unread alert sits at the top of Home (Critical also pops up when PARRON opens) until they tap
+  *I have read and understood*. Acknowledgements with no signal wait on the phone and send later.
+- **Register:** sheets *SHEQ Alerts* and *Alert Acks* in the project log; the SHE Manager sees who has / hasn't read it.
+  The 6 pm daily email lists who on site is still outstanding; the Monday summary shows the acknowledgement rate.
+- **Roster sheet:** created with the team and their patterns. Fill in **First day of a swing** (any past swing start date)
+  for each person so people on R&R aren't chased. Flexible = Y (e.g. variable out days) counts the person as on site.
+  Add rows for anyone else who should acknowledge alerts.
+- Close an alert from its page (Manager mode) to take it off Home and the daily email; the register is kept.
+- Relay update required: paste the new `PARRON_Relay_Code.gs`, run `setup` once (creates the sheets and the roster), and
+  redeploy as a new version.

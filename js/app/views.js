@@ -26,8 +26,9 @@ async function route(){const seq=++ROUTE_SEQ;const h=location.hash||"#home";cons
   if(v==="status")return viewStatus();
   if(v==="history")return viewHistory();
   if(v==="reference")return viewReference(id);
+  if(v==="alerts")return viewAlerts(id);
   return viewHome()}
-function setNav(v){const m={home:"home","":"home",inspect:"inspect",inspections:"inspect",report:"inspect",ta:"inspect",myday:"home",radio:"home",insights:"insights",dash:"insights",actions:"actions",reports:"actions",emergency:"emergency",traffic:"traffic",status:"home",history:"home",reference:"home"};const k=m[v]||"";
+function setNav(v){const m={home:"home","":"home",inspect:"inspect",inspections:"inspect",report:"inspect",ta:"inspect",myday:"home",radio:"home",insights:"insights",dash:"insights",actions:"actions",reports:"actions",emergency:"emergency",traffic:"traffic",status:"home",history:"home",reference:"home",alerts:"home"};const k=m[v]||"";
   document.querySelectorAll("#tabs a").forEach(a=>{const on=a.dataset.t===k;a.classList.toggle("on",on);if(on)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
 function setHeader(title,sub,btn){$("#hTitle").textContent=title;$("#hSub").textContent=sub;const b=$("#hBtn");
   if(btn){b.innerHTML=(btn.icon?ic(btn.icon):"")+(btn.label?`<span>${esc(btn.label)}</span>`:"");b.setAttribute("aria-label",btn.aria||btn.label||"");b.onclick=btn.fn;b.classList.remove("hide")}else b.classList.add("hide")}
@@ -52,7 +53,7 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   const me=ls("inspector")||"";const drafts=await dbAll("drafts");const ob=await dbAll("outbox");if(stale(seq))return;
   const reg=regAll();const st=regStats(reg);const mine=reg.filter(f=>isMine(f)&&f.status==="Open");
   const mon=new Date();mon.setDate(1);mon.setHours(0,0,0,0);const sentMonth=(await dbAll("sent")).filter(s=>s.sentAt>=mon.getTime()).length;if(stale(seq))return;
-  let h=`<div id="stp">${statusPanelHTML()}</div><div id="hcd">${historyCardHTML()}</div><section class="hero"><div class="hi">${esc(greeting())}${me?",":""}</div><h1>${esc(firstName(me)||"Welcome")}</h1>
+  let h=`<div id="alb">${alertBannerHTML()}</div><div id="stp">${statusPanelHTML()}</div><div id="hcd">${historyCardHTML()}</div><section class="hero"><div class="hi">${esc(greeting())}${me?",":""}</div><h1>${esc(firstName(me)||"Welcome")}</h1>
    <div class="proj">${ic("pin","s")} ${esc(CONFIG.jobNo)} · ${esc(CONFIG.projectShort)} · ${new Date().toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"})}</div>
    ${wxHTML()}
    <div class="kp"><button onclick="go('#inspect')"><b>${drafts.length}</b><span>In progress</span></button>
@@ -72,6 +73,7 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   render(h);
   regRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home"&&!stale(seq))viewHome()});
   stRefresh().then(ch=>{const e=document.getElementById("stp");if(ch&&e&&!stale(seq))e.innerHTML=statusPanelHTML()});
+  alertPopup();alRefresh().then(ch=>{const e=document.getElementById("alb");if(ch&&e&&!stale(seq)){e.innerHTML=alertBannerHTML();alertPopup()}});
   histLoad().then(ch=>{const e=document.getElementById("hcd");if(ch&&e&&!stale(seq))e.innerHTML=historyCardHTML()});
   Promise.all([wxRefresh(),fdrRefresh()]).then(r=>{if(r.some(Boolean)&&(location.hash||"#home")==="#home"&&!stale(seq)){const w=document.querySelector(".hero .wx");if(w)w.outerHTML=wxHTML()}})}
 /* Inspect tab – start an inspection or report, carry on a draft, see what was sent */
@@ -156,7 +158,7 @@ async function viewSettings(){setHeader("Settings","This phone only",{icon:"back
    <div class="seg" role="group" aria-label="Theme">${[["auto","Auto"],["light","Light"],["dark","Dark"]].map(([k,l])=>`<button class="${th===k?"on":""}" onclick="setTheme('${k}')">${l}</button>`).join("")}</div>
    <div class="set" style="margin-top:6px">${ic("sun")}<div><b>High contrast</b><span>Stronger text and borders for bright sunlight.</span></div><label class="switch"><input type="checkbox" ${hc?"checked":""} onchange="setContrast(this.checked)"><i></i></label></div></div>
   <h2>Manager mode</h2><div class="card"><div class="set">${ic("lock")}<div><b>${isManager()?"On – this phone can verify, re-open and reassign actions":"Off"}</b><span>For the SHE Manager. Needs the Manager PIN set in the relay.</span></div></div>
-   ${isManager()?`<button class="btn g w" onclick="mgrOff()">Turn off on this phone</button>`:`<label class="f" for="mPin">Manager PIN</label><input class="t" id="mPin" type="password" inputmode="numeric" autocomplete="off" maxlength="12"><button class="btn w" onclick="mgrOn()">${ic("lock","s")} Turn on</button>`}</div>
+   ${isManager()?`<button class="btn o w" onclick="go('#alerts/new')">${ic("bell","s")} Publish a SHEQ Alert</button><button class="btn g w" onclick="mgrOff()">Turn off on this phone</button>`:`<label class="f" for="mPin">Manager PIN</label><input class="t" id="mPin" type="password" inputmode="numeric" autocomplete="off" maxlength="12"><button class="btn w" onclick="mgrOn()">${ic("lock","s")} Turn on</button>`}</div>
   <h2>Connection</h2><div class="card"><div class="set">${ic("send")}<div><b>Direct send</b><span id="cState">${directOn()?"On – reports email automatically":"Not set up – reports are shared via Outlook"}</span></div></div>
    <div class="set">${ic("layers")}<div><b>Project log</b><span id="rState">${directOn()?(v3()?"Connected – shared actions, action emails and Insights":"Checking…"):"Not connected"}</span></div></div>
    ${directOn()?`<div class="set">${ic("lock")}<div><b>Site access code</b><span>${siteCode()?"Saved on this phone":"Not entered – only needed once the SHE Manager turns it on"}</span></div><button class="btn g s" onclick="askSiteCode(true)">${siteCode()?"Change":"Enter"}</button></div>`:""}

@@ -459,7 +459,7 @@ const BAD_WORDS = ["murder", "massacre", "killed", "killing", "terrorist", "bomb
 await step("Today on site: not set → wrong PIN rejected → Morning High / TFB No / HVMB Yes → HVMB box first, next check 12:00", async () => {
   await page.evaluate(() => { localStorage.removeItem("siteStatus"); localStorage.removeItem("statusPin"); SITEST = null; go("#home"); }); await page.waitForSelector("#stp .st-panel");
   if (!/NOT SET TODAY/.test(await page.textContent("#stp"))) throw new Error("should start NOT SET TODAY");
-  const first = await page.evaluate(() => document.querySelector("#app").firstElementChild.id); if (first !== "stp") throw new Error("status panel is not at the top of Home");
+  const first = await page.evaluate(() => [...document.querySelector("#app").children].find(e => e.innerHTML.trim()).id); if (first !== "stp") throw new Error("status panel is not at the top of Home");
   await page.click("#stp .st-upd"); await page.waitForSelector(".st-pick");
   await page.click(".st-pick button:has-text('High')"); await page.click(".seg[data-k=tfb] button:has-text('No')"); await page.click(".seg[data-k=hvmb] button:has-text('Yes')"); await page.click(".seg[data-k=type] button:has-text('Morning')");
   await page.fill("#stPin", "1111"); await page.click("#stSave"); await page.waitForFunction(() => /Incorrect status PIN/.test(document.querySelector("#toast").textContent));
@@ -527,6 +527,47 @@ await step("Reference: nine SNN cards with icons, 330 kV card with MAD fallback,
   await page.evaluate(() => { ls("appCfg", JSON.stringify({ chemAlertUrl: "https://example.com/chemalert" })); go("#reference/sds"); }); await page.waitForSelector(".ref-chem a");
   const a = await page.$eval(".ref-chem a", e => [e.getAttribute("href"), e.getAttribute("target")]); if (a[0] !== "https://example.com/chemalert" || a[1] !== "_blank") throw new Error("ChemAlert link: " + a);
   await page.evaluate(() => ls("appCfg", JSON.stringify({})));
+});
+await step("SHEQ Alerts: SHE Manager publishes a Critical alert → Home banner, pop-up, acknowledge, register with R&R", async () => {
+  relay.sheet("Roster") || relay.ctx.book_();
+  const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10), ago = n => new Date(Date.now() + 8 * 3600e3 - n * 864e5).toISOString().slice(0, 10);
+  relay.sheet("Roster").getRange(3, 4).setValue("'" + today);     // Lee – day 1 of the swing
+  relay.sheet("Roster").getRange(5, 4).setValue("'" + ago(8));    // Matt – on R&R
+  await page.evaluate(() => { ls("mgrPin", "2468"); go("#alerts/new"); }); await page.waitForSelector("#alTitle");
+  await page.click("#alPri button:has-text('Critical')");
+  await page.fill("#alTitle", "Underground service strike – Genus site, WA");
+  await page.fill("#alWhat", "An excavator contacted a live LV cable during trenching. No injuries.");
+  await page.fill("#alMust", "Pothole and locate before mechanical digging\nStop and call your Supervisor if services don't match the plans");
+  await settle(page); await shot(page, "48-alert-publish");
+  const before = relay.mail.length; await page.click("#alPub");
+  await page.waitForFunction(() => /^#alerts\/SA-\d{4}-\d{3}$/.test(location.hash), null, { timeout: 15000 });
+  if (relay.sheet("SHEQ Alerts").getLastRow() !== 2) throw new Error("alert not logged");
+  const m = relay.mail.slice(before).find(x => /CRITICAL – SHEQ Alert/.test(x.subject)); if (!m || !/lee\.allen@genus\.com\.au/.test(m.bcc || "")) throw new Error("team email: " + (m && m.bcc));
+  await page.waitForSelector(".al-reg"); const reg = await page.textContent("#app");
+  if (!/0 of 7 on site acknowledged/.test(reg) || !/R&R · back/.test(reg)) throw new Error("register: " + reg.slice(0, 300));
+  // Lee opens PARRON: banner at the top of Home and the critical pop-up
+  const l = await newPage({ name: "Lee Allen", hash: "#home" });
+  await l.waitForSelector("#alb .al-banner.crit", { timeout: 15000 }); await l.waitForSelector("#alRead", { timeout: 10000 });
+  if ((await l.$$eval("#tabs a[data-t=home] .bdg:not(.hide)", e => e.length)) !== 1) throw new Error("Home tab badge");
+  await settle(l); await shot(l, "49-alert-popup");
+  await l.click("#alRead"); await l.waitForSelector("#alAck");
+  if (!/What you must do/.test(await l.textContent("#app"))) throw new Error("detail");
+  await settle(l); await shot(l, "50-alert-detail");
+  await l.click("#alAck"); await l.waitForSelector(".al-done", { timeout: 15000 });
+  if (relay.sheet("Alert Acks").getLastRow() !== 2) throw new Error("ack not recorded");
+  await l.evaluate(() => go("#home")); await l.waitForSelector("#stp"); if (await l.$("#alb .al-banner")) throw new Error("banner should clear after acknowledging");
+  // SHE Manager sees Lee ticked off; Matt on R&R is not counted
+  await page.evaluate(async () => { await alRefresh(); route(); }); await page.waitForFunction(() => /1 of 7 on site acknowledged/.test(document.querySelector("#app").textContent), null, { timeout: 10000 });
+  await page.evaluate(() => document.querySelector(".al-prog").scrollIntoView({ block: "center" })); await settle(page); await shot(page, "51-alert-register");
+  // acknowledging with no signal waits on the phone and records later
+  await page.evaluate(() => go("#alerts")); await page.waitForSelector(".al-item");
+  const o = await newPage({ name: "Nicola Rucci", hash: "#alerts" }); await o.waitForSelector(".al-item");
+  await o.context().setOffline(true); await o.click(".al-item"); await o.waitForSelector("#alAck"); await o.click("#alAck"); await o.waitForSelector(".al-done");
+  if (relay.sheet("Alert Acks").getLastRow() !== 2) throw new Error("offline ack should wait");
+  await o.context().setOffline(false); await o.evaluate(() => alRefresh()); if (relay.sheet("Alert Acks").getLastRow() !== 3) throw new Error("queued ack not sent");
+  // closing takes it off Home
+  const id = await page.evaluate(() => ALERTS.alerts[0].id); await page.evaluate(i => go("#alerts/" + i), id); await page.click("text=Close this alert"); await page.click("#aYes");
+  await page.waitForFunction(() => /Re-open this alert/.test(document.querySelector("#app").textContent), null, { timeout: 10000 });
 });
 await step("CSV exports", async () => {
   const [dl] = await Promise.all([page.waitForEvent("download"), page.evaluate(() => exportActions())]);
