@@ -57,6 +57,17 @@ const HISTORY_HOUR = 4;                       // "This day in history" prepared 
 // Words that keep an event off the pre-start list – edit here
 const HISTORY_EXCLUDE = ['murder', 'massacre', 'killed', 'killing', 'kills', 'terrorist', 'terrorism', 'bombing', 'bomb', 'shooting', 'shot dead', 'assassinat', 'executed', 'execution',
   'genocide', 'rape', 'suicide', 'war crime', 'hostage', 'behead', 'lynch', 'stabbing', 'torture', 'slaughter', 'atrocit', 'holocaust', 'abduct', 'kidnap', 'died', 'deaths', 'dead', 'crash', 'disaster'];
+/* SHEQ Alerts – read and acknowledge. Published by the SHE Manager (Manager PIN); acknowledged by name on each phone.
+   The Roster sheet says who is on site each day, so people on R&R are not chased (fill in "First day of a swing"). */
+const ALERT_HEAD = ['Alert ID', 'Published', 'Type', 'Priority', 'Title', 'What happened', 'What you must do', 'Attachment', 'Attachment type', 'Published by', 'Active', 'Closed'];
+const ACK_HEAD = ['Acknowledged', 'Alert ID', 'Name'];
+const ROSTER_HEAD = ['Name', 'Days on', 'Days off', 'First day of a swing', 'Flexible (Y/N)', 'Notes'];
+const ROSTER_SEED = [['Darren Frizzell', 8, 6, '', 'N', '8 on / 6 off – swing starts Monday'], ['Lee Allen', 8, 6, '', 'N', '8 on / 6 off – swing starts Monday'],
+  ['Nicola Rucci', 8, 6, '', 'N', '8 on / 6 off – swing starts Monday'], ['Matt Smith', 6, 6, '', 'N', '6 on / 6 off – swing starts Tuesday'],
+  ['Cory Shotter', 6, 6, '', 'N', '6 on / 6 off – swing starts Tuesday'], ['Paul Delaney', 6, 6, '', 'N', '6 on / 6 off – swing starts Tuesday'],
+  ['Gary Armitage', '', '', '', 'Y', '2 weeks on / 1 week off – out days vary'], ['Anphin Thomas', 14, 7, '', 'N', '2 weeks on / 1 week off']];
+const ALERT_TYPES = ['SHEQ Alert', 'Lesson learned', 'Plan or procedure change', 'Site notice'];
+const ALERT_PRIORITY = ['Critical', 'Important', 'Info'];
 const REM_HEAD = ['ID', 'Name', 'Email', 'Reminder', 'Repeat', 'Time', 'Created', 'Last sent', 'Active'];
 const ST = { spot: 'Closed on spot', open: 'Open', closed: 'Closed', verified: 'Verified' };
 
@@ -79,6 +90,7 @@ function setup() {
     '\nPersonal reminders: emailed between 5 and 6 am (Perth time).' +
     '\nWeekly fuel, hours & pre-start register: Mondays to ' + FUEL_TO + '.' +
     '\nThis day in history: prepared every day between 4 and 5 am (Perth time)' + (PropertiesService.getScriptProperties().getProperty('HISTORY_EMAIL') ? ' and emailed to ' + PropertiesService.getScriptProperties().getProperty('HISTORY_EMAIL') : '') + '.' +
+    '\nSHEQ Alerts: published from the app in Manager mode. Fill in "First day of a swing" on the Roster sheet so people on R&R are not chased.' +
     '\nToday on site status PIN: ' + (PropertiesService.getScriptProperties().getProperty('STATUS_PIN') ? 'set' : 'NOT SET – add STATUS_PIN under Script properties so the site status can be updated.') +
     '\nFire Danger Rating: ' + (fdrFetch_(true).today ? 'reading from the Bureau of Meteorology' : 'could not be read automatically – set it in the app (Manager mode) or choose the district') +
     '\nManager PIN: ' + (pin ? 'set' : 'NOT SET – add MANAGER_PIN under Project Settings > Script properties.') +
@@ -91,6 +103,9 @@ function book_() {
   if (id) { try { ss = SpreadsheetApp.openById(id); } catch (e) { ss = null; } }
   if (!ss) { ss = SpreadsheetApp.create('PARRON – Inspection Log (YMT)'); p.setProperty('SHEET_ID', ss.getId()); }
   sheet_(ss, 'Sent', SENT_HEAD); sheet_(ss, 'Status', STAT_HEAD); sheet_(ss, 'Findings', FIND_HEAD); sheet_(ss, 'Observations', OBS_HEAD); sheet_(ss, 'Reminders', REM_HEAD); sheet_(ss, 'Fuel', FUEL_HEAD); sheet_(ss, 'Site Status', SITESTAT_HEAD); sheet_(ss, 'This Day', HIST_HEAD);
+  sheet_(ss, 'SHEQ Alerts', ALERT_HEAD); sheet_(ss, 'Alert Acks', ACK_HEAD);
+  const ro = sheet_(ss, 'Roster', ROSTER_HEAD);
+  if (!p.getProperty('ROSTER_SEEDED')) { if (ro.getLastRow() < 2) ROSTER_SEED.forEach(r => ro.appendRow(r)); p.setProperty('ROSTER_SEEDED', '1'); }
   const s1 = ss.getSheetByName('Sheet1'); if (s1 && ss.getSheets().length > 8) ss.deleteSheet(s1);
   return ss;
 }
@@ -126,6 +141,9 @@ function doPost(e) {
     if (d.action === 'reminder') return reminder_(d);
     if (d.action === 'fdr') return fdrSet_(d);
     if (d.action === 'setStatus') return setStatus_(d);
+    if (d.action === 'publishAlert') return publishAlert_(d);
+    if (d.action === 'ackAlert') return ackAlert_(d);
+    if (d.action === 'closeAlert') return closeAlert_(d);
     if (d.action === 'pin') return out_({ ok: pinOK_(d.pin), error: pinOK_(d.pin) ? '' : 'Incorrect PIN' });
     return send_(d);
   } catch (err) {
@@ -349,10 +367,12 @@ function upsert_(ss, uid, m, state, sentAt) {
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  if (['weather', 'dashboard', 'reports', 'photo', 'getStatus', 'getHistory'].includes(p.action) && p.key === KEY && !codeOK_(p.code)) return out_({ ok: false, error: 'Site code required', needCode: true });
+  if (['weather', 'dashboard', 'reports', 'photo', 'getStatus', 'getHistory', 'alerts', 'alertFile'].includes(p.action) && p.key === KEY && !codeOK_(p.code)) return out_({ ok: false, error: 'Site code required', needCode: true });
   if (p.action === 'weather') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_({ ok: true, fdr: fdrFetch_(false) }); }
   if (p.action === 'getStatus') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_(Object.assign({ ok: true }, statusOut_())); }
   if (p.action === 'getHistory') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_(history_(false)); }
+  if (p.action === 'alerts') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_(Object.assign({ ok: true }, alertsOut_())); }
+  if (p.action === 'alertFile') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return alertFile_(p.id); }
   if (p.action === 'reports') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_({ ok: true, reports: reports_() }); }
   if (p.action === 'photo') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return photo_(p.id); }
   if (p.action !== 'dashboard') return out_({ ok: true, service: 'PARRON relay', v: 3, emailsLeftToday: MailApp.getRemainingDailyQuota() });
@@ -405,13 +425,14 @@ function dailyDigest() {
   const fmt = v => Utilities.formatDate(new Date(v), TZ, 'dd/MM HH:mm');
   const st = s => s === 'outbox' ? 'Finished – waiting for signal' : 'Started – not sent';
   const dmy = s => s ? s.split('-').reverse().join('/') : '';
-  const SS = statusDigest_(today);
+  const SS = statusDigest_(today); const AD = alertsDigest_(today);
   const byName = {}; sentToday.forEach(r => { byName[r[5]] = (byName[r[5]] || []).concat(`${no_(r[6])} ${r[7]}`); });
   const tile = (n, l, c) => `<td style="padding:10px;text-align:center;border:1px solid #D0D5DD"><div style="font-size:22px;font-weight:700;color:${c}">${n}</div><div style="font-size:11px;color:#5B6675">${l}</div></td>`;
   const html = `<div style="font-family:Arial,sans-serif;color:#1B2430;max-width:820px">
     <div style="background:#112B4E;color:#fff;padding:12px 14px;border-bottom:4px solid #EC7723"><div style="font-size:12px;color:#EC7723;font-weight:700">PARRON | DAILY SUMMARY</div><div style="font-size:18px;font-weight:700">${Utilities.formatDate(now, TZ, 'EEEE d MMMM yyyy')}</div></div>
     <div style="border:1px solid #D0D5DD;border-left:4px solid #EC7723;padding:8px 12px;margin:12px 0;font-size:13px"><b>Today on site – fire status:</b> ${SS.L.length ? SS.line.map(esc_).join(' &nbsp;|&nbsp; ') : '<b style="color:#C62828">No status set today</b>'}${SS.L.length && SS.noMidday ? '<br><b style="color:#C62828">⚠ No midday re-check recorded</b>' : ''}</div>
     <table style="border-collapse:collapse;width:100%;margin:12px 0"><tr>${tile(sentToday.length, 'Sent today', '#2E7D32')}${tile(open.length, 'Not sent', '#C62828')}${tile(overdue.length, 'Actions overdue', '#C62828')}${tile(toVerify.length, 'Awaiting verification', '#E39A00')}</tr></table>
+    ${AD.rows.length ? `<h3 style="color:#C62828">SHEQ Alerts – not yet acknowledged</h3>${t(AD.rows.map(a => [a.id + ' – ' + a.title, a.priority, a.acked + ' of ' + a.expected, a.waiting.join(', ') || '–']), ['Alert', 'Priority', 'Acknowledged (on site)', 'Waiting on'])}` : ''}
     <h3 style="color:#C62828">Not sent – started today (${openToday.length})</h3>${t(openToday.map(r => [r[1], `${no_(r[2])} ${r[3]}`, r[4], fmt(r[5]), st(r[7])]), ['Name', 'Inspection', 'Location', 'Started', 'Status'])}
     <h3 style="color:#C62828">Still not sent – from earlier days (${openOlder.length})</h3>${t(openOlder.map(r => [r[1], `${no_(r[2])} ${r[3]}`, r[4], fmt(r[5]), st(r[7])]), ['Name', 'Inspection', 'Location', 'Started', 'Status'])}
     <h3 style="color:#C62828">Corrective actions overdue (${overdue.length})</h3>${t(overdue.map(f => [f.reportId + ' / ' + f.item, f.level || f.rating, f.action, f.owner || 'TBC', dmy(f.due)]), ['Finding', 'Risk', 'Corrective action', 'Owner', 'Due'])}
@@ -533,6 +554,7 @@ function weeklyDigest() {
     <h3 style="color:#112B4E">Activity by person</h3>${t(Object.keys(people).sort((a, b) => people[b].n - people[a].n || a.localeCompare(b)).map(k => [esc_(k), people[k].n, people[k].obs]), ['Name', 'Inspections', 'Hazard / positive reports'])}
     <h3 style="color:#C5221F">Open High / Critical actions (${crit.length})</h3>${t(crit.slice(0, 20).map(f => [esc_(f.reportId + ' / ' + f.item), esc_(f.level + ' ' + f.score), esc_(f.action), esc_(f.owner || 'TBC'), dmy(f.due)]), ['Finding', 'Risk', 'Corrective action', 'Owner', 'Due'])}
     <h3 style="color:#C5221F">Overdue actions (${overdue.length})</h3>${t(overdue.slice(0, 20).map(f => [esc_(f.reportId + ' / ' + f.item), esc_(f.level || f.rating), esc_(f.action), esc_(f.owner || 'TBC'), dmy(f.due)]), ['Finding', 'Risk', 'Corrective action', 'Owner', 'Due'])}
+    ${(() => { const W = alertsDigest_(today, true); return W.rows.length ? `<h3 style="color:#112B4E">SHEQ Alerts – acknowledgement</h3>${t(W.rows.map(a => [esc_(a.id + ' – ' + a.title), esc_(a.priority), a.acked + ' of ' + a.expected + (a.expected ? ' (' + Math.round(100 * a.acked / a.expected) + '%)' : ''), esc_(a.waiting.join(', ') || '–')]), ['Alert', 'Priority', 'Acknowledged (on site)', 'Waiting on'])}` : ''; })()}
     <h3 style="color:#112B4E">Repeat findings – last 90 days</h3>${t(repeat.map(([k, o]) => [esc_(k), esc_(o.text), o.n]), ['Item', 'Requirement', 'Times'])}
     <p style="font-size:12px;color:#5B6675">Open PARRON Insights for charts and the Monthly HSE summary: <a href="${APP_URL}#insights">${APP_URL}</a></p></div>`;
   MailApp.sendEmail({ to: TO, name: 'PARRON Site Inspections', subject: `PARRON weekly summary ${range} – ${sent.length} inspections, ${overdue.length} actions overdue`, htmlBody: html, body: 'Open in an HTML email client.' });
@@ -625,6 +647,93 @@ function prepareHistory() {
 function installHistoryTrigger() {
   ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'prepareHistory') ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('prepareHistory').timeBased().atHour(HISTORY_HOUR).everyDays(1).inTimezone(TZ).create();
+}
+
+/* ---------- SHEQ Alerts – read and acknowledge ---------- */
+const dayAdd_ = (ymd, n) => new Date(Date.parse(ymd + 'T00:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+/* who is on site on a given day (yyyy-MM-dd): on = true / false, or null when the roster is flexible or has no start date */
+function roster_(ymd) {
+  return rows_(book_().getSheetByName('Roster')).filter(r => clean_(r[0])).map(r => {
+    const name = clean_(r[0]), on = num_(r[1]), off = num_(r[2]), a = dstr_(r[3]).slice(0, 10), flex = /^y/i.test(String(r[4] || ''));
+    if (flex || !on || !/^\d{4}-\d\d-\d\d$/.test(a)) return { name, on: null, back: '', flex };
+    const cyc = on + off, diff = Math.round((Date.parse(ymd + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5), pos = ((diff % cyc) + cyc) % cyc;
+    return { name, on: pos < on, back: pos < on ? '' : dayAdd_(ymd, cyc - pos), flex };
+  });
+}
+function alertRow_(r) { return { id: r[0], at: iso_(r[1]), type: r[2], priority: r[3], title: r[4], what: r[5], must: r[6], file: driveId_(r[7]), fileType: r[8], by: r[9], active: r[10] !== 'No', closed: iso_(r[11]) }; }
+function alertsOut_() {
+  const ss = book_(); const acks = rows_(ss.getSheetByName('Alert Acks')).filter(r => r[0]);
+  const all = rows_(ss.getSheetByName('SHEQ Alerts')).filter(r => r[0]).map(alertRow_);
+  const since = Date.now() - 120 * 864e5;
+  const list = all.filter(a => a.active || new Date(a.at).getTime() >= since).slice(-60).reverse();
+  list.forEach(a => { a.acks = acks.filter(r => r[1] === a.id).map(r => ({ name: r[2], at: iso_(r[0]) })); });
+  return { alerts: list, roster: roster_(Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd')) };
+}
+const sameName_ = (a, b) => clean_(a).toLowerCase() === clean_(b).toLowerCase();
+function publishAlert_(d) {
+  if (!pinOK_(d.pin)) return out_({ ok: false, error: 'Incorrect Manager PIN', badPin: true });
+  const type = ALERT_TYPES.find(x => x === d.type) || ALERT_TYPES[0], pri = ALERT_PRIORITY.find(x => x === d.priority);
+  const title = clean_(d.title);
+  if (!pri || !title || !str_(d.what, 4000).trim()) return out_({ ok: false, error: 'Add a priority, a title and what happened' });
+  const ss = book_(); const sh = ss.getSheetByName('SHEQ Alerts'); const now = new Date(); const yr = Utilities.formatDate(now, TZ, 'yyyy');
+  const n = rows_(sh).filter(r => String(r[0]).indexOf('SA-' + yr + '-') === 0).length + 1;
+  const id = `SA-${yr}-${('00' + n).slice(-3)}`;
+  let link = '', ftype = '';
+  const f = d.file || {};
+  if (f.data) {
+    ftype = /^image\/(jpeg|png|webp)$/.test(f.type) || f.type === 'application/pdf' ? f.type : '';
+    if (!ftype) return out_({ ok: false, error: 'Attach a photo or a PDF' });
+    const bytes = Utilities.base64Decode(f.data); if (bytes.length > 8 * 1024 * 1024) return out_({ ok: false, error: 'Attachment over 8 MB' });
+    try { link = folder_('PARRON – Alerts').createFile(Utilities.newBlob(bytes, ftype, `${id}_${str_(f.name || 'attachment', 80)}`.replace(/[^\w.-]+/g, '_'))).getUrl(); } catch (e) { link = ''; ftype = ''; }
+  }
+  sh.appendRow([id, now, type, pri, title, str_(d.what, 4000), str_(d.must, 4000), link, ftype, clean_(d.by) || 'SHE Manager', 'Yes', '']);
+  const bcc = String(Array.isArray(d.notify) ? d.notify.join(',') : d.notify || '').split(/[,;]/).map(e => e.trim().toLowerCase())
+    .filter(e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && ALLOWED.test(e) && e !== TO.toLowerCase()).slice(0, 60).join(',');
+  if (d.email !== false) {
+    const col = pri === 'Critical' ? '#C62828' : pri === 'Important' ? '#EC7723' : '#112B4E';
+    const para = s => esc_(s).replace(/\n/g, '<br>');
+    try { MailApp.sendEmail(Object.assign({ to: TO, name: 'PARRON Site Inspections' }, bcc ? { bcc } : {}, { subject: `${pri === 'Info' ? '' : pri.toUpperCase() + ' – '}${type}: ${title}`,
+      htmlBody: `<div style="font-family:Arial,sans-serif;color:#1B2430;max-width:640px"><div style="background:#112B4E;color:#fff;padding:12px 14px;border-bottom:4px solid ${col}"><div style="font-size:12px;color:#EC7723;font-weight:700">PARRON | ${esc_(type.toUpperCase())} · ${esc_(pri.toUpperCase())} · ${id}</div><div style="font-size:18px;font-weight:700">${esc_(title)}</div></div>
+        <h3 style="color:#112B4E;margin-bottom:4px">What happened</h3><p style="font-size:14px">${para(d.what)}</p>${str_(d.must).trim() ? `<h3 style="color:#112B4E;margin-bottom:4px">What you must do</h3><p style="font-size:14px">${para(d.must)}</p>` : ''}
+        <p style="font-size:14px"><a href="${APP_URL}#alerts/${id}" style="background:#EC7723;color:#1B1206;padding:10px 16px;border-radius:8px;font-weight:700;text-decoration:none">Open PARRON to read and acknowledge</a></p>
+        <p style="font-size:12px;color:#5B6675">Please acknowledge in PARRON so the project record shows you have read it.</p></div>`,
+      body: `${type} (${pri}) ${id}: ${title}\n\nWhat happened:\n${d.what}\n\nWhat you must do:\n${d.must || '-'}\n\nRead and acknowledge in PARRON: ${APP_URL}#alerts/${id}` })); } catch (e) {}
+  }
+  return out_(Object.assign({ ok: true, id }, alertsOut_()));
+}
+function ackAlert_(d) {
+  const name = clean_(d.name); if (!name) return out_({ ok: false, error: 'Pick your name first' });
+  const ss = book_(); const a = rows_(ss.getSheetByName('SHEQ Alerts')).find(r => r[0] === d.id);
+  if (!a) return out_({ ok: false, error: 'Alert not found' });
+  const sh = ss.getSheetByName('Alert Acks');
+  if (!rows_(sh).some(r => r[1] === d.id && sameName_(r[2], name))) sh.appendRow([new Date(), d.id, name]);
+  return out_(Object.assign({ ok: true }, alertsOut_()));
+}
+function closeAlert_(d) {
+  if (!pinOK_(d.pin)) return out_({ ok: false, error: 'Incorrect Manager PIN', badPin: true });
+  const sh = book_().getSheetByName('SHEQ Alerts'); const rows = rows_(sh); const i = rows.findIndex(r => r[0] === d.id);
+  if (i < 0) return out_({ ok: false, error: 'Alert not found' });
+  const open = d.reopen === true;
+  sh.getRange(i + 2, 11, 1, 2).setValues([[open ? 'Yes' : 'No', open ? '' : new Date()]]);
+  return out_(Object.assign({ ok: true }, alertsOut_()));
+}
+/* the attachment of an alert (only files that belong to an alert can be read) */
+function alertFile_(id) {
+  id = String(id || ''); if (!/^[\w-]{1,80}$/.test(id)) return out_({ ok: false, error: 'Bad file id' });
+  const r = rows_(book_().getSheetByName('SHEQ Alerts')).find(x => driveId_(x[7]) === id); if (!r) return out_({ ok: false, error: 'Not found' });
+  const b = DriveApp.getFileById(id).getBlob(); const bytes = b.getBytes(); if (bytes.length > 8 * 1024 * 1024) return out_({ ok: false, error: 'Too large' });
+  return out_({ ok: true, type: r[8] || b.getContentType(), data: Utilities.base64Encode(bytes) });
+}
+/* active alerts, who on site has not acknowledged (people on R&R are not counted) – for the daily and weekly emails */
+function alertsDigest_(today, includeAll) {
+  const ss = book_(); const acks = rows_(ss.getSheetByName('Alert Acks')).filter(r => r[0]); const R = roster_(today);
+  const since = Date.now() - (includeAll ? 7 : 30) * 864e5;
+  const rows = rows_(ss.getSheetByName('SHEQ Alerts')).filter(r => r[0]).map(alertRow_)
+    .filter(a => includeAll ? (a.active || new Date(a.at).getTime() >= since) && new Date(a.at).getTime() >= Date.now() - 30 * 864e5 : a.active && new Date(a.at).getTime() >= since)
+    .map(a => { const done = acks.filter(r => r[1] === a.id).map(r => r[2]); const expected = R.filter(p => p.on !== false);
+      const waiting = expected.filter(p => !done.some(n => sameName_(n, p.name))).map(p => p.name + (p.flex ? ' (flexible)' : ''));
+      return { id: a.id, title: a.title, priority: a.priority, expected: expected.length, acked: expected.length - waiting.length, waiting }; });
+  return { rows: includeAll ? rows : rows.filter(a => a.waiting.length) };
 }
 
 /* hazard reports and positive observations for the in-app list (last 13 months, newest first) */

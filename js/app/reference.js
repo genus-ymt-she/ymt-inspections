@@ -5,6 +5,7 @@ function chemAlertHTML(){const u=appCfg().chemAlertUrl;
   return `<div class="card ref-chem">${u?`<a class="btn o w" href="${esc(u)}" target="_blank" rel="noopener external">${ic("ext","s")} SDS – ChemAlert</a>`:`<div class="alert org" style="margin:0">${ic("info")}<div><b>ChemAlert link not set – ask the SHE Manager</b></div></div>`}
     <p class="muted" style="margin:10px 2px 0">${esc(CHEMALERT_NOTE)}</p></div>`}
 function referenceHTML(){return `<h2>Reference</h2><div class="ref-list">
+   <button class="card tap" onclick="go('#alerts')"><span class="ti t-red">${ic("bell","l")}</span><span><b>SHEQ Alerts</b><small>${(()=>{const n=alUnread().length;return n?`${n} to read and acknowledge`:"Alerts, lessons learned and site notices"})()}</small></span>${ic("chev")}</button>
    <button class="card tap" onclick="go('#reference/snn')"><span class="ti t-accent"><img src="${SNN_ICONS.FND}" alt=""></span><span><b>Safety Non-Negotiables</b><small>The nine Genus SNNs and their rules</small></span>${ic("chev")}</button>
    <button class="card tap" onclick="go('#reference/330kv')"><span class="ti t-red">${ic("zap","l")}</span><span><b>Working near 330 kV lines</b><small>MADs, exclusion zones, permits, crossings</small></span>${ic("chev")}</button>
 </div>${chemAlertHTML()}
