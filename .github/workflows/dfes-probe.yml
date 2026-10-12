@@ -6,10 +6,27 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - run: |
-          pip install -q pypdf
-          curl -sSL -m 60 -A "Mozilla/5.0" -o d.pdf https://www.dfes.wa.gov.au/documents/WA-Fire-Weather-Districts-and-Local-Government-Authorities.pdf; ls -l d.pdf; file d.pdf
-          python3 -c "import pypdf;r=pypdf.PdfReader('d.pdf');open('d.txt','w').write(chr(10).join(p.extract_text() for p in r.pages))"; grep -n -i -B3 -A3 "dandaragan\|lesueur\|watheroo\|coorow\|gingin" d.txt | head -120
-          curl -sSL -m 60 -A "Mozilla/5.0" "https://www.dandaragan.wa.gov.au/services/emergency-management/bushfire.aspx" -o s.html; grep -o 'href="[^"]*\.pdf[^"]*"' s.html | head; grep -i -o '[^<>]\{0,200\}weather zone[^<>]\{0,300\}' s.html | head
+          pip install -q pyshp shapely
+          curl -s -m 30 --list-only ftp://ftp.bom.gov.au/anon/home/adfd/spatial/ | grep -i "IDM0000[0-9]" | head -20
+          curl -sS -m 120 -o fw.zip ftp://ftp.bom.gov.au/anon/home/adfd/spatial/IDM00007.zip && ls -l fw.zip && unzip -o -q fw.zip -d fw && ls fw
+          python3 - <<'PY'
+          import shapefile, glob
+          from shapely.geometry import shape, Point, LineString
+          shp=glob.glob('fw/**/*.shp',recursive=True)[0]; r=shapefile.Reader(shp); print(r.fields)
+          polys={}
+          for sr in r.shapeRecords():
+              rec=dict(zip([f[0] for f in r.fields[1:]],sr.record))
+              name=' '.join(str(v) for v in rec.values())
+              if any(k in name for k in ('Lesueur','Watheroo','WA_FW055','WA_FW056')): polys[name]=shape(sr.shape.__geo_interface__)
+          for k in polys: print('POLY',k, polys[k].bounds)
+          pts={'Badgingarra town':(115.50,-30.39),'Hill River mouth':(115.07,-30.38),'Brand Hwy x Hill River':(115.47,-30.33),'Jurien Bay':(115.04,-30.30),'Cervantes':(115.07,-30.50)}
+          for n,(x,y) in pts.items(): print('PT',n,[k[:40] for k,p in polys.items() if p.contains(Point(x,y))])
+          for lat in (-30.20,-30.25,-30.30,-30.35,-30.40,-30.45,-30.50):
+              ln=LineString([(114.9,lat),(116.0,lat)])
+              for k,p in polys.items():
+                  if 'Lesueur' in k or 'FW055' in k:
+                      i=p.intersection(ln); print('LAT',lat,'Lesueur east edge lon', round(i.bounds[2],3) if not i.is_empty else None)
+          PY
