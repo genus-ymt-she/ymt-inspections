@@ -8,7 +8,7 @@ const CONFIG = {
   project: "J1084 – Parron Wind Farm Connection Assets – Yerramullah Terminal (YMT)",
   projectShort: "YMT – Yerramullah Terminal",
   jobNo: "J1084",
-  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "3.7.1"
+  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "3.7.2"
 };
 
 /* Site location for the home-screen weather (forecast for this point) and the Bureau of Meteorology
@@ -53,22 +53,28 @@ const RISK = {
 
 /* Project team – people who use PARRON and can be assigned actions.
    Picking a name fills in their email, so they are emailed the action automatically. Add or remove people here.
-   ta: true = Trade Assistant (shown as quick-pick names on the Trade Assistants forms; no email needed). */
+   ta: true = Trade Assistant (shown as quick-pick names on the Trade Assistants forms; no email needed).
+   site: true = site-based – ticked when a SHEQ Alert is sent to "Everyone on site". */
 const TEAM = [
-  { name: "Darren Frizzell",  role: "SHE Manager",                  email: "darren.frizzell@genus.com.au" },
-  { name: "Lee Allen",        role: "SHE Manager",                  email: "lee.allen@genus.com.au" },
-  { name: "Nicola Rucci",     role: "Senior SHE Advisor",           email: "nicola.rucci@genus.com.au" },
-  { name: "Anphin Thomas",    role: "SHE Advisor",                  email: "anphin.thomas@genus.com.au" },
-  { name: "Steve Armitage",   role: "Project Director",             email: "steve.armitage@genus.com.au" },
-  { name: "Gary Armitage",    role: "Construction Manager",         email: "gary.armitage@genus.com.au" },
-  { name: "Joey Ryan",        role: "Grad Project Manager",         email: "joey.ryan@genus.com.au" },
-  { name: "Matt Smith",       role: "Senior Civil Supervisor",      email: "matt.smith@genus.com.au" },
-  { name: "Paul Delaney",     role: "Civil Supervisor",             email: "paul.delaney@genus.com.au" },
-  { name: "Cory Shotter",     role: "Senior Electrical Supervisor", email: "cory.shotter@genus.com.au" },
-  { name: "Zane Patten",      role: "Electrical Supervisor",        email: "zane.patten@genus.com.au" },
-  { name: "Amie Smith",       role: "Project Admin",                email: "amie.smith@genus.com.au" },
-  { name: "Jayden Mullan",    role: "Trade Assistant",              email: "", ta: true },
-  { name: "Ben Herbert",      role: "Trade Assistant",              email: "", ta: true }
+  { name: "Darren Frizzell",   role: "SHE Manager",                  email: "darren.frizzell@genus.com.au", site: true },
+  { name: "Lee Allen",         role: "SHE Manager",                  email: "lee.allen@genus.com.au" },
+  { name: "Nicola Rucci",      role: "Senior SHE Advisor",           email: "nicola.rucci@genus.com.au", site: true },
+  { name: "Anphin Thomas",     role: "SHE Advisor",                  email: "anphin.thomas@genus.com.au", site: true },
+  { name: "Steve Armitage",    role: "Project Director",             email: "" },
+  { name: "Gary Armitage",     role: "Construction Manager",         email: "gary.armitage@genus.com.au", site: true },
+  { name: "Saeed Heidari",     role: "Project Quality Manager",      email: "saeed.heidari@genus.com.au", site: true },
+  { name: "Vinal Khambhayta",  role: "Senior Project Engineer",      email: "vinal.khambhayta@genus.com.au", site: true },
+  { name: "Dayou Ding",        role: "Project Engineer (Civil)",     email: "dayou.ding@genus.com.au", site: true },
+  { name: "Joey Ryan",         role: "Grad Project Manager",         email: "joey.ryan@genus.com.au", site: true },
+  { name: "Matthew Smith",     role: "Senior Civil Supervisor",      email: "matt.smith@genus.com.au", site: true },
+  { name: "Paul Delaney",      role: "Civil Supervisor",             email: "paul.delaney@genus.com.au", site: true },
+  { name: "Corey Shotter",     role: "Senior Electrical Supervisor", email: "cory.shotter@genus.com.au", site: true },
+  { name: "Zane Patten",       role: "Electrical Supervisor",        email: "zane.patten@genus.com.au", site: true },
+  { name: "Steven Pugh",       role: "Supervisor (Electrical)",      email: "steven.pugh@genus.com.au", site: true },
+  { name: "Amie Smith",        role: "Project Admin",                email: "amie.smith@genus.com.au", site: true },
+  { name: "Sarah Donnolley",   role: "Site Support Attendant",       email: "sarah.donnolley@genus.com.au", site: true },
+  { name: "Jayden Mullan",     role: "Trade Assistant",              email: "", ta: true, site: true },
+  { name: "Benjamin Herbert",  role: "Trade Assistant",              email: "", ta: true, site: true }
 ];
 
 /* Quick report – positive observation categories */
