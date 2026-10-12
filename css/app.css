@@ -687,3 +687,17 @@ body.radio-on main{padding-bottom:180px}
 .prog i{transition:width .45s cubic-bezier(.2,.8,.2,1)}
 
 .reports .btn{white-space:nowrap;font-size:15px;padding-left:10px;padding-right:10px}
+
+/* ---------- Action register / reports tabs + report cards ---------- */
+.acttabs{margin:0 0 12px}
+.acttabs button{font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px}
+.rep{border-left:4px solid var(--rc)}
+.rep .top{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.rep .ttl,.rephead .ttl{font-weight:700;font-size:15.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.rephead .ttl{-webkit-line-clamp:unset;font-size:17px}
+.rep .foot2{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;color:var(--muted);font-size:13px}
+.rep .foot2 span{display:inline-flex;gap:5px;align-items:center}
+.rephead{border-left:4px solid var(--ua)}.rephead.po{border-left-color:var(--c)}
+.repph{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.repph .ph{aspect-ratio:4/3;width:auto;height:auto}
+.repph .ph img{width:100%;height:100%;object-fit:cover;border-radius:10px;cursor:zoom-in}

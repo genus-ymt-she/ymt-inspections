@@ -338,8 +338,10 @@ function upsert_(ss, uid, m, state, sentAt) {
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  if ((p.action === 'weather' || p.action === 'dashboard') && p.key === KEY && !codeOK_(p.code)) return out_({ ok: false, error: 'Site code required', needCode: true });
+  if (['weather', 'dashboard', 'reports', 'photo'].includes(p.action) && p.key === KEY && !codeOK_(p.code)) return out_({ ok: false, error: 'Site code required', needCode: true });
   if (p.action === 'weather') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_({ ok: true, fdr: fdrFetch_(false) }); }
+  if (p.action === 'reports') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_({ ok: true, reports: reports_() }); }
+  if (p.action === 'photo') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return photo_(p.id); }
   if (p.action !== 'dashboard') return out_({ ok: true, service: 'PARRON relay', v: 3, emailsLeftToday: MailApp.getRemainingDailyQuota() });
   if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' });
   const ss = book_(); const month = /^\d{4}-\d\d$/.test(p.month || '') ? p.month : Utilities.formatDate(new Date(), TZ, 'yyyy-MM');
@@ -523,6 +525,24 @@ function weeklyDigest() {
 }
 
 /* ---------- helpers ---------- */
+/* hazard reports and positive observations for the in-app list (last 13 months, newest first) */
+const driveId_ = u => (String(u).match(/\/d\/([\w-]{1,80})/) || [])[1] || '';
+function reports_() {
+  const O = idx_(OBS_HEAD); const since = Date.now() - 400 * 864e5;
+  return rows_(book_().getSheetByName('Observations')).filter(r => r[0] && new Date(r[0]).getTime() >= since).slice(-500).reverse().map(r => ({
+    at: iso_(r[0]), reportId: r[O['Report ID']], type: r[O.Type] === 'Hazard' ? 'hazard' : 'positive', name: r[O.Name], location: r[O.Location],
+    description: r[O.Description], category: r[O.Category], recognised: r[O['Person / crew recognised']], cons: r[O.Consequence], like: r[O.Likelihood],
+    score: r[O['Risk score']], level: r[O['Risk level']], immediate: r[O['Immediate action']], status: r[O.Status], owner: r[O.Owner], due: dstr_(r[O.Due]),
+    photos: String(r[O['Photo links']] || '').split('\n').map(driveId_).filter(Boolean) }));
+}
+/* one report photo – only files that belong to a logged report can be read */
+function photo_(id) {
+  id = String(id || ''); if (!/^[\w-]{1,80}$/.test(id)) return out_({ ok: false, error: 'Bad photo id' });
+  const O = idx_(OBS_HEAD); const known = rows_(book_().getSheetByName('Observations')).some(r => String(r[O['Photo links']] || '').split('\n').some(u => driveId_(u) === id));
+  if (!known) return out_({ ok: false, error: 'Not found' });
+  const b = DriveApp.getFileById(id).getBlob(); const bytes = b.getBytes(); if (bytes.length > 5 * 1024 * 1024) return out_({ ok: false, error: 'Too large' });
+  return out_({ ok: true, type: b.getContentType() || 'image/jpeg', data: Utilities.base64Encode(bytes) });
+}
 /* site access code: kept in Script properties (SITE_CODE), never in the code or on GitHub; not case-sensitive */
 function codeOK_(c) { const s = PropertiesService.getScriptProperties().getProperty('SITE_CODE'); if (!s) return true; return String(c || '').trim().toUpperCase() === String(s).trim().toUpperCase(); }
 function pinOK_(pin) {

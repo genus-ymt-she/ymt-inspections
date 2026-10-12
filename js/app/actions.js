@@ -14,7 +14,7 @@ function drawActions(){const all=regAll();const st=regStats(all);const q=ACTF.q.
   const flt=ACT_FILTERS.find(x=>x[0]===ACTF.f)||ACT_FILTERS[0];
   const list=all.filter(f=>flt[2](f)&&(!ACTF.mine||isMine(f))&&(!q||[f.text,f.finding,f.action,f.owner,f.location,f.title,f.reportId,f.by,f.item].join(" ").toLowerCase().includes(q)))
     .sort((a,b)=>ACTF.f==="closed"?String(b.closedAt||b.verifiedAt||"").localeCompare(String(a.closedAt||a.verifiedAt||"")):(daysTo(a.due)??9999)-(daysTo(b.due)??9999)||(+b.score||0)-(+a.score||0));
-  let h="";
+  let h=actTabs("actions");
   if(directOn()&&REG.v&&REG.v<3)h+=`<div class="alert org">${ic("info")}<div><b>Showing actions raised on this phone only.</b> Update the relay script to v3 to share the register across the whole project (see the deployment guide).</div></div>`;
   if(!directOn())h+=`<div class="alert org">${ic("wifioff")}<div>Direct send is not set up, so the register shows actions raised on this phone only.</div></div>`;
   h+=`<div class="kpis">
@@ -38,7 +38,7 @@ function findF(fid){return regAll().find(f=>f.fid===fid)}
 function actDetail(fid){const f=findF(fid);if(!f){toast("Action not found");return}const M=isManager();
   const ev=(f.history||[]).slice().reverse().map(e=>`<div class="ev"><b>${esc({raised:"Raised",close:"Closed out",verify:"Verified",reopen:"Re-opened",edit:"Updated"}[e.op]||e.op)}</b> · ${esc(e.by||"")}${e.pending?" · waiting to sync":""}<small>${fmtDT(e.at)}</small>${e.note?`<div>${esc(e.note)}</div>`:""}</div>`).join("");
   let h=`<div class="libmeta" style="margin:0 0 8px">${statusPill(f)}${riskChip(f.cons,f.like)}<span class="pill ${f.rating==="UA"?"ua":"ni"}">${esc(f.rating)}</span>${f.snn?`<span class="tag o">${ic("shield","s")} ${esc(f.snn)}</span>`:""}</div>
-   <h3>${esc(f.action||"Corrective action")}</h3>
+   <h3>${esc(f.action||"Corrective action")}</h3>${f.item==="HZ"?`<button class="linkbtn" style="margin:-4px 0 8px" onclick="closeSheet();go('#reports/${encodeURIComponent(f.reportId||String(f.fid).split("|")[0])}')">${ic("alert","s")} Open the hazard report (photos)</button>`:""}
    <dl class="kv"><dt>Item</dt><dd><b>${esc(f.item)}</b> ${esc(f.text||"")}</dd><dt>Finding</dt><dd>${esc(f.finding||"—")}</dd>
    <dt>Owner</dt><dd>${esc(f.owner||"TBC")}${f.ownerEmail?`<div class="muted">${ic("send","s")} ${esc(f.ownerEmail)}${f.notified?` · emailed ${fmtD(String(f.notified).slice(0,10))}`:isOpen(f)&&!f.local?" · not emailed (address not allowed by the relay)":""}</div>`:isOpen(f)?`<div class="muted">No email – they were not notified</div>`:""}</dd><dt>Due</dt><dd>${f.due?`${fmtD(f.due)} · <b style="color:${isOverdue(f)?"var(--ua)":"inherit"}">${esc(dueText(f.due))}</b>`:"—"}</dd>
    <dt>Inspection</dt><dd>${esc(f.no)} ${esc(f.title||"")}</dd><dt>Location</dt><dd>${esc(f.location||"—")}${f.crew?` · ${esc(f.crew)}`:""}</dd>

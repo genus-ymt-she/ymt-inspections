@@ -280,3 +280,18 @@ test("site access code: when SITE_CODE is set, sends and reads need it (not case
   assert.equal(r.get({ action: "dashboard", key: r.key, code: "PARRON26" }).ok, true);
   assert.equal(r.get({}).ok, true);                               // connection check still answers
 });
+
+test("hazard and positive reports can be listed and their photos opened (only report photos)", () => {
+  const r = createRelay();
+  const jpg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64");
+  r.post({ key: r.key, action: "observation", uid: "o1", reportId: "YMT-HZ-1", subject: "s", text: "t", html: "h", meta: { name: "Matt Smith", location: "Laydown 2" },
+    obs: { type: "hazard", description: "Open trench, no barricade", immediate: "Barricaded" }, photos: [jpg, jpg],
+    findings: [{ fid: "YMT-HZ-1|HZ", item: "HZ", text: "Open trench", rating: "NI", cons: 3, like: 3, score: 14, level: "High", finding: "Open trench", action: "Install barricade", status: "open", owner: "Paul Delaney", due: "2026-10-20" }] });
+  r.post({ key: r.key, action: "observation", uid: "o2", reportId: "YMT-PO-1", subject: "s", text: "t", html: "h", meta: { name: "Lee Allen", location: "Office" }, obs: { type: "positive", description: "Great housekeeping", recognised: "Civil crew" } });
+  const j = r.get({ action: "reports", key: r.key }); assert.equal(j.ok, true); assert.equal(j.reports.length, 2);
+  assert.equal(j.reports[0].reportId, "YMT-PO-1"); const hz = j.reports[1];
+  assert.equal(hz.type, "hazard"); assert.equal(hz.level, "High"); assert.equal(hz.immediate, "Barricaded"); assert.equal(hz.owner, "Paul Delaney"); assert.equal(hz.photos.length, 2);
+  const ph = r.get({ action: "photo", key: r.key, id: hz.photos[0] }); assert.equal(ph.ok, true); assert.equal(ph.data, jpg);
+  assert.equal(r.get({ action: "photo", key: r.key, id: "999" }).ok, false);        // not a report photo
+  assert.equal(r.get({ action: "reports", key: "bad" }).ok, false);
+});
