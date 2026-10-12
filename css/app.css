@@ -763,3 +763,4 @@ nav.tabs a.em-tab.on .ic{stroke:var(--ua)}
 .tmap img{display:block;width:100%;height:190px;object-fit:cover;background:var(--surface-3)}
 .tmap span{display:block;padding:12px 14px}.tmap b{display:block;font-size:16px}.tmap small{color:var(--muted);font-size:13px}
 .tmap-full img{width:100%;border-radius:12px;display:block}
+.em-tile.em-heat{border-left-color:var(--accent)}.em-heat .ti{background:var(--accent-soft);color:var(--accent)}

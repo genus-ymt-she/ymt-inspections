@@ -412,16 +412,18 @@ await step("motion: entrance, count-up and success tick run (and are skipped for
   await m.waitForTimeout(900); await shot(m, "32-success-tick");
   if (await page.$(".tile.rise")) throw new Error("reduced-motion page should not animate");
 });
-await step("Emergency tab: call 000, site location, 16 situation cards (verbatim), contacts without Genus names, TARP", async () => {
+await step("Emergency tab: call 000, site location, 20 situation cards (ERP Rev 1) (verbatim), contacts without Genus names, TARP", async () => {
   await page.evaluate(() => go("#home")); await page.click("nav.tabs >> text=Emergency"); await page.waitForSelector(".em-hero");
   if (await page.getAttribute(".em-000", "href") !== "tel:000") throw new Error("000 link");
   const t = await page.textContent("#app"); for (const w of ["M83P+PRV", "30.3456° S, 115.3370° E", "UHF Channel 24", "Primary – Site Office Muster Point"]) if (!t.includes(w)) throw new Error("emergency page missing " + w);
-  if ((await page.$$(".em-tile")).length !== 16) throw new Error("cards: " + (await page.$$(".em-tile")).length);
+  if ((await page.$$(".em-tile")).length !== 20) throw new Error("cards: " + (await page.$$(".em-tile")).length);
   await page.evaluate(() => window.scrollTo(0, 0)); await settle(page); await shot(page, "35-emergency");
   await page.click(".em-tile.em-snake"); await page.waitForSelector(".em-step .eb");
-  const c = await page.textContent("#app"); if (!/elasticated roller bandage \(10-15cm wide\)/.test(c) || !/Page 34 of 49/.test(c)) throw new Error("snake card wording: " + c.slice(0, 200));
+  const c = await page.textContent("#app"); if (!/elasticated roller bandage \(10-15cm wide\)/.test(c) || !/Appendix B Rev 1 \| 25\/09\/2026/.test(c)) throw new Error("snake card wording: " + c.slice(0, 200));
   await settle(page); await shot(page, "36-emergency-card");
   await page.evaluate(() => go("#emergency/card/drsabcd")); await page.waitForSelector(".em-evac");
+  await page.evaluate(() => go("#emergency/card/heat")); await page.waitForSelector(".em-step .eb"); if (!/Signs of heat stroke/.test(await page.textContent("#app"))) throw new Error("heat illness card");
+  await page.evaluate(() => go("#emergency")); await page.waitForSelector("img.em-evac"); await page.waitForFunction(() => document.querySelector("img.em-evac").naturalWidth > 0);
   await page.evaluate(() => go("#emergency/contacts")); await page.waitForSelector(".callrow");
   const ct = await page.textContent("#app"); if (/Gary|Armitage|Frizzell|Shotter|0477|0484|0475/.test(ct)) throw new Error("Genus personal contacts shown on the public link");
   await page.fill("#emq", "moora"); const n = await page.$$eval(".callrow", e => e.length); if (n < 3) throw new Error("contact search: " + n);
