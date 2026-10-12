@@ -6,1080 +6,1570 @@
  "districts": {
   "North Kimberley": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 22,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 22
+    "fbi": 22,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 21
+    "fbi": 21,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 20
+    "fbi": 20,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 20
+    "fbi": 20,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Dampier Derby Coast": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 21,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 20
+    "fbi": 20,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 23
+    "fbi": 23,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 23
+    "fbi": 23,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 20
+    "fbi": 20,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "South Kimberley Coast": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 14,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 13
+    "fbi": 13,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 15
+    "fbi": 15,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 15
+    "fbi": 15,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 15
+    "fbi": 15,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Kimberley Inland North": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 22,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 22
+    "fbi": 22,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "High",
-    "fbi": 26
+    "fbi": 26,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 23
+    "fbi": 23,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 21
+    "fbi": 21,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Kimberley Inland South": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 16,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 13
+    "fbi": 13,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 16
+    "fbi": 16,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 17
+    "fbi": 17,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 15
+    "fbi": 15,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "North Interior": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 22,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 16
+    "fbi": 16,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 17
+    "fbi": 17,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 20
+    "fbi": 20,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 14
+    "fbi": 14,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Central Pilbara": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 23,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 21
+    "fbi": 21,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "High",
-    "fbi": 27
+    "fbi": 27,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 22
+    "fbi": 22,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 22
+    "fbi": 22,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Hedland": [
    {
+    "date": "2026-10-12",
+    "rating": "High",
+    "fbi": 31,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "High",
-    "fbi": 29
+    "fbi": 29,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "High",
-    "fbi": 29
+    "fbi": 29,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "High",
-    "fbi": 27
+    "fbi": 27,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "High",
-    "fbi": 25
+    "fbi": 25,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Burrup": [
    {
+    "date": "2026-10-12",
+    "rating": "High",
+    "fbi": 38,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "High",
-    "fbi": 38
+    "fbi": 38,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "High",
-    "fbi": 34
+    "fbi": 34,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "High",
-    "fbi": 35
+    "fbi": 35,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "High",
-    "fbi": 34
+    "fbi": 34,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Ashburton Inland": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 22,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 22
+    "fbi": 22,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "High",
-    "fbi": 26
+    "fbi": 26,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 21
+    "fbi": 21,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 21
+    "fbi": 21,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Ashburton Coast": [
    {
+    "date": "2026-10-12",
+    "rating": "High",
+    "fbi": 25,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "High",
-    "fbi": 24
+    "fbi": 24,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "High",
-    "fbi": 24
+    "fbi": 24,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 22
+    "fbi": 22,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "High",
-    "fbi": 24
+    "fbi": 24,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Exmouth Gulf Coast": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 22,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 23
+    "fbi": 23,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 22
+    "fbi": 22,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 22
+    "fbi": 22,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "High",
-    "fbi": 24
+    "fbi": 24,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "West Interior": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 21,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 20
+    "fbi": 20,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 20
+    "fbi": 20,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 22
+    "fbi": 22,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 16
+    "fbi": 16,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Gascoyne Inland": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 19,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 20
+    "fbi": 20,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "High",
-    "fbi": 24
+    "fbi": 24,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 21
+    "fbi": 21,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 19
+    "fbi": 19,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "South Murchison": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 19,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 21
+    "fbi": 21,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 22
+    "fbi": 22,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 20
+    "fbi": 20,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 19
+    "fbi": 19,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Gascoyne Coast": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 19,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 21
+    "fbi": 21,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 22
+    "fbi": 22,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 18
+    "fbi": 18,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 20
+    "fbi": 20,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Mid West": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 20,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "High",
-    "fbi": 24
+    "fbi": 24,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "High",
-    "fbi": 28
+    "fbi": 28,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 19
+    "fbi": 19,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 18
+    "fbi": 18,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "North Midlands": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 18,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "High",
-    "fbi": 24
+    "fbi": 24,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "High",
-    "fbi": 28
+    "fbi": 28,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 19
+    "fbi": 19,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 18
+    "fbi": 18,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Lesueur": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 15,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 19
+    "fbi": 19,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 21
+    "fbi": 21,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "No Rating",
-    "fbi": 9
+    "fbi": 9,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "No Rating",
-    "fbi": 9
+    "fbi": 9,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Watheroo": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 14,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 17
+    "fbi": 17,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 20
+    "fbi": 20,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 13
+    "fbi": 13,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Central Interior": [
    {
+    "date": "2026-10-12",
+    "rating": "High",
+    "fbi": 38,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 19
+    "fbi": 19,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 19
+    "fbi": 19,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 22
+    "fbi": 22,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 16
+    "fbi": 16,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "South Interior": [
    {
+    "date": "2026-10-12",
+    "rating": "High",
+    "fbi": 29,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "High",
-    "fbi": 24
+    "fbi": 24,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 20
+    "fbi": 20,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 19
+    "fbi": 19,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Eucla": [
    {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 11,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "No Rating",
-    "fbi": 10
+    "fbi": 10,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "North Goldfields": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 16,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 15
+    "fbi": 15,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 14
+    "fbi": 14,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 15
+    "fbi": 15,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "South Goldfields": [
    {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 8,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "No Rating",
-    "fbi": 9
+    "fbi": 9,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "No Rating",
-    "fbi": 11
+    "fbi": 11,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "No Rating",
-    "fbi": 8
+    "fbi": 8,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "No Rating",
-    "fbi": 7
+    "fbi": 7,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Karroun": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 13,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 15
+    "fbi": 15,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 17
+    "fbi": 17,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 15
+    "fbi": 15,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 14
+    "fbi": 14,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Lockwood": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 14,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 16
+    "fbi": 16,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 20
+    "fbi": 20,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 17
+    "fbi": 17,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 15
+    "fbi": 15,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Mortlock": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 17,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 20
+    "fbi": 20,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 22
+    "fbi": 22,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 18
+    "fbi": 18,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 16
+    "fbi": 16,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Avon": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 15,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 17
+    "fbi": 17,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 21
+    "fbi": 21,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 16
+    "fbi": 16,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 15
+    "fbi": 15,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Swan Inland North": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 18,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 21
+    "fbi": 21,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "High",
-    "fbi": 27
+    "fbi": 27,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 17
+    "fbi": 17,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 17
+    "fbi": 17,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Swan Coastal North": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 13,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 15
+    "fbi": 15,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 22
+    "fbi": 22,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "No Rating",
-    "fbi": 10
+    "fbi": 10,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "No Rating",
-    "fbi": 10
+    "fbi": 10,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Perth Inner": [
    {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 7,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "No Rating",
-    "fbi": 8
+    "fbi": 8,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "No Rating",
-    "fbi": 9
+    "fbi": 9,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "No Rating",
-    "fbi": 7
+    "fbi": 7,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "No Rating",
-    "fbi": 7
+    "fbi": 7,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Swan Inland South": [
    {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 10,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 16
+    "fbi": 16,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Swan Coastal South": [
    {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 11,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 17
+    "fbi": 17,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "No Rating",
-    "fbi": 11
+    "fbi": 11,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Rottnest": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 22,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "No Rating",
-    "fbi": 11
+    "fbi": 11,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 18
+    "fbi": 18,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "No Rating",
-    "fbi": 1
+    "fbi": 1,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "No Rating",
-    "fbi": 4
+    "fbi": 4,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Brockman": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 12,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 13
+    "fbi": 13,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 16
+    "fbi": 16,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 13
+    "fbi": 13,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 13
+    "fbi": 13,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Geographe": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 12,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 13
+    "fbi": 13,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 13
+    "fbi": 13,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Blackwood": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 12,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 16
+    "fbi": 16,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 13
+    "fbi": 13,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 13
+    "fbi": 13,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Capes": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 12,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 13
+    "fbi": 13,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 17
+    "fbi": 17,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 13
+    "fbi": 13,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 14
+    "fbi": 14,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Southern Forests": [
    {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 8,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "No Rating",
-    "fbi": 11
+    "fbi": 11,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 15
+    "fbi": 15,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 13
+    "fbi": 13,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Roe": [
    {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 11,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 16
+    "fbi": 16,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 13
+    "fbi": 13,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Arthur": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 12,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 14
+    "fbi": 14,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 20
+    "fbi": 20,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 14
+    "fbi": 14,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 14
+    "fbi": 14,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Lakes": [
    {
+    "date": "2026-10-12",
+    "rating": "Moderate",
+    "fbi": 13,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "Moderate",
-    "fbi": 13
+    "fbi": 13,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 20
+    "fbi": 20,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 16
+    "fbi": 16,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 15
+    "fbi": 15,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Stirling North": [
    {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 10,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "No Rating",
-    "fbi": 11
+    "fbi": 11,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 16
+    "fbi": 16,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Stirling West": [
    {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 7,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "No Rating",
-    "fbi": 9
+    "fbi": 9,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 13
+    "fbi": 13,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "No Rating",
-    "fbi": 9
+    "fbi": 9,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "No Rating",
-    "fbi": 10
+    "fbi": 10,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Stirling Coast": [
    {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 8,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "No Rating",
-    "fbi": 11
+    "fbi": 11,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 14
+    "fbi": 14,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "No Rating",
-    "fbi": 10
+    "fbi": 10,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "No Rating",
-    "fbi": 11
+    "fbi": 11,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Fitzgerald": [
    {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 9,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "No Rating",
-    "fbi": 11
+    "fbi": 11,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 14
+    "fbi": 14,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "No Rating",
-    "fbi": 10
+    "fbi": 10,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "No Rating",
-    "fbi": 10
+    "fbi": 10,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Esperance Coast": [
    {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 8,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "No Rating",
-    "fbi": 10
+    "fbi": 10,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 12
+    "fbi": 12,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "No Rating",
-    "fbi": 9
+    "fbi": 9,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "No Rating",
-    "fbi": 8
+    "fbi": 8,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ],
   "Esperance Inland": [
    {
+    "date": "2026-10-12",
+    "rating": "No Rating",
+    "fbi": 9,
+    "issued": "2026-10-12T04:35:00+08:00"
+   },
+   {
     "date": "2026-10-13",
     "rating": "No Rating",
-    "fbi": 10
+    "fbi": 10,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-14",
     "rating": "Moderate",
-    "fbi": 14
+    "fbi": 14,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-15",
     "rating": "No Rating",
-    "fbi": 9
+    "fbi": 9,
+    "issued": "2026-10-12T16:10:00+08:00"
    },
    {
     "date": "2026-10-16",
     "rating": "No Rating",
-    "fbi": 9
+    "fbi": 9,
+    "issued": "2026-10-12T16:10:00+08:00"
    }
   ]
  }
