@@ -28,14 +28,21 @@ jobs:
             sleep 20
           done
           test -s IDW15100.xml
-      - name: Build fdr.json
-        run: node app/tools/fdr-feed.mjs IDW15100.xml > fdr.json && head -c 400 fdr.json
-      - name: Publish to the fdr-data branch (only when the forecast changes)
+      - name: Earlier issues (today's rating is not in the afternoon issue)
         run: |
           git init -q pub && cd pub
-          git config user.name "PARRON FDR feed" && git config user.email "actions@users.noreply.github.com"
           git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
-          if git fetch -q --depth 1 origin fdr-data 2>/dev/null; then git checkout -q -b fdr-data FETCH_HEAD; else git checkout -q --orphan fdr-data; fi
+          if git fetch -q --depth 12 origin fdr-data 2>/dev/null; then
+            i=0; for c in $(git rev-list --reverse FETCH_HEAD | tail -n 12); do i=$((i+1)); git show "$c:fdr.json" > "../prev_$(printf %02d $i).json" 2>/dev/null || true; done
+            git checkout -q -b fdr-data FETCH_HEAD
+          else git checkout -q --orphan fdr-data; fi
+          ls ../prev_*.json 2>/dev/null | wc -l
+      - name: Build fdr.json
+        run: node app/tools/fdr-feed.mjs IDW15100.xml $(ls prev_*.json 2>/dev/null) > fdr.json && node -e 'const f=require("./fdr.json");for(const d of ["Lesueur","Watheroo"])console.log(d,JSON.stringify(f.districts[d]))'
+      - name: Publish to the fdr-data branch (only when the forecast changes)
+        run: |
+          cd pub
+          git config user.name "PARRON FDR feed" && git config user.email "actions@users.noreply.github.com"
           cp ../fdr.json fdr.json && git add fdr.json
           if git diff --cached --quiet; then echo "No change"; exit 0; fi
           git commit -qm "Fire Danger Rating $(node -p 'require("./fdr.json").issued')"

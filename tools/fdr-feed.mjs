@@ -27,8 +27,24 @@ export function parseFdr(xml) {
   };
 }
 
+/* The afternoon issue starts from tomorrow, so today's rating would vanish at about 4 pm. Earlier issues are
+   merged in (oldest first, newest wins for any date) and kept from yesterday onwards (Perth time). */
+export function mergeFdr(latest, previous, today) {
+  const keepFrom = new Date(Date.parse(today + "T00:00:00Z") - 864e5).toISOString().slice(0, 10);
+  const byD = {};
+  for (const f of [...previous, latest]) for (const [name, days] of Object.entries((f && f.districts) || {})) {
+    const m = byD[name] = byD[name] || {};
+    for (const d of days) if (d && d.date >= keepFrom) m[d.date] = { ...d, issued: f.issued || "" };
+  }
+  const districts = {};
+  for (const [name, m] of Object.entries(byD)) districts[name] = Object.keys(m).sort().map(k => m[k]);
+  return { ...latest, districts };
+}
+const perthToday = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+
 if (process.argv[2]) {
-  const out = parseFdr(fs.readFileSync(process.argv[2], "utf8"));
-  if (!Object.keys(out.districts).length) { console.error("No fire-district ratings found"); process.exit(1); }
-  process.stdout.write(JSON.stringify(out, null, 1) + "\n");
+  const latest = parseFdr(fs.readFileSync(process.argv[2], "utf8"));
+  if (!Object.keys(latest.districts).length) { console.error("No fire-district ratings found"); process.exit(1); }
+  const previous = process.argv.slice(3).map(f => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return null; } }).filter(Boolean);
+  process.stdout.write(JSON.stringify(mergeFdr(latest, previous, perthToday()), null, 1) + "\n");
 }

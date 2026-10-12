@@ -1,6 +1,6 @@
 "use strict";
 /* Emergency Management and Traffic Management content (YMT). Wording is taken verbatim from the controlled documents:
-   ERP J1084-HSE-PLN-YMT-0002 Appendix A (contacts, Genus personnel left out – public link) and Appendix B (situation cards),
+   ERP J1084-HSE-PLN-YMT-0002 Appendix A (contacts, Genus personnel left out – public link) and Appendix B Rev 1 25/09/2026 (situation cards),
    and TARP J1084-HSE-TRP-YMT-0001 Rev A. Update this file when those documents are revised. */
 const EMERG={
  "site": {
@@ -61,7 +61,7 @@ const EMERG={
         ],
         [
          2,
-         "Address of incident and nearest cross street;"
+         "Address of incident and site address and Plus Code M83P+PRV;"
         ],
         [
          2,
@@ -148,9 +148,9 @@ const EMERG={
      ]
     }
    ],
-   "source": "J1084-HSE-PLN-YMT-0002 — Emergency Response and Management Plan, Appendix B Rev: A | 1/05/2026 | Ref. Page 31 of 49",
-   "icon": "flame",
-   "id": "fire"
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "fire",
+   "icon": "flame"
   },
   {
    "title": "MEDICAL EMERGENCY",
@@ -194,7 +194,7 @@ const EMERG={
         ],
         [
          2,
-         "Send for Help: If you are alone with the individual and you need to leave to call for help, firstly turn the individual into the recovery position;"
+         "Send for Help: Call Triple Zero (000) or send someone to call. If you must leave an unconscious, breathing casualty to call for help, first place them in the recovery position;"
         ],
         [
          2,
@@ -226,7 +226,7 @@ const EMERG={
         ],
         [
          2,
-         "Address of incident and nearest cross street;"
+         "Address of incident and site address and Plus Code M83P+PRV;"
         ],
         [
          2,
@@ -259,9 +259,9 @@ const EMERG={
      ]
     }
    ],
-   "source": "J1084-HSE-PLN-YMT-0002 — Emergency Response and Management Plan, Appendix B Rev: A | 1/05/2026 | Ref. Page 32 of 49",
-   "icon": "plus",
-   "id": "medical"
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "medical",
+   "icon": "plus"
   },
   {
    "title": "MENTAL HEALTH (PSYCHOSOCIAL) EMERGENCY",
@@ -368,9 +368,9 @@ const EMERG={
      ]
     }
    ],
-   "source": "J1084-HSE-PLN-YMT-0002 — Emergency Response and Management Plan, Appendix B Rev: A | 1/05/2026 | Ref. Page 33 of 49",
-   "icon": "users",
-   "id": "mental"
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "mental",
+   "icon": "users"
   },
   {
    "title": "SNAKE BITE",
@@ -398,7 +398,7 @@ const EMERG={
         ],
         [
          2,
-         "Send for Help: If you are alone with the individual and you need to leave to call for help, firstly turn the individual into the recovery position;"
+         "Send for Help: Call Triple Zero (000) or send someone to call. If you must leave an unconscious, breathing casualty to call for help, first place them in the recovery position;"
         ],
         [
          2,
@@ -467,9 +467,9 @@ const EMERG={
      ]
     }
    ],
-   "source": "J1084-HSE-PLN-YMT-0002 — Emergency Response and Management Plan, Appendix B Rev: A | 1/05/2026 | Ref. Page 34 of 49",
-   "icon": "alert",
-   "id": "snake"
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "snake",
+   "icon": "alert"
   },
   {
    "title": "ELECTROCUTION / ELECTRIC SHOCK",
@@ -533,7 +533,7 @@ const EMERG={
         ],
         [
          2,
-         "Send for Help: If you are alone with the individual and you need to leave to call for help, firstly turn the individual into the recovery position;"
+         "Send for Help: Call Triple Zero (000) or send someone to call. If you must leave an unconscious, breathing casualty to call for help, first place them in the recovery position;"
         ],
         [
          2,
@@ -591,7 +591,7 @@ const EMERG={
         ],
         [
          1,
-         "Phone Network Operator to report a fallen powerline and to make the area safe;"
+         "Phone Western Power on 13 13 51 (or the Western Power network operations contact in Appendix A for YMT interface works) to report the fallen powerline and make the area safe;"
         ],
         [
          1,
@@ -624,9 +624,9 @@ const EMERG={
      ]
     }
    ],
-   "source": "J1084-HSE-PLN-YMT-0002 — Emergency Response and Management Plan, Appendix B Rev: A | 1/05/2026 | Ref. Pages 35–36 of 49",
-   "icon": "zap",
-   "id": "electric"
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "electric",
+   "icon": "zap"
   },
   {
    "title": "FALL FROM HEIGHT",
@@ -657,7 +657,7 @@ const EMERG={
          "If unable to lower the person, use another/secondary item of suitable equipment or plant e.g., EWP, Scissor lift, Platform ladder, to stabilise the suspended person:"
         ],
         [
-         2,
+         1,
          "Coordinate rescue (with trained and competent persons) to ensure that individual is not suspended for >10 minutes;"
         ],
         [
@@ -670,71 +670,75 @@ const EMERG={
         ],
         [
          2,
-         "If the suspended person cannot be safely and immediately rescued, elevation of the legs may prolong tolerance of the suspension and assist normal blood flow; and"
+         "If the suspended person cannot be safely and immediately rescued, encourage the conscious worker to use suspension relief straps and keep moving their legs; and"
         ],
         [
          2,
          "Use an Emergency Descent Device (EDD) to lower casualty to the ground:"
         ],
         [
-         3,
+         1,
          "Visually check the casualty to ensure further injury / danger is minimised, provide verbal reassurance;"
         ],
         [
-         3,
+         1,
          "Raise the rescue kit;"
         ],
         [
-         3,
+         1,
          "Attach the rescue kit sling to a suitable attachment point;"
         ],
         [
-         3,
+         1,
          "Attach the personal rescue device to yourself;"
         ],
         [
-         3,
+         1,
          "Attach rescue kit EDD to the rescue rope, test the functionality of the EDD;"
         ],
         [
-         3,
+         1,
          "Attach yourself to the EDD and lock off EDD;"
         ],
         [
-         3,
+         1,
          "Detach yourself from the structure;"
         ],
         [
-         3,
+         1,
          "Descend to casualty and lock off EDD;"
         ],
         [
-         3,
+         1,
          "Attach the personal rescue device to the rescue rope and to the casualty;"
         ],
         [
-         3,
+         1,
          "Raise the casualty to take the weight off his attachment;"
         ],
         [
-         3,
+         1,
          "Secure casualty's harness to rescuers;"
         ],
         [
-         3,
+         1,
          "Slowly release the personal rescue device to transfer the full weight of the casualty to the rescuer;"
         ],
         [
-         3,
+         1,
          "Lower the casualty to the ground;"
         ],
         [
-         3,
+         1,
          "Disconnect self / casualty from the rescue rope; and"
         ],
         [
-         3,
+         1,
          "Move the casualty to a suitable location to allow first aid to be administered and seek medical assistance."
+        ],
+        [
+         1,
+         "Once on the ground, lay the casualty flat as soon as it is safe to do so, follow DRSABCD and call 000. Do not keep the casualty sitting or semi-recumbent (ANZCOR Guideline 9.1.5)."
         ]
        ],
        [
@@ -765,9 +769,9 @@ const EMERG={
      ]
     }
    ],
-   "source": "J1084-HSE-PLN-YMT-0002 — Emergency Response and Management Plan, Appendix B Rev: A | 1/05/2026 | Ref. Page 36 of 49",
-   "icon": "down",
-   "id": "fall"
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "fall",
+   "icon": "down"
   },
   {
    "title": "ELEVATED WORK PLATFORM (EWP) FAILURE / RESCUE",
@@ -821,6 +825,50 @@ const EMERG={
         [
          0,
          "Supervisor / Qualified Operator / IP"
+        ]
+       ]
+      ],
+      [
+       [
+        [
+         0,
+         "Scissor / Vertical Lift – Platform Will Not Lower"
+        ]
+       ],
+       [
+        [
+         0,
+         "Refer to the task Scissor Lift Rescue Plan (TEM-SHEQ-GNP-0018):"
+        ],
+        [
+         1,
+         "Operator attempts to lower using the platform controls; check E-stops and battery isolation;"
+        ],
+        [
+         1,
+         "Spotter lowers the platform using the ground controls. If unsuccessful;"
+        ],
+        [
+         1,
+         "Spotter operates the OEM emergency (manual) lowering valve per the manufacturer's decal / operator manual;"
+        ],
+        [
+         1,
+         "Operator remains inside the guardrails — never climb down the scissor stack or guardrails;"
+        ],
+        [
+         1,
+         "If the platform still cannot be lowered, retrieve the operator using a second EWP or platform ladder where safe, as directed by the Chief Warden, maintaining fall protection during transfer;"
+        ],
+        [
+         1,
+         "Medical emergency on the platform: lower immediately using the above sequence, call 000 and follow DRSABCD once grounded."
+        ]
+       ],
+       [
+        [
+         0,
+         "Operator / Spotter / Supervisor / Chief Warden"
         ]
        ]
       ],
@@ -1011,9 +1059,9 @@ const EMERG={
      ]
     }
    ],
-   "source": "J1084-HSE-PLN-YMT-0002 — Emergency Response and Management Plan, Appendix B Rev: A | 1/05/2026 | Ref. Pages 37–38 of 49",
-   "icon": "layers",
-   "id": "ewp"
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "ewp",
+   "icon": "layers"
   },
   {
    "title": "UTILITY / SERVICE STRIKE",
@@ -1096,7 +1144,7 @@ const EMERG={
         ],
         [
          1,
-         "If it is safe to do so, whilst in the vehicle, call 000 and the Power Utility company;"
+         "If it is safe to do so, whilst in the vehicle, call 000 and Western Power (13 13 51);"
         ],
         [
          1,
@@ -1169,9 +1217,9 @@ const EMERG={
      ]
     }
    ],
-   "source": "J1084-HSE-PLN-YMT-0002 — Emergency Response and Management Plan, Appendix B Rev: A | 1/05/2026 | Ref. Page 39 of 49",
-   "icon": "zap",
-   "id": "utility"
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "utility",
+   "icon": "zap"
   },
   {
    "title": "SPILLS — HYDROCARBON / OIL",
@@ -1253,7 +1301,7 @@ const EMERG={
          "Turn off power to any machinery or equipment causing a spill or leak as soon as it is detected:"
         ],
         [
-         2,
+         1,
          "Turn off supply taps from source (e.g. hydraulic / fuel tanks of vehicles or machinery);"
         ],
         [
@@ -1350,7 +1398,15 @@ const EMERG={
         ],
         [
          1,
-         "Arrange approved disposal (contact SHEQ Advisor for guidance)."
+         "Arrange approved disposal (contact SHE Advisor for guidance)."
+        ],
+        [
+         1,
+         "Record the spill in MYOSH and notify in accordance with Section 12;"
+        ],
+        [
+         1,
+         "Where the spill causes, or is likely to cause, pollution, the SHE Manager notifies DWER as soon as practicable (Environmental Protection Act 1986 s.72)."
         ]
        ],
        [
@@ -1363,9 +1419,9 @@ const EMERG={
      ]
     }
    ],
-   "source": "J1084-HSE-PLN-YMT-0002 — Emergency Response and Management Plan, Appendix B Rev: A | 1/05/2026 | Ref. Page 40 of 49",
-   "icon": "drop",
-   "id": "spill"
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "spill",
+   "icon": "drop"
   },
   {
    "title": "TRAFFIC MANAGEMENT INCIDENT",
@@ -1405,7 +1461,7 @@ const EMERG={
         ],
         [
          2,
-         "Send for Help: If you are alone with the individual and you need to leave to call for help, firstly turn the individual into the recovery position;"
+         "Send for Help: Call Triple Zero (000) or send someone to call. If you must leave an unconscious, breathing casualty to call for help, first place them in the recovery position;"
         ],
         [
          2,
@@ -1436,8 +1492,8 @@ const EMERG={
          "Nominate a team member/bystander to wait at entrance/road etc. to guide emergency services to site."
         ],
         [
-         2,
-         "Traffic Control to open road closures and enable emergency services to get to injured person upon their arrival (if working in metro areas)."
+         1,
+         "Traffic control to hold or open access so that emergency services can reach the injured person on arrival."
         ]
        ],
        [
@@ -1451,13 +1507,17 @@ const EMERG={
        [
         [
          1,
-         "If emergency services are not needed, drive stabilised person to a nominated medical facility for medical assessment and treatment, as required."
+         "If emergency services are not required, the Supervisor arranges transport of the stabilised person, accompanied by a first aider, to nominated medical facility for assessment;"
+        ],
+        [
+         1,
+         "The driver / operator involved is subject to post-incident drug and alcohol testing in accordance with the WHSMP."
         ]
        ],
        [
         [
          0,
-         "SHEQ / Project Manager or Supervisor"
+         "Supervisor / Construction Manager"
         ]
        ]
       ],
@@ -1490,9 +1550,9 @@ const EMERG={
      ]
     }
    ],
-   "source": "J1084-HSE-PLN-YMT-0002 — Emergency Response and Management Plan, Appendix B Rev: A | 1/05/2026 | Ref. Page 41 of 49",
-   "icon": "truck",
-   "id": "traffic"
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "traffic",
+   "icon": "truck"
   },
   {
    "title": "MISSING PERSON",
@@ -1592,7 +1652,7 @@ const EMERG={
        [
         [
          1,
-         "If the missing person cannot be located within 30 minutes of the specified check in time, notify Project Manager and Project Director to enact emergency response."
+         "If the missing person cannot be located within 30 minutes of the specified check-in time, notify the Project Director and enact the emergency response."
         ]
        ],
        [
@@ -1620,7 +1680,7 @@ const EMERG={
        [
         [
          1,
-         "Notify the search and rescue authority and local police. Provide all available information to the search party."
+         "Notify WA Police (the search and rescue authority) on 000. Provide all available information to the search party."
         ]
        ],
        [
@@ -1703,9 +1763,9 @@ const EMERG={
      ]
     }
    ],
-   "source": "J1084-HSE-PLN-YMT-0002 — Emergency Response and Management Plan, Appendix B Rev: A | 1/05/2026 | Ref. Page 42 of 49",
-   "icon": "search",
-   "id": "missing"
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "missing",
+   "icon": "search"
   },
   {
    "title": "BOMB / SUBSTANCE THREAT",
@@ -1781,7 +1841,7 @@ const EMERG={
         ],
         [
          1,
-         "Notify the Police by dialling 131 444 and request assistance;"
+         "Call Triple Zero (000) and request Police assistance;"
         ],
         [
          1,
@@ -1842,9 +1902,9 @@ const EMERG={
      ]
     }
    ],
-   "source": "J1084-HSE-PLN-YMT-0002 — Emergency Response and Management Plan, Appendix B Rev: A | 1/05/2026 | Ref. Page 43 of 49",
-   "icon": "alert",
-   "id": "bomb"
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "bomb",
+   "icon": "alert"
   },
   {
    "title": "EXTERNAL EMERGENCY",
@@ -1879,7 +1939,7 @@ const EMERG={
         ],
         [
          2,
-         "Implement cessation triggers per §5.2 Inclement Weather Triggers (lightning, wind, rainfall, visibility, temperature)."
+         "Implement cessation triggers per Section 10.2 Inclement Weather Triggers (lightning, wind, rainfall, visibility, temperature)."
         ],
         [
          2,
@@ -1947,7 +2007,7 @@ const EMERG={
         ],
         [
          2,
-         "When contacting the emergency services, state the following: Your name; Company name; Address of incident and nearest cross street; Types of injuries (if any); and any other relevant information."
+         "When contacting the emergency services, state the following: Your name; Company name; Address of incident and site address and Plus Code M83P+PRV; Types of injuries (if any); and any other relevant information."
         ],
         [
          1,
@@ -2004,9 +2064,9 @@ const EMERG={
      ]
     }
    ],
-   "source": "J1084-HSE-PLN-YMT-0002 — Emergency Response and Management Plan, Appendix B Rev: A | 1/05/2026 | Ref. Pages 44–45 of 49",
-   "icon": "cloud",
-   "id": "external"
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "external",
+   "icon": "cloud"
   },
   {
    "title": "COMMUNICATIONS FAILURE",
@@ -2057,7 +2117,7 @@ const EMERG={
         ],
         [
          1,
-         "Inspect communication equipment (UHF radios, Starlink, satellite phone) monthly per Table 3 and report defects immediately; and"
+         "Inspect communication equipment (UHF radios, Starlink, satellite phone) monthly per Table 12 and report defects immediately; and"
         ],
         [
          1,
@@ -2067,7 +2127,7 @@ const EMERG={
        [
         [
          0,
-         "Supervisor / SHEQ Advisor / All Workers"
+         "Supervisor / SHE Advisor / All Workers"
         ]
        ]
       ],
@@ -2097,7 +2157,7 @@ const EMERG={
         ],
         [
          1,
-         "Supervisor conducts a headcount and accounts for all personnel against the visitor register and sign-on records (refer §4.2); and"
+         "Supervisor conducts a headcount and accounts for all personnel against the visitor register and sign-on records (refer Section 8.2); and"
         ],
         [
          1,
@@ -2153,11 +2213,11 @@ const EMERG={
         ],
         [
          1,
-         "Provide the site address as per §4.3: Yerramullah Terminal construction site, Cowalla Road, Hill River WA 6521 — approx. 15km west of Brand Highway; Plus Code M83P+PRV; GPS 30.3456°S, 115.3370°E; Shire of Dandaragan; and"
+         "Provide the site address as per Section 8.3: Yerramullah Terminal (YMT) construction site, Cowalla Road, Hill River WA 6521 — approx. 15 km from the Brand Highway turnoff via Cowalla Road; Plus Code M83P+PRV; GPS 30.3456° S, 115.3370° E; Shire of Dandaragan; and"
         ],
         [
          1,
-         "Dispatch the escort vehicle to the primary site entry to meet Emergency Services per §4.3."
+         "Dispatch the escort vehicle to the primary site entry to meet Emergency Services per Section 8.3."
         ]
        ],
        [
@@ -2193,22 +2253,22 @@ const EMERG={
         ],
         [
          1,
-         "Report repeated or prolonged failures to the SHEQ Manager for review of communication arrangements and this protocol."
+         "Report repeated or prolonged failures to the SHE Manager for review of communication arrangements and this protocol."
         ]
        ],
        [
         [
          0,
-         "Chief Warden / Supervisor / SHEQ Advisor"
+         "Chief Warden / Supervisor / SHE Advisor"
         ]
        ]
       ]
      ]
     }
    ],
-   "source": "J1084-HSE-PLN-YMT-0002 — Emergency Response and Management Plan, Appendix B Rev: A | 1/05/2026 | Ref. Pages 46–47 of 49",
-   "icon": "cloud",
-   "id": "comms"
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "comms",
+   "icon": "radio"
   },
   {
    "title": "CIVIL DISTURBANCE / PERSONAL THREAT",
@@ -2228,7 +2288,7 @@ const EMERG={
         ],
         [
          1,
-         "Notify the Police by dialling 131 444 or 000 and request assistance;"
+         "Call Triple Zero (000) where there is any threat to safety and request Police assistance (131 444 for non-urgent reports only);"
         ],
         [
          1,
@@ -2257,18 +2317,390 @@ const EMERG={
      ]
     }
    ],
-   "source": "J1084-HSE-PLN-YMT-0002 — Emergency Response and Management Plan, Appendix B Rev: A | 1/05/2026 | Ref. Page 48 of 49",
-   "icon": "shield",
-   "id": "civil"
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "civil",
+   "icon": "shield"
+  },
+  {
+   "title": "VEHICLE COLLISION (PUBLIC ROAD / DAILY COMMUTE)",
+   "sub": "",
+   "tables": [
+    {
+     "head": [
+      "ACTION",
+      "RESPONSIBLE"
+     ],
+     "rows": [
+      [
+       [
+        [
+         1,
+         "Stop only where safe; switch on hazard lights, apply the park brake and switch off the ignition;"
+        ],
+        [
+         1,
+         "Wear hi-vis before exiting; place warning triangles; keep all passengers clear of live traffic lanes;"
+        ],
+        [
+         1,
+         "Call Triple Zero (000): state the road name (e.g. Brand Highway, Cowalla Road), direction of travel, nearest intersection or landmark, number of vehicles and casualties, and any hazards (fuel leak, fire, livestock / fauna on road);"
+        ],
+        [
+         1,
+         "Follow DRSABCD; do not move casualties unless there is immediate danger (fire, traffic);"
+        ],
+        [
+         1,
+         "With multiple casualties, prioritise those who are unresponsive or not breathing normally;"
+        ],
+        [
+         1,
+         "Account for every occupant against the vehicle / mini-bus passenger list;"
+        ],
+        [
+         1,
+         "If there is no mobile coverage, send a vehicle to the nearest point of coverage or occupied premises (Communications Failure Protocol)."
+        ]
+       ],
+       [
+        [
+         0,
+         "Driver / First Responder / First Aider"
+        ]
+       ]
+      ],
+      [
+       [
+        [
+         1,
+         "Notify the Construction Manager and SHE Manager immediately; notify the Principal in accordance with Section 12;"
+        ],
+        [
+         1,
+         "Arrange recovery of uninjured personnel to site or accommodation;"
+        ],
+        [
+         1,
+         "Preserve the scene for WA Police; do not move vehicles unless directed by Police or required for safety;"
+        ],
+        [
+         1,
+         "Post-incident drug and alcohol testing for the driver in accordance with the WHSMP;"
+        ],
+        [
+         1,
+         "Fauna or livestock strike: report as an environmental incident in accordance with the WHSMP, and notify the Land Access Coordinator where livestock or private property is involved."
+        ]
+       ],
+       [
+        [
+         0,
+         "Supervisor / Construction Manager / SHE Manager /  Land Access Coordinator (the role held by the Environmental Supervisor (Environmental Lead)."
+        ]
+       ]
+      ]
+     ]
+    }
+   ],
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "vehicle",
+   "icon": "truck"
+  },
+  {
+   "title": "HEAT ILLNESS",
+   "sub": "",
+   "tables": [
+    {
+     "head": [
+      "ACTION",
+      "RESPONSIBLE"
+     ],
+     "rows": [
+      [
+       [
+        [
+         1,
+         "Move the person out of the heat to a shaded or air-conditioned area (site office or vehicle cool zone);"
+        ],
+        [
+         1,
+         "Call the First Aider and Supervisor;"
+        ],
+        [
+         1,
+         "Signs of heat stroke (confusion, slurred speech, collapse, seizure, hot skin, or not sweating): call Triple Zero (000) immediately;"
+        ],
+        [
+         1,
+         "Follow DRSABCD if the person is unresponsive;"
+        ],
+        [
+         1,
+         "Cool the person rapidly: remove excess clothing and PPE, wet the skin with cool water and fan continuously, and apply cold packs to the neck, armpits and groin; use cold water immersion where available;"
+        ],
+        [
+         1,
+         "If fully conscious and able to swallow, give small sips of cool water; do not give fluids to a person with an altered conscious state;"
+        ],
+        [
+         1,
+         "Stay with the person and continue cooling until the ambulance arrives or symptoms resolve;"
+        ],
+        [
+         1,
+         "A worker treated for heat illness does not return to work that shift and requires medical assessment."
+        ]
+       ],
+       [
+        [
+         0,
+         "First Responder / First Aider"
+        ]
+       ]
+      ],
+      [
+       [
+        [
+         1,
+         "Review work–rest cycles, hydration and heat triggers for the remaining crew (Section 10.2.5, TEM-SHEQ-GNP-0055);"
+        ],
+        [
+         1,
+         "Record the event in MYOSH and notify in accordance with Section 12."
+        ]
+       ],
+       [
+        [
+         0,
+         "Supervisor / SHE Advisor"
+        ]
+       ]
+      ]
+     ]
+    }
+   ],
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "heat",
+   "icon": "sun"
+  },
+  {
+   "title": "STRUCTURAL FAILURE / COLLAPSE",
+   "sub": "",
+   "tables": [
+    {
+     "head": [
+      "ACTION",
+      "RESPONSIBLE"
+     ],
+     "rows": [
+      [
+       [
+        [
+         0,
+         "Immediate response"
+        ],
+        [
+         1,
+         "Raise the alarm on UHF channel 24: “Emergency, Emergency, Emergency” – state the location, the structure involved and the number of people affected."
+        ],
+        [
+         1,
+         "Stop all work and plant movement in the area. Do not approach an unstable structure, formwork or excavation."
+        ],
+        [
+         1,
+         "Set up an exclusion zone of at least 1.5 times the height of the structure, or as directed by the Chief Warden, and prevent entry."
+        ],
+        [
+         1,
+         "Call 000 if anyone is trapped or injured, and state that the incident is a structural collapse."
+        ],
+        [
+         1,
+         "Isolate energy sources to the structure (electrical, hydraulic, stored energy) where it is safe to do so."
+        ]
+       ],
+       [
+        [
+         0,
+         "First Responder / Supervisor"
+        ]
+       ]
+      ],
+      [
+       [
+        [
+         0,
+         "Rescue and casualty care"
+        ],
+        [
+         1,
+         "Do not attempt to lift or dig out a trapped person until a competent person has confirmed the structure is stable; where it remains unstable, wait for DFES."
+        ],
+        [
+         1,
+         "Where a casualty can be reached safely, apply DRSABCD (Appendix D) and follow the 000 operator’s directions for crush injury."
+        ],
+        [
+         1,
+         "Account for all personnel at the muster point and report anyone missing to the Chief Warden and emergency services."
+        ],
+        [
+         1,
+         "Meet emergency services at the YMT Primary Site Entry (Section 8.3) and brief them on the structure, hazards and casualties."
+        ]
+       ],
+       [
+        [
+         0,
+         "Chief Warden / ERT"
+        ]
+       ]
+      ],
+      [
+       [
+        [
+         0,
+         "After the event"
+        ],
+        [
+         1,
+         "Preserve the scene; do not disturb the structure or failed components except to rescue or make safe (WHS Act s.39)."
+        ],
+        [
+         1,
+         "Notify the Principal and the regulator in accordance with Section 12. A collapse of a structure, excavation or shoring may be a notifiable dangerous incident (WHS Act s.37)."
+        ],
+        [
+         1,
+         "A competent engineer (Design Manager / Partum) assesses stability before any recovery or re-entry."
+        ]
+       ],
+       [
+        [
+         0,
+         "Construction Manager / SHE Manager"
+        ]
+       ]
+      ]
+     ]
+    }
+   ],
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "structural",
+   "icon": "layers"
+  },
+  {
+   "title": "CRANE / LIFTING INCIDENT",
+   "sub": "",
+   "tables": [
+    {
+     "head": [
+      "ACTION",
+      "RESPONSIBLE"
+     ],
+     "rows": [
+      [
+       [
+        [
+         0,
+         "Immediate response"
+        ],
+        [
+         1,
+         "Stop the lift. If a suspended load is stable, hold it where it is; move the crane only if needed to make the situation safe."
+        ],
+        [
+         1,
+         "Raise the alarm on UHF channel 24 and clear everyone from under the load and from the crane’s fall zone."
+        ],
+        [
+         1,
+         "If the crane, load or rigging has contacted or come close to an overhead line or energised apparatus, keep everyone clear, follow the Electrocution / Electric Shock card (Fallen Power Lines) and notify Western Power immediately."
+        ],
+        [
+         1,
+         "Call 000 if anyone is injured or trapped."
+        ]
+       ],
+       [
+        [
+         0,
+         "Crane Operator / Dogman / Supervisor"
+        ]
+       ]
+      ],
+      [
+       [
+        [
+         0,
+         "Casualty care and securing the site"
+        ],
+        [
+         1,
+         "Do not go under a suspended or unstable load to reach a casualty; lower or secure the load first, under the direction of the crane operator and a competent rigger, where it is safe to do so."
+        ],
+        [
+         1,
+         "Apply DRSABCD (Appendix D)."
+        ],
+        [
+         1,
+         "Where a crane is unstable or has overturned, do not attempt recovery; isolate the area and obtain a recovery plan from the crane supplier and a competent person."
+        ],
+        [
+         1,
+         "Meet emergency services at the YMT Primary Site Entry."
+        ]
+       ],
+       [
+        [
+         0,
+         "Chief Warden / ERT"
+        ]
+       ]
+      ],
+      [
+       [
+        [
+         0,
+         "After the event"
+        ],
+        [
+         1,
+         "Preserve the scene and all rigging; quarantine and tag out the lifting equipment involved."
+        ],
+        [
+         1,
+         "Notify the Principal and the regulator in accordance with Section 12. Collapse, overturning or failure of a crane, or the fall of a load from height, may be a notifiable dangerous incident (WHS Act s.37)."
+        ],
+        [
+         1,
+         "Crane recovery and resumption of lifting only under an approved lift plan (FRM-SHEQ-GNP-0047 Critical Lift Plan)."
+        ]
+       ],
+       [
+        [
+         0,
+         "Construction Manager / SHE Manager"
+        ]
+       ]
+      ]
+     ]
+    }
+   ],
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B Rev 1 | 25/09/2026",
+   "id": "crane",
+   "icon": "alert"
   },
   {
    "title": "DRSABCD",
-   "sub": "",
+   "sub": "Action plan",
    "tables": [],
-   "source": "J1084-HSE-PLN-YMT-0002 — Emergency Response and Management Plan, Appendix B Rev: A | 1/05/2026 | Ref. Page 49 of 49",
-   "icon": "heart",
    "id": "drsabcd",
-   "image": "assets/emergency/drsabcd.jpg"
+   "icon": "heart",
+   "image": "assets/emergency/drsabcd.jpg",
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix D Rev 1 | 25/09/2026"
   }
  ],
  "contacts": [
@@ -2599,7 +3031,7 @@ const EMERG={
   ],
   "doubt": "Stay at the higher level. Safety takes precedence over production, schedule, commercial and operational pressure. No person will be disadvantaged for declining to travel or work in these conditions, or for raising a concern about the route."
  },
- "evac": null
+ "evac": "assets/emergency/evacuation.jpg"
 };
 const TRAFFIC_MAPS=[
  {

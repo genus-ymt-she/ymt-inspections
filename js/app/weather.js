@@ -19,7 +19,8 @@ function isoPlus(n){const d=new Date();d.setDate(d.getDate()+n);return `${d.getF
 /* Rating for the site's district from the BoM feed (by date, so an overnight forecast still shows the right day) */
 function fdrFromFeed(feed,want){const D=(feed&&feed.districts)||{};const name=D[want]?want:D[SITE.fdrDistrict]?SITE.fdrDistrict:"";if(!name)return null;
   const on=iso=>(D[name].find(x=>x.date===iso)||{}).rating||"";
-  return{today:on(todayISO()),tomorrow:on(isoPlus(1)),area:name,areas:Object.keys(D).sort(),issued:feed.issued||"",source:"Bureau of Meteorology"}}
+  const t=D[name].find(x=>x.date===todayISO())||{};   // today's rating may come from the morning issue
+  return{today:on(todayISO()),tomorrow:on(isoPlus(1)),area:name,areas:Object.keys(D).sort(),issued:t.issued||feed.issued||"",source:"Bureau of Meteorology"}}
 async function fdrRefresh(force){const F=lsJ("fdr",null);if(!force&&F&&F.date===todayISO()&&Date.now()-F.at<20*60e3)return false;if(navigator.onLine===false)return false;
   // the relay holds the SHE Manager's manual rating and district choice; the feed holds the official ratings
   const rel=(directOn()&&v3())?fetch(relayQ("action=weather"),{redirect:"follow"}).then(r=>r.json()).then(j=>{if(j.needCode)askSiteCode();return j.ok?j.fdr:null}).catch(()=>null):Promise.resolve(null);

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseFdr } from "../../tools/fdr-feed.mjs";
+import { parseFdr, mergeFdr } from "../../tools/fdr-feed.mjs";
 
 // Trimmed from a real IDW15100 issue (12 Oct 2026, 04:35 WST)
 const XML = `<?xml version="1.0" encoding="UTF-8"?><product><amoc><identifier>IDW15100</identifier>
@@ -20,4 +20,14 @@ test("fire-district ratings are read with their dates", () => {
   assert.deepEqual(Object.keys(f.districts), ["Watheroo", "Lesueur"]);
   assert.deepEqual(f.districts.Watheroo, [{ date: "2026-10-12", rating: "Moderate", fbi: 14 }, { date: "2026-10-13", rating: "High", fbi: 15 }]);
   assert.deepEqual(f.districts.Lesueur, [{ date: "2026-10-12", rating: "No Rating" }]);
+});
+
+test("afternoon issue keeps today's rating from the morning issue", () => {
+  const morning = { issued: "2026-10-12T04:35:00+08:00", districts: { Lesueur: [{ date: "2026-10-12", rating: "High" }, { date: "2026-10-13", rating: "Moderate" }] } };
+  const older = { issued: "2026-10-10T16:10:00+08:00", districts: { Lesueur: [{ date: "2026-10-10", rating: "Extreme" }] } };
+  const pm = { issued: "2026-10-12T16:10:00+08:00", districts: { Lesueur: [{ date: "2026-10-13", rating: "Extreme" }, { date: "2026-10-14", rating: "Moderate" }] } };
+  const m = mergeFdr(pm, [older, morning], "2026-10-12");
+  assert.equal(m.issued, pm.issued);
+  assert.deepEqual(m.districts.Lesueur.map(d => [d.date, d.rating]), [["2026-10-12", "High"], ["2026-10-13", "Extreme"], ["2026-10-14", "Moderate"]]);
+  assert.equal(m.districts.Lesueur[0].issued, morning.issued);   // today's entry remembers which issue it came from
 });
