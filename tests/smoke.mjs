@@ -67,7 +67,7 @@ const page = await newPage();
 await step("Home opens first: HVMB & Fire Status, history, welcome, My Day, Inspect & report, Radio, Reference", async () => {
   await page.waitForSelector(".hero"); await page.waitForSelector(".tiles .tile");
   if (await page.$("#lib")) throw new Error("inspection list should not be on home");
-  if (!await page.$("nav.tabs a[data-t=home].on")) throw new Error("Home tab not active");
+  await page.waitForSelector("nav.tabs a[data-t=home].on", { timeout: 5000 }).catch(() => { throw new Error("Home tab not active"); });
   const order = await page.evaluate(() => ["#stp", "#hcd", ".hero", ".tile.myday", "#refsec"].map(q => { const e = document.querySelector(q); return e ? e.getBoundingClientRect().top + scrollY : -1; }));
   if (order.some(x => x < 0) || order.some((x, i) => i && x <= order[i - 1])) throw new Error("home order: " + order);
   if (!/HVMB & Fire Status/.test(await page.textContent("#stp"))) throw new Error("status panel title");
@@ -77,7 +77,7 @@ await step("Home opens first: HVMB & Fire Status, history, welcome, My Day, Insp
 });
 await step("Inspect tab holds the six inspection and report tiles", async () => {
   await page.click("nav.tabs >> text=Inspect"); await page.waitForFunction(() => location.hash === "#inspect"); await page.waitForSelector(".tiles .tile");
-  if (!await page.$("nav.tabs a[data-t=inspect].on")) throw new Error("Inspect tab not active");
+  await page.waitForSelector("nav.tabs a[data-t=inspect].on", { timeout: 5000 }).catch(() => { throw new Error("Inspect tab not active"); });
   const labels = await page.$$eval(".tiles .tile b", e => e.map(x => x.textContent.trim()).join("|")); if (labels !== "Inspection|Task Observation|Mentoring|Hazard|Positive|Trade Assistants") throw new Error("inspect tiles: " + labels);
   if (await page.$("#stp")) throw new Error("status panel should be on Home only");
   await settle(page); await shot(page, "01b-inspect");
