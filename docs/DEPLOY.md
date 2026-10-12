@@ -162,14 +162,13 @@ Insights (Lead indicators) and the hazard form also link to it.
   to the project team (Genus addresses in `TEAM`, js/app/config.js).
 - **Everyone:** the newest unread alert sits at the top of Home (Critical also pops up when PARRON opens) until they tap
   *I have read and understood*. Acknowledgements with no signal wait on the phone and send later.
-- **Register:** sheets *SHEQ Alerts* and *Alert Acks* in the project log; the SHE Manager sees who has / hasn't read it.
-  The 6 pm daily email lists who on site is still outstanding; the Monday summary shows the acknowledgement rate.
-- **Roster sheet:** created with the team and their patterns. Fill in **First day of a swing** (any past swing start date)
-  for each person so people on R&R aren't chased. Flexible = Y (e.g. variable out days) counts the person as on site.
-  Add rows for anyone else who should acknowledge alerts.
-- **Who must acknowledge:** *Everyone on the roster* (default) or *Choose people* – tick boxes for the team, with quick
-  picks for SHE team, Supervisors & managers and Trade Assistants. Only the people chosen get the Home banner and the email;
-  the register and daily email count only them. Stored in the *Must acknowledge* column.
+- **Who must acknowledge:** *Everyone on site* (default – the people marked `site: true` in `TEAM`, js/app/config.js)
+  or *Choose people* (tick boxes, with quick picks for SHE team, Supervisors & managers, Engineers, Trade Assistants).
+  Only the people ticked get the Home banner and the email (Genus addresses only).
+- **Acknowledgement:** they must tap *I have read and understood* – opening the alert is not enough.
+- **Register:** sheets *SHEQ Alerts* (with the *Must acknowledge* column) and *Alert Acks* in the project log; the alert
+  page shows who has / hasn't acknowledged. The 6 pm daily email lists who is outstanding; the Monday summary shows the rate.
+- **Team list:** add, remove or rename people in `TEAM` (js/app/config.js). Everyone picks their own name once on their phone.
 - Close an alert from its page (Manager mode) to take it off Home and the daily email; the register is kept.
-- Relay update required: paste the new `PARRON_Relay_Code.gs`, run `setup` once (creates the sheets and the roster), and
-  redeploy as a new version.
+- Relay update required: paste the new `PARRON_Relay_Code.gs`, run `setup` once (creates the sheets), and redeploy as a
+  new version.

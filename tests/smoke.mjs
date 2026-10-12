@@ -94,9 +94,9 @@ await step("Inspection tile opens the list with category chips", async () => {
 await step("first run: pick your name from the team list", async () => {
   const p0 = await newPage({ name: "" }); await p0.click("text=Pick my name"); await p0.waitForSelector(".who button");
   await settle(p0); await shot(p0, "00-who-are-you");
-  await p0.click(".who button >> text=Matt Smith");
+  await p0.click(".who button >> text=Matthew Smith");
   const me = await p0.evaluate(() => [localStorage.getItem("inspector"), localStorage.getItem("myEmail")]);
-  if (me[0] !== "Matt Smith" || me[1] !== "matt.smith@genus.com.au") throw new Error("identity not saved: " + me);
+  if (me[0] !== "Matthew Smith" || me[1] !== "matt.smith@genus.com.au") throw new Error("identity not saved: " + me);
   await p0.context().close();
 });
 await step("library search filters templates", async () => {
@@ -351,7 +351,7 @@ await step("Trade Assistants: fuel register – start of day, end of day, sign a
   await page.click("text=Save start of day"); await page.waitForSelector(".tacard .tstep.done");
   if (!/Saved at/.test(await page.textContent(".tacard"))) throw new Error("start of day not shown as saved");
   await page.click(".tacard button.btn.o"); await page.waitForSelector('[data-fu="0|fuel"]');
-  await page.click(".tachips >> text=Ben Herbert"); await page.waitForSelector('[data-fu="0|fuel"]');
+  await page.click(".tachips >> text=Benjamin Herbert"); await page.waitForSelector('[data-fu="0|fuel"]');
   await page.fill('[data-fu="0|he"]', "8575.1"); await page.fill('[data-fu="0|fuel"]', "40"); await page.fill('[data-fu="0|cmt"]', "Fuelled pod (Badgingarra Roadhouse)");
   await page.fill('[data-fu="2|fuel"]', "90"); await page.fill('[data-fu="1|fuel"]', "12.5");
   if ((await page.textContent("#ftot")).trim() !== "142.5") throw new Error("total: " + await page.textContent("#ftot"));
@@ -360,7 +360,7 @@ await step("Trade Assistants: fuel register – start of day, end of day, sign a
   await page.click("#fstage >> text=Review & sign"); await page.waitForSelector("#sig");
   const sig = await page.$("#sig"); await sig.scrollIntoViewIfNeeded(); const b = await sig.boundingBox();
   await page.mouse.move(b.x + 20, b.y + 30); await page.mouse.down(); await page.mouse.move(b.x + 120, b.y + 60); await page.mouse.move(b.x + 200, b.y + 25); await page.mouse.up();
-  await page.fill("#fvName", "Matt Smith"); if (await page.inputValue("#fvPos") !== "Senior Civil Supervisor") throw new Error("verifier role not filled");
+  await page.fill("#fvName", "Matthew Smith"); if (await page.inputValue("#fvPos") !== "Senior Civil Supervisor") throw new Error("verifier role not filled");
   if (!/amie\.smith@genus\.com\.au/.test(await page.textContent("#app"))) throw new Error("Amie not shown as recipient");
   await page.waitForFunction(() => !document.querySelector("#bShare").disabled, null, { timeout: 15000 }).catch(async e => { throw new Error("send not ready: " + JSON.stringify(await page.evaluate(() => problems(CUR)))); });
   const pdf = await page.evaluate(async () => { PDFBLOB = null; const b = await buildPDF(CUR); const t = await b.text(); return { size: b.size, land: /\/MediaBox \[0 0 841/.test(t) }; });
@@ -370,7 +370,7 @@ await step("Trade Assistants: fuel register – start of day, end of day, sign a
   const before = relay.mail.length; await page.click("#bShare"); await page.waitForFunction(() => location.hash === "#inspect", null, { timeout: 15000 });
   const m = relay.mail.slice(before).find(x => /Fuel, Hours/.test(x.subject || ""));
   if (!m || m.to !== "amie.smith@genus.com.au,darren.frizzell@genus.com.au") throw new Error("register email: " + (m && m.to));
-  if (!/Start of day: [0-9:]+ \(Jayden Mullan\)/.test(m.body) || !/\(Ben Herbert\)/.test(m.body)) throw new Error("who did each half: " + m.body.slice(0, 400));
+  if (!/Start of day: [0-9:]+ \(Jayden Mullan\)/.test(m.body) || !/\(Benjamin Herbert\)/.test(m.body)) throw new Error("who did each half: " + m.body.slice(0, 400));
   if (!/142.5 L/.test(m.subject) || !/PRE-START NOT DONE/.test(m.subject)) throw new Error("subject: " + m.subject);
   const rows = relay.sheet("Fuel").getLastRow() - 1; if (rows !== 9) throw new Error("fuel rows logged: " + rows);
   await page.evaluate(() => go("#ta")); await page.waitForSelector(".tacard"); if (!/register has been sent/.test(await page.textContent("#app"))) throw new Error("TA page should show today's register as sent");
@@ -528,12 +528,9 @@ await step("Reference: nine SNN cards with icons, 330 kV card with MAD fallback,
   const a = await page.$eval(".ref-chem a", e => [e.getAttribute("href"), e.getAttribute("target")]); if (a[0] !== "https://example.com/chemalert" || a[1] !== "_blank") throw new Error("ChemAlert link: " + a);
   await page.evaluate(() => ls("appCfg", JSON.stringify({})));
 });
-await step("SHEQ Alerts: SHE Manager publishes a Critical alert → Home banner, pop-up, acknowledge, register with R&R", async () => {
-  relay.sheet("Roster") || relay.ctx.book_();
-  const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10), ago = n => new Date(Date.now() + 8 * 3600e3 - n * 864e5).toISOString().slice(0, 10);
-  relay.sheet("Roster").getRange(3, 4).setValue("'" + today);     // Lee – day 1 of the swing
-  relay.sheet("Roster").getRange(5, 4).setValue("'" + ago(8));    // Matt – on R&R
+await step("SHEQ Alerts: SHE Manager publishes a Critical alert to everyone on site → banner, pop-up, acknowledge, register; then to chosen people", async () => {
   await page.evaluate(() => { ls("mgrPin", "2468"); go("#alerts/new"); }); await page.waitForSelector("#alTitle");
+  if (!/17 site-based people must acknowledge it/.test(await page.textContent("#alWhoN"))) throw new Error("everyone on site count: " + await page.textContent("#alWhoN"));
   await page.click("#alPri button:has-text('Critical')");
   await page.fill("#alTitle", "Underground service strike – Genus site, WA");
   await page.fill("#alWhat", "An excavator contacted a live LV cable during trenching. No injuries.");
@@ -542,11 +539,10 @@ await step("SHEQ Alerts: SHE Manager publishes a Critical alert → Home banner,
   const before = relay.mail.length; await page.click("#alPub");
   await page.waitForFunction(() => /^#alerts\/SA-\d{4}-\d{3}$/.test(location.hash), null, { timeout: 15000 });
   if (relay.sheet("SHEQ Alerts").getLastRow() !== 2) throw new Error("alert not logged");
-  const m = relay.mail.slice(before).find(x => /CRITICAL – SHEQ Alert/.test(x.subject)); if (!m || !/lee\.allen@genus\.com\.au/.test(m.bcc || "")) throw new Error("team email: " + (m && m.bcc));
-  await page.waitForSelector(".al-reg"); const reg = await page.textContent("#app");
-  if (!/0 of 7 on site acknowledged/.test(reg) || !/R&R · back/.test(reg)) throw new Error("register: " + reg.slice(0, 300));
-  // Lee opens PARRON: banner at the top of Home and the critical pop-up
-  const l = await newPage({ name: "Lee Allen", hash: "#home" });
+  const m = relay.mail.slice(before).find(x => /CRITICAL – SHEQ Alert/.test(x.subject)); if (!m || !/steven\.pugh@genus\.com\.au/.test(m.bcc || "") || /lee\.allen/.test(m.bcc)) throw new Error("site email: " + (m && m.bcc));
+  await page.waitForSelector(".al-reg"); if (!/0 of 17 acknowledged/.test(await page.textContent("#app"))) throw new Error("register");
+  // Nicola opens PARRON: banner at the top of Home and the critical pop-up
+  const l = await newPage({ name: "Nicola Rucci", hash: "#home" });
   await l.waitForSelector("#alb .al-banner.crit", { timeout: 15000 }); await l.waitForSelector("#alRead", { timeout: 10000 });
   if ((await l.$$eval("#tabs a[data-t=home] .bdg:not(.hide)", e => e.length)) !== 1) throw new Error("Home tab badge");
   await settle(l); await shot(l, "49-alert-popup");
@@ -556,32 +552,34 @@ await step("SHEQ Alerts: SHE Manager publishes a Critical alert → Home banner,
   await l.click("#alAck"); await l.waitForSelector(".al-done", { timeout: 15000 });
   if (relay.sheet("Alert Acks").getLastRow() !== 2) throw new Error("ack not recorded");
   await l.evaluate(() => go("#home")); await l.waitForSelector("#stp"); if (await l.$("#alb .al-banner")) throw new Error("banner should clear after acknowledging");
-  // SHE Manager sees Lee ticked off; Matt on R&R is not counted
-  await page.evaluate(async () => { await alRefresh(); route(); }); await page.waitForFunction(() => /1 of 7 on site acknowledged/.test(document.querySelector("#app").textContent), null, { timeout: 10000 });
-  await page.evaluate(() => document.querySelector(".al-prog").scrollIntoView({ block: "center" })); await settle(page); await shot(page, "51-alert-register");
+  // Lee is not site-based: no banner; sees it for information
+  const x = await newPage({ name: "Lee Allen", hash: "#home" }); await x.waitForSelector("#stp"); await x.evaluate(() => alRefresh()); await x.evaluate(() => { go("#home"); route(); });
+  await x.waitForSelector("#stp"); if (await x.$("#alb .al-banner")) throw new Error("Lee was not ticked – no banner");
+  // SHE Manager sees Nicola ticked off
+  await page.evaluate(async () => { await alRefresh(); route(); }); await page.waitForFunction(() => /1 of 17 acknowledged/.test(document.querySelector("#app").textContent), null, { timeout: 10000 });
+  await page.evaluate(() => document.querySelector(".al-prog").scrollIntoView({ block: "start" })); await settle(page); await shot(page, "51-alert-register");
   // acknowledging with no signal waits on the phone and records later
-  await page.evaluate(() => go("#alerts")); await page.waitForSelector(".al-item");
-  const o = await newPage({ name: "Nicola Rucci", hash: "#alerts" }); await o.waitForSelector(".al-item");
+  const o = await newPage({ name: "Steven Pugh", hash: "#alerts" }); await o.waitForSelector(".al-item");
   await o.context().setOffline(true); await o.click(".al-item"); await o.waitForSelector("#alAck"); await o.click("#alAck"); await o.waitForSelector(".al-done");
   if (relay.sheet("Alert Acks").getLastRow() !== 2) throw new Error("offline ack should wait");
   await o.context().setOffline(false); await o.evaluate(() => alRefresh()); if (relay.sheet("Alert Acks").getLastRow() !== 3) throw new Error("queued ack not sent");
   // closing takes it off Home
   const id = await page.evaluate(() => ALERTS.alerts[0].id); await page.evaluate(i => go("#alerts/" + i), id); await page.click("text=Close this alert"); await page.click("#aYes");
   await page.waitForFunction(() => /Re-open this alert/.test(document.querySelector("#app").textContent), null, { timeout: 10000 });
-  // choose who must acknowledge: only Lee and Jayden – Nicola gets no banner and sees it "for information"
+  // choose people: Trade Assistants + Lee – Nicola gets no banner and sees it "for information"
   await page.evaluate(() => go("#alerts/new")); await page.waitForSelector("#alWho");
   await page.fill("#alTitle", "Toolbox: new wheel wash procedure"); await page.fill("#alWhat", "The wheel wash procedure has changed.");
   await page.click("#alWho button[data-v=pick]"); await page.waitForSelector(".al-person");
   await page.click(".al-quick .chip[data-g=ta]"); await page.check(".al-person input[value='Lee Allen']");
   if (!/3 people must acknowledge/.test(await page.textContent("#alPickN"))) throw new Error("pick count: " + await page.textContent("#alPickN"));
-  await page.uncheck(".al-person input[value='Ben Herbert']");
-  await page.evaluate(() => document.querySelector("#alPick").scrollIntoView({ block: "center" })); await settle(page); await shot(page, "52-alert-choose");
+  await page.uncheck(".al-person input[value='Benjamin Herbert']");
+  await page.evaluate(() => document.querySelector("#alPick").scrollIntoView({ block: "start" })); await settle(page); await shot(page, "52-alert-choose");
   await page.click("#alPub"); await page.waitForFunction(() => /^#alerts\/SA-\d{4}-002$/.test(location.hash), null, { timeout: 15000 });
-  await page.waitForSelector(".al-reg"); if (!/2 people chosen to acknowledge/.test(await page.textContent("#app")) || !/0 of 2 on site/.test(await page.textContent("#app"))) throw new Error("register for chosen people");
-  await o.evaluate(async () => { await alRefresh(); go("#home"); route(); }); await o.waitForSelector("#stp");
-  if (await o.$("#alb .al-banner")) throw new Error("Nicola was not chosen – no banner");
-  await o.evaluate(() => go("#alerts")); await o.waitForSelector(".al-item"); if (!/For information/.test(await o.textContent("#app"))) throw new Error("for information label");
-  await l.evaluate(async () => { await alRefresh(); go("#home"); route(); }); await l.waitForSelector("#alb .al-banner", { timeout: 10000 });
+  await page.waitForSelector(".al-reg"); if (!/0 of 2 acknowledged/.test(await page.textContent("#app"))) throw new Error("register for chosen people");
+  await l.evaluate(async () => { await alRefresh(); go("#home"); route(); }); await l.waitForSelector("#stp");
+  if (await l.$("#alb .al-banner")) throw new Error("Nicola was not chosen – no banner");
+  await l.evaluate(() => go("#alerts")); await l.waitForSelector(".al-item"); if (!/For information/.test(await l.textContent("#app"))) throw new Error("for information label");
+  await x.evaluate(async () => { await alRefresh(); go("#home"); route(); }); await x.waitForSelector("#alb .al-banner", { timeout: 10000 });
 });
 await step("CSV exports", async () => {
   const [dl] = await Promise.all([page.waitForEvent("download"), page.evaluate(() => exportActions())]);

@@ -344,7 +344,7 @@ test("setup creates the 4–5 am history trigger alongside the others", () => {
 
 const perthYmd = (n = 0) => new Date(Date.now() + 8 * 3600e3 + n * 864e5).toISOString().slice(0, 10);
 const alertPayload = (o = {}) => ({ key: "prn-ymt-7Qk2vX9m", action: "publishAlert", pin: "2468", type: "SHEQ Alert", priority: "Critical", title: "Underground service strike",
-  what: "An excavator contacted a live LV cable.", must: "Pothole before digging.", by: "Darren Frizzell", notify: ["lee.allen@genus.com.au", "someone@evil.com", "darren.frizzell@genus.com.au"], ...o });
+  what: "An excavator contacted a live LV cable.", must: "Pothole before digging.", by: "Darren Frizzell", required: ["Lee Allen", "Darren Frizzell"], notify: ["lee.allen@genus.com.au", "someone@evil.com", "darren.frizzell@genus.com.au"], ...o });
 
 test("SHEQ alerts: Manager PIN required, numbered, emailed to the team (project addresses only)", () => {
   const r = createRelay();
@@ -356,36 +356,26 @@ test("SHEQ alerts: Manager PIN required, numbered, emailed to the team (project 
   const b = r.post(alertPayload({ priority: "Info", title: "Site notice", type: "Site notice", email: false }));
   assert.match(b.id, /-002$/); assert.equal(r.mail.at(-1), m, "no email when switched off");
   assert.equal(r.get({ action: "alerts", key: r.key }).alerts.length, 2);
-  // the roster sheet is created with the team and their patterns
-  assert.equal(r.sheet("Roster").getLastRow(), 9);
 });
 
-test("SHEQ alerts: acknowledged once per person; R&R from the roster is not chased; daily summary lists who is outstanding", () => {
-  const r = createRelay(); r.ctx.book_();
-  const R = r.sheet("Roster");   // rows: Darren, Lee, Nicola, Matt, Cory, Paul, Gary (flexible), Anphin
-  R.getRange(2, 4).setValue("'" + perthYmd(0));    // Darren – day 1 of his swing → on site
-  R.getRange(5, 4).setValue("'" + perthYmd(-8));   // Matt 6/6 – day 9 of the cycle → R&R, back in 4 days
-  const id = r.post(alertPayload()).id;
+test("SHEQ alerts: acknowledged once per person; daily summary lists who of the people ticked is outstanding", () => {
+  const r = createRelay();
+  const id = r.post(alertPayload({ required: ["Darren Frizzell", "Lee Allen", "Jayden Mullan"] })).id;
   const ack = r.post({ key: r.key, action: "ackAlert", id, name: "Darren Frizzell" });
   assert.equal(ack.ok, true); assert.equal(ack.alerts[0].acks.length, 1);
   r.post({ key: r.key, action: "ackAlert", id, name: " darren  frizzell " });                     // same person again
   assert.equal(r.sheet("Alert Acks").getLastRow(), 2);
   assert.equal(r.post({ key: r.key, action: "ackAlert", id, name: "" }).ok, false);
   assert.equal(r.post({ key: r.key, action: "ackAlert", id: "SA-0000-999", name: "Lee Allen" }).ok, false);
-  const g = r.get({ action: "alerts", key: r.key });
-  const matt = g.roster.find(p => p.name === "Matt Smith"); assert.equal(matt.on, false); assert.equal(matt.back, perthYmd(4));
-  assert.equal(g.roster.find(p => p.name === "Darren Frizzell").on, true);
-  assert.equal(g.roster.find(p => p.name === "Gary Armitage").flex, true);
   const before = r.mail.length; r.ctx.dailyDigest();
   const d = r.mail.slice(before).find(x => /daily summary/.test(x.subject)).htmlBody;
-  assert.match(d, /SHEQ Alerts – not yet acknowledged/); assert.match(d, /1 of 7/); assert.match(d, /Lee Allen/); assert.match(d, /Gary Armitage \(flexible\)/);
-  assert.doesNotMatch(d, /Matt Smith/, "on R&R – not chased"); assert.doesNotMatch(d, /Darren Frizzell,|Waiting on.*Darren/);
+  assert.match(d, /SHEQ Alerts – not yet acknowledged/); assert.match(d, /1 of 3/); assert.match(d, /Lee Allen, Jayden Mullan/);
   // closing the alert takes it off the daily summary
   assert.equal(r.post({ key: r.key, action: "closeAlert", id, pin: "1" }).ok, false);
   const c = r.post({ key: r.key, action: "closeAlert", id, pin: "2468" }); assert.equal(c.alerts[0].active, false);
   const b2 = r.mail.length; r.ctx.dailyDigest(); assert.doesNotMatch(r.mail.slice(b2).find(x => /daily summary/.test(x.subject)).htmlBody, /not yet acknowledged/);
   // weekly summary shows the acknowledgement rate
-  const b3 = r.mail.length; r.ctx.weeklyDigest(); assert.match(r.mail.slice(b3).find(x => /weekly summary/.test(x.subject)).htmlBody, /SHEQ Alerts – acknowledgement[\s\S]*1 of 7 \(14%\)/);
+  const b3 = r.mail.length; r.ctx.weeklyDigest(); assert.match(r.mail.slice(b3).find(x => /weekly summary/.test(x.subject)).htmlBody, /SHEQ Alerts – acknowledgement[\s\S]*1 of 3 \(33%\)/);
 });
 
 test("SHEQ alerts: a photo or PDF attachment is stored and only alert files can be read back", () => {
@@ -398,13 +388,13 @@ test("SHEQ alerts: a photo or PDF attachment is stored and only alert files can 
   r.props.set("SITE_CODE", "Parron26"); assert.equal(r.get({ action: "alerts", key: r.key }).needCode, true);
 });
 
-test("SHEQ alerts: only the people chosen must acknowledge; R&R still applies to them", () => {
-  const r = createRelay(); r.ctx.book_();
-  r.sheet("Roster").getRange(5, 4).setValue("'" + perthYmd(-8));   // Matt on R&R
-  const a = r.post(alertPayload({ required: ["Lee Allen", "Matt Smith", "Jayden Mullan"], notify: ["lee.allen@genus.com.au", "matt.smith@genus.com.au"] }));
-  assert.deepEqual(JSON.parse(JSON.stringify(a.alerts[0].required)), ["Lee Allen", "Matt Smith", "Jayden Mullan"]);
+test("SHEQ alerts: someone must be ticked; only the people ticked are emailed and counted", () => {
+  const r = createRelay();
+  assert.match(r.post(alertPayload({ required: [] })).error, /Tick who must acknowledge/);
+  const a = r.post(alertPayload({ required: ["Lee Allen", "Matthew Smith", "Jayden Mullan"], notify: ["lee.allen@genus.com.au", "matt.smith@genus.com.au"] }));
+  assert.deepEqual(JSON.parse(JSON.stringify(a.alerts[0].required)), ["Lee Allen", "Matthew Smith", "Jayden Mullan"]);
   assert.equal(r.mail.at(-1).bcc, "lee.allen@genus.com.au,matt.smith@genus.com.au");
   const before = r.mail.length; r.ctx.dailyDigest();
   const d = r.mail.slice(before).find(x => /daily summary/.test(x.subject)).htmlBody;
-  assert.match(d, /0 of 2/); assert.match(d, /Lee Allen, Jayden Mullan/); assert.doesNotMatch(d, /Nicola Rucci/);
+  assert.match(d, /0 of 3/); assert.match(d, /Lee Allen, Matthew Smith, Jayden Mullan/); assert.doesNotMatch(d, /Nicola Rucci/);
 });
