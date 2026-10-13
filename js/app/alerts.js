@@ -73,7 +73,9 @@ function alRegisterHTML(a){const acks=a.acks||[];const req=a.required||[];
   return `<h2>Acknowledgement register</h2><div class="card"><div class="row" style="display:flex;justify-content:space-between;gap:8px"><b>${S.done} of ${S.expected} acknowledged</b><span class="muted">${pc}%</span></div>
     <div class="al-prog"><i style="width:${pc}%"></i></div>${rows}
     ${extra.length?`<div class="al-reg"><span><b>Also read</b></span><span class="muted">${extra.map(x=>esc(x.name)).join(", ")}</span></div>`:""}
-    <p class="muted" style="margin-top:8px">Outstanding names are listed in the 6 pm daily email until they acknowledge or you close the alert.</p></div>
+    <p class="muted" style="margin-top:8px">Outstanding names are listed in the 6 pm daily email until they acknowledge or you close the alert.</p>
+    ${a.emailed?`<div class="al-mail ${/Not sent/.test(a.emailed)?"bad":""}">${ic("send","s")}<span><b>Email record</b>${esc(a.emailed).replace(/\n/g,"<br>")}</span></div>`:""}</div>
+    ${a.active&&S.done<S.expected?`<button class="btn g w" onclick="alEmailAgain('${esc(a.id)}')">${ic("send","s")} Email again to those not yet acknowledged</button>`:""}
     <button class="btn g w" onclick="alClose('${esc(a.id)}',${a.active?"false":"true"})">${ic(a.active?"lock":"reopen","s")} ${a.active?"Close this alert":"Re-open this alert"}</button>`}
 async function alClose(id,reopen){if(!reopen&&!await ask2("Close this alert?","It comes off everyone's Home screen and the daily email. The register is kept.","Close alert"))return;
   try{const r=await relayPost({payload:{action:"closeAlert",id,reopen:!!reopen,pin:ls("mgrPin")||""}},false);if(r&&r.badPin){toast("Manager PIN not accepted – turn Manager mode on again",4500);return}
@@ -129,9 +131,17 @@ function alNew(){setHeader("New SHEQ Alert","Choose who must acknowledge it",{ic
         by:ls("inspector")||"SHE Manager",email:$("#alEmail").checked,required,notify:TEAM.filter(t=>required.some(n=>nameEq(n,t.name))).map(t=>t.email).filter(Boolean)}},false);
       if(r&&r.badPin){toast("Manager PIN not accepted – turn Manager mode on again",4500);b.disabled=false;b.innerHTML=`${ic("send","s")} Publish`;return}
       if(!r||!r.ok)throw new Error((r&&r.error)||"Not published");
-      alStore(r);celebrate("Alert published",`${r.id} sent to ${required.length} ${required.length>1?"people":"person"}`);go("#alerts/"+encodeURIComponent(r.id))}
+      alStore(r);if(/Not sent/.test(r.emailed||""))toast(`Published, but some emails were not sent – see the email record`,6000);else celebrate("Alert published",`${r.id} for ${required.length} ${required.length>1?"people":"person"}${r.emailed&&$("#alEmail").checked?" · "+String(r.emailed).replace(/^.*– /,""):""}`);go("#alerts/"+encodeURIComponent(r.id))}
     catch(e){toast(String(e.message||e),4500);b.disabled=false;b.innerHTML=`${ic("send","s")} Publish`}}}
 /* people who can be ticked: the project team (js/app/config.js) – site-based people first */
 const alCandidates=()=>TEAM.filter(t=>t.site).concat(TEAM.filter(t=>!t.site));
 const alSite=()=>TEAM.filter(t=>t.site).map(t=>t.name);
 const alGroup=t=>t.ta?"ta":/SHE/.test(t.role||"")?"she":/Engineer/.test(t.role||"")?"eng":/Supervisor|Manager|Director/.test(t.role||"")?"sup":"";
+/* SHE Manager: email the alert again to the people ticked who haven't acknowledged it (Genus addresses only) */
+async function alEmailAgain(id){const a=(ALERTS.alerts||[]).find(x=>x.id===id);if(!a)return;
+  const wait=(a.required||[]).filter(n=>!(a.acks||[]).some(x=>nameEq(x.name,n)));const to=TEAM.filter(t=>t.email&&wait.some(n=>nameEq(n,t.name))).map(t=>t.email);
+  if(!to.length){toast("Nobody waiting has a Genus email – tell them in person",4000);return}
+  if(!await ask2("Email the alert again?",`It goes to ${to.length} ${to.length>1?"people":"person"} who haven't acknowledged it yet.`,"Send email"))return;
+  try{const r=await relayPost({payload:{action:"emailAlert",id,pin:ls("mgrPin")||"",notify:to}},false);if(r&&r.badPin){toast("Manager PIN not accepted – turn Manager mode on again",4500);return}
+    if(!r||!r.ok)throw new Error((r&&r.error)||"Not sent");alStore(r);toast(String(r.emailed||"Emailed").replace(/^.*– /,""),5000);alDetail(id)}
+  catch(e){toast(navigator.onLine===false?"Needs signal to send":String(e.message||e),4500)}}

@@ -169,6 +169,9 @@ Insights (Lead indicators) and the hazard form also link to it.
 - **Register:** sheets *SHEQ Alerts* (with the *Must acknowledge* column) and *Alert Acks* in the project log; the alert
   page shows who has / hasn't acknowledged. The 6 pm daily email lists who is outstanding; the Monday summary shows the rate.
 - **Team list:** add, remove or rename people in `TEAM` (js/app/config.js). Everyone picks their own name once on their phone.
+- **Emails (v3.11):** each person ticked gets their own email (no BCC), and the alert page shows an *Email record* –
+  how many were emailed and anyone not sent (e.g. Gmail's daily email limit). *Email again to those not yet acknowledged*
+  re-sends to the people still waiting.
 - Close an alert from its page (Manager mode) to take it off Home and the daily email; the register is kept.
 - Relay update required: paste the new `PARRON_Relay_Code.gs`, run `setup` once (creates the sheets), and redeploy as a
   new version.
@@ -187,6 +190,8 @@ planner and form change, so nobody else can read the register or change forms.
   (forms 18, 20, 22, 26, 27) to check against the plans.
 - **Automatic tick-off:** when a form linked to an item is sent (e.g. Inspection 18 for the weekly DG store inspection),
   the item is marked done with the report number and PDF link as evidence, and the next due date moves on.
+- **Reminder emails switch (v3.11):** *Off* (default – nobody is emailed), *Me only*, or *Me and owners*, on the
+  planner screen. Kept in the relay (Script property `PLANNER_EMAILS`).
 - **Emails (between 5 and 6 am, no AI):** you get *Your SHEQ day* when anything is overdue, due today, due this week or
   inside its reminder period. Owners with a Genus email (e.g. the SHE Advisor) get their own items on the day the
   reminder period starts, the day before, on the day and every day while overdue. Overdue items stay in your email.

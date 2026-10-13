@@ -36,7 +36,7 @@ function plState(o){if(o.status!=="Active")return {k:"off",n:null};if(o.every===
 const plDueTxt=o=>{const s=plState(o);if(s.n===null)return o.every==="As required"?"As required":"No date";return s.n<0?`${-s.n} day${s.n===-1?"":"s"} overdue`:s.n===0?"Due today":s.n===1?"Due tomorrow":`${fmtD(o.due)} · in ${s.n} days`};
 async function plRefresh(){if(!isManager()||!directOn()||navigator.onLine===false)return false;
   try{const r=await relayPost({payload:{action:"planner",pin:ls("mgrPin")||""}},false);if(r&&r.badPin){toast("Manager PIN not accepted – turn Manager mode on again",4500);return false}if(!r||!r.ok)return false;return plStore(r)}catch(e){return false}}
-function plStore(j){const before=JSON.stringify([PLAN.items,PLAN.log]);PLAN={at:Date.now(),items:j.items||[],log:j.log||[]};ls("planner",JSON.stringify(PLAN));return JSON.stringify([PLAN.items,PLAN.log])!==before}
+function plStore(j){const before=JSON.stringify([PLAN.items,PLAN.log,PLAN.emails]);PLAN={at:Date.now(),items:j.items||[],log:j.log||[],emails:j.emails||""};ls("planner",JSON.stringify(PLAN));return JSON.stringify([PLAN.items,PLAN.log,PLAN.emails])!==before}
 async function plSend(payload,okMsg){if(navigator.onLine===false||!directOn()){toast("Needs signal to save the register",3500);return null}
   try{const r=await relayPost({payload:{...payload,pin:ls("mgrPin")||"",by:plMe()||"SHE Manager"}},false);if(r&&r.badPin){toast("Manager PIN not accepted – turn Manager mode on again",4500);return null}
     if(!r||!r.ok)throw new Error((r&&r.error)||"Not saved");plStore(r);if(okMsg)toast(okMsg);return r}catch(e){toast(String(e.message||e),4500);return null}}
@@ -58,6 +58,7 @@ function viewPlanner(id){if(id==="import")return plImport();const seq=ROUTE_SEQ;
     let h=`<div class="pl-kpis"><div class="bad"><b>${over.length}</b><span>Overdue</span></div><div class="warn"><b>${wk.length}</b><span>Due this week</span></div><div class="info"><b>${mo.length}</b><span>Next 30 days</span></div><div class="ok"><b>${doneM}</b><span>Done this month</span></div></div>
      <div class="pl-tools"><button class="btn o s" onclick="go('#planner/import')">${ic("upload","s")} Import from Claude</button><button class="btn g s" onclick="plEdit()">${ic("plus","s")} Add an item</button><button class="btn g s" onclick="go('#submitted')">${ic("inbox","s")} Submitted forms</button><button class="btn g s" onclick="go('#figures')">${ic("chart","s")} Monthly figures</button><button class="btn g s" onclick="go('#forms')">${ic("clipboard","s")} Inspection forms</button></div>`;
     if(!directOn())h+=`<div class="alert org">${ic("wifioff")}<div>Direct send is not set up, so the register can't be loaded.</div></div>`;
+    h+=plMailHTML();
     if(!all.length){h+=`<div class="card empty">${ic("shield")}<b>Your register is empty</b>Start with the items PARRON already knows from its forms, or paste the list your Claude Project made from the plans. Nothing reminds anyone until you approve it.
       <div class="pl-tools" style="justify-content:center;margin-top:12px"><button class="btn o s" onclick="PL_START=true;go('#planner/import')">Start with suggested items</button><button class="btn g s" onclick="go('#planner/import')">Import from Claude</button></div></div>`;render(h);return}
     h+=`<div class="chips scroll pl-own">${[["all","Everything"],["mine","Mine"],...owners.filter(o=>!nameEq(o,plMe())).map(o=>[o,o])].map(([k,l])=>`<button class="chip ${PLF===k?"on":""}" data-k="${esc(k)}">${esc(l)}</button>`).join("")}</div>`;
@@ -69,8 +70,8 @@ function viewPlanner(id){if(id==="import")return plImport();const seq=ROUTE_SEQ;
     const off=all.filter(o=>o.status!=="Active");if(off.length)h+=`<details class="pl-more"><summary><h2>Retired or finished <span class="cnt">${off.length}</span></h2></summary><div class="pl-list">${off.map(o=>plItemHTML(o,plState(o))).join("")}</div></details>`;
     const log=(PLAN.log||[]).slice(0,8);
     if(log.length)h+=`<h2>Recently done</h2><div class="card pl-log">${log.map(x=>`<div><span>${ic(/^Form/.test(x.how)?"clipboard":"check","s")} <b>${esc(x.title)}</b><small>${esc(fmtD(x.date))} · ${esc(x.by||"")} · ${esc(x.how)}</small></span></div>`).join("")}</div>`;
-    h+=`<p class="foot">Emailed to you between 5 and 6 am when items are due. Owners with a Genus email get their own items on the day the reminder starts, the day before, on the day and while overdue.<br>Register kept in the PARRON project log (SHEQ Register sheet).</p>`;
-    render(h);document.querySelectorAll(".pl-own .chip").forEach(c=>c.onclick=()=>{PLF=c.dataset.k;draw()})};
+    h+=`<p class="foot">Reminder emails go between 5 and 6 am – only when switched on above. With owners on, people with a Genus email get their own items on the day the reminder starts, the day before, on the day and while overdue.<br>Register kept in the PARRON project log (SHEQ Register sheet).</p>`;
+    render(h);plMailWire(draw);document.querySelectorAll(".pl-own .chip").forEach(c=>c.onclick=()=>{PLF=c.dataset.k;draw()})};
   draw();plRefresh().then(ch=>{if(ch&&!stale(seq)&&location.hash==="#planner")draw()})}
 let PL_START=false;
 function plItemHTML(o,s){const who=teamBy(o.owner);
@@ -195,3 +196,13 @@ Rules:
 - First due: YYYY-MM-DD only if the plan or a date I give you sets it; otherwise blank.
 - Notes: one short line – what "done" looks like or who else is involved. No names of individuals.
 Do not use the | character inside a cell.`;
+
+/* reminder emails switch: Off (default) · Me only · Me and owners – kept by the relay (Manager PIN) */
+const PL_MAIL=[["off","Off"],["me","Me only"],["all","Me and owners"]];
+function plMailHTML(){const m=PLAN.emails;
+  if(!m)return `<div class="alert org pl-mail">${ic("info")}<div><b>Reminder emails</b> – update the relay (v3.11) to control them here. Until then the relay may email you and owners between 5 and 6 am.</div></div>`;
+  return `<div class="card pl-mail"><div class="set">${ic(m==="off"?"bell":"send")}<div><b>Reminder emails</b><span>${m==="off"?"Off – nobody is emailed. Items still show here.":m==="me"?"To you only, between 5 and 6 am – owners are not emailed.":"To you and each owner with a Genus email, between 5 and 6 am."}</span></div></div>
+    <div class="seg" id="plMail" role="group" aria-label="Reminder emails">${PL_MAIL.map(([k,l])=>`<button type="button" data-m="${k}" class="${m===k?"on":""}" aria-pressed="${m===k}">${l}</button>`).join("")}</div></div>`}
+function plMailWire(redraw){document.querySelectorAll("#plMail [data-m]").forEach(b=>b.onclick=async()=>{const mode=b.dataset.m;if(mode===PLAN.emails)return;
+  if(mode==="all"&&!await ask2("Email the owners?","Each owner with a Genus email will get reminders for their own items between 5 and 6 am, starting tomorrow.","Turn on"))return;
+  if(await plSend({action:"plannerEmails",mode},mode==="off"?"Reminder emails off":mode==="me"?"Reminders to you only":"Reminders to you and owners"))redraw()})}

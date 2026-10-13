@@ -556,8 +556,15 @@ await step("SHEQ Alerts: SHE Manager publishes a Critical alert to everyone on s
   const before = relay.mail.length; await page.click("#alPub");
   await page.waitForFunction(() => /^#alerts\/SA-\d{4}-\d{3}$/.test(location.hash), null, { timeout: 15000 });
   if (relay.sheet("SHEQ Alerts").getLastRow() !== 2) throw new Error("alert not logged");
-  const m = relay.mail.slice(before).find(x => /CRITICAL – SHEQ Alert/.test(x.subject)); if (!m || !/steven\.pugh@genus\.com\.au/.test(m.bcc || "") || /lee\.allen/.test(m.bcc)) throw new Error("site email: " + (m && m.bcc));
+  const to = relay.mail.slice(before).filter(x => /CRITICAL – SHEQ Alert/.test(x.subject)).map(x => x.to);
+  if (!to.includes("steven.pugh@genus.com.au") || to.includes("lee.allen@genus.com.au") || to.length !== 15) throw new Error("site emails: " + to.join(","));
   await page.waitForSelector(".al-reg"); if (!/0 of 17 acknowledged/.test(await page.textContent("#app"))) throw new Error("register");
+  if (!/emailed 15 of 15/.test(await page.textContent(".al-mail"))) throw new Error("email record: " + await page.textContent(".al-mail"));
+  // email again goes only to people who haven't acknowledged (Genus addresses)
+  const b4 = relay.mail.length; await page.click("text=Email again to those not yet acknowledged"); await page.click("#aYes");
+  await page.waitForFunction(() => /\n.*emailed 14 of 14|emailed 14 of 14/.test(ALERTS.alerts[0].emailed), null, { timeout: 10000 });
+  if (relay.mail.slice(b4).some(x => x.to === "darren.frizzell@genus.com.au" || x.to === "lee.allen@genus.com.au")) throw new Error("email again recipients");
+  await settle(page); await shot(page, "51b-alert-email-record");
   // Nicola opens PARRON: banner at the top of Home and the critical pop-up
   const l = await newPage({ name: "Nicola Rucci", hash: "#home" });
   await l.waitForSelector("#alb .al-banner.crit", { timeout: 15000 }); await l.waitForSelector("#alRead", { timeout: 10000 });
@@ -610,6 +617,7 @@ await step("My SHEQ Planner: Manager mode only; suggested items → check → ap
   await page.click("#plAdd"); await page.waitForFunction(() => location.hash === "#planner" && document.querySelector(".pl-item"), null, { timeout: 15000 });
   if (relay.sheet("SHEQ Register").getLastRow() !== 6) throw new Error("register rows: " + relay.sheet("SHEQ Register").getLastRow());
   if (await page.$$eval(".pl-item", e => e.length) !== 5) throw new Error("planner items");
+  if (await page.textContent("#plMail .on") !== "Off" || relay.props.get("PLANNER_EMAILS")) throw new Error("reminder emails should be off by default");
   // a weekly item is due within the week → Done moves it on a week and logs it
   await page.click(".pl-item:has-text('Weekly DG store inspection') >> text=Done"); await page.waitForSelector("#plDs"); await page.click("#plDs");
   await page.waitForFunction(() => PLAN.log.length === 1, null, { timeout: 10000 });
@@ -630,7 +638,12 @@ await step("My SHEQ Planner: Manager mode only; suggested items → check → ap
   const rain = await page.evaluate(() => PLAN.items.find(i => /after rain/.test(i.title))); if (rain.every !== "As required") throw new Error("event item: " + rain.every);
   if (!/As required – when triggered/.test(await page.textContent("#app"))) throw new Error("as required group");
   // 5 am email
-  relay.cache.delete("planner_" + perth(0)); const before = relay.mail.length; relay.ctx.plannerDigest_(new Date());
+  relay.cache.delete("planner_" + perth(0)); let before = relay.mail.length; relay.ctx.plannerDigest_(new Date());
+  if (relay.mail.slice(before).some(x => /SHEQ/.test(x.subject))) throw new Error("emailed while reminders are off");
+  await page.click("#plMail >> text=Me only"); await page.waitForFunction(() => PLAN.emails === "me", null, { timeout: 10000 });
+  if (relay.props.get("PLANNER_EMAILS") !== "me") throw new Error("setting not saved in the relay");
+  relay.cache.delete("planner_" + perth(0)); before = relay.mail.length; relay.ctx.plannerDigest_(new Date());
+  if (relay.mail.slice(before).some(x => x.to !== "darren.frizzell@genus.com.au")) throw new Error("only the SHE Manager should be emailed");
   const m = relay.mail.slice(before).find(x => /^Your SHEQ day/.test(x.subject)); if (!m || !/Monthly road condition check/.test(m.htmlBody)) throw new Error("planner email");
 });
 await step("computer: planner and form builder side by side", async () => {
