@@ -187,6 +187,8 @@ planner and form change, so nobody else can read the register or change forms.
   (forms 18, 20, 22, 26, 27) to check against the plans.
 - **Automatic tick-off:** when a form linked to an item is sent (e.g. Inspection 18 for the weekly DG store inspection),
   the item is marked done with the report number and PDF link as evidence, and the next due date moves on.
+- **Reminder emails switch (v3.11):** *Off* (default – nobody is emailed), *Me only*, or *Me and owners*, on the
+  planner screen. Kept in the relay (Script property `PLANNER_EMAILS`).
 - **Emails (between 5 and 6 am, no AI):** you get *Your SHEQ day* when anything is overdue, due today, due this week or
   inside its reminder period. Owners with a Genus email (e.g. the SHE Advisor) get their own items on the day the
   reminder period starts, the day before, on the day and every day while overdue. Overdue items stay in your email.

@@ -90,7 +90,7 @@ function setup() {
     '\nPersonal reminders: emailed between 5 and 6 am (Perth time).' +
     '\nWeekly fuel, hours & pre-start register: Mondays to ' + FUEL_TO + '.' +
     '\nThis day in history: prepared every day between 4 and 5 am (Perth time)' + (PropertiesService.getScriptProperties().getProperty('HISTORY_EMAIL') ? ' and emailed to ' + PropertiesService.getScriptProperties().getProperty('HISTORY_EMAIL') : '') + '.' +
-    '\nMy SHEQ Planner: your obligations register (SHEQ Register sheet) – emailed to you between 5 and 6 am when items are due; owners get their own items.' +
+    '\nMy SHEQ Planner: your obligations register (SHEQ Register sheet). Reminder emails are ' + ({ off: 'OFF – nobody is emailed', me: 'on – to you only', all: 'on – to you and each owner' })[plannerEmails_()] + ' (change it on the planner screen).' +
     '\nInspection forms you add in the app are kept in the Custom Forms sheet.' +
     '\nSHEQ Alerts: published from the app in Manager mode – tick who must acknowledge; the register is in the Alert Acks sheet.' +
     '\nToday on site status PIN: ' + (PropertiesService.getScriptProperties().getProperty('STATUS_PIN') ? 'set' : 'NOT SET – add STATUS_PIN under Script properties so the site status can be updated.') +
@@ -149,6 +149,7 @@ function doPost(e) {
     if (d.action === 'saveOb') return saveOb_(d);
     if (d.action === 'importOb') return importOb_(d);
     if (d.action === 'doneOb') return doneOb_(d);
+    if (d.action === 'plannerEmails') return plannerMode_(d);
     if (d.action === 'saveForm') return saveForm_(d);
     if (d.action === 'submitted') return submitted_(d);
     if (d.action === 'reportPdf') return reportPdf_(d);
@@ -763,7 +764,16 @@ function obRow_(r) {
 function plannerOut_() {
   const ss = book_(); const items = rows_(ss.getSheetByName('SHEQ Register')).filter(r => r[0]).map(obRow_);
   const log = rows_(ss.getSheetByName('Register Log')).filter(r => r[0]).slice(-400).reverse().map(r => ({ at: iso_(r[0]), id: String(r[1]), title: String(r[2]), date: dstr_(r[3]).slice(0, 10), by: String(r[4]), evidence: String(r[5]), how: String(r[6]) }));
-  return { items, log };
+  return { items, log, emails: plannerEmails_() };
+}
+/* who the planner emails: 'off' (nobody – the default until the SHE Manager turns it on), 'me' (SHE Manager only), 'all' (SHE Manager and owners) */
+const PLANNER_MODES = ['off', 'me', 'all'];
+function plannerEmails_() { const v = PropertiesService.getScriptProperties().getProperty('PLANNER_EMAILS'); return PLANNER_MODES.indexOf(v) >= 0 ? v : 'off'; }
+function plannerMode_(d) {
+  if (!pinOK_(d.pin)) return out_({ ok: false, error: 'Incorrect Manager PIN', badPin: true });
+  if (PLANNER_MODES.indexOf(d.mode) < 0) return out_({ ok: false, error: 'Unknown setting' });
+  PropertiesService.getScriptProperties().setProperty('PLANNER_EMAILS', d.mode);
+  return out_(Object.assign({ ok: true }, plannerOut_()));
 }
 function planner_(d) { if (!pinOK_(d.pin)) return out_({ ok: false, error: 'Incorrect Manager PIN', badPin: true }); return out_(Object.assign({ ok: true }, plannerOut_())); }
 /* one checked obligation as a sheet row (or an error message) */
@@ -824,6 +834,7 @@ function plannerMail_(title, sub, inner) {
 }
 /* between 5 and 6 am (with the personal reminders): the SHE Manager's planner email, and each owner's own items */
 function plannerDigest_(now) {
+  const mode = plannerEmails_(); if (mode === 'off') return;   // nobody is emailed until the SHE Manager turns reminders on
   const ss = book_(); const sh = ss.getSheetByName('SHEQ Register'); if (!sh) return;
   const today = Utilities.formatDate(now, TZ, 'yyyy-MM-dd'); const cache = CacheService.getScriptCache();
   if (cache.get('planner_' + today)) return; cache.put('planner_' + today, '1', 21600);
@@ -842,6 +853,7 @@ function plannerDigest_(now) {
         `<p style="font-size:12px;color:#5B6675">Open <a href="${APP_URL}#planner">My SHEQ Planner</a> (Manager mode) to mark items done or change them. Owners with a Genus email are reminded of their own items.</p>`),
       body: L.filter(o => o.n <= Math.max(7, o.lead)).map(o => `${o.title} – ${o.owner || 'SHE Manager'} – ${o.due}`).join('\n') + `\n${APP_URL}#planner` });
   }
+  if (mode !== 'all') return;
   // owners: on the day the reminder period starts, the day before, on the day, and every day while overdue
   const mine = {}; L.filter(o => o.ownerEmail && o.ownerEmail.toLowerCase() !== TO.toLowerCase() && (o.n < 0 || o.n <= 1 || o.n === o.lead)).forEach(o => { (mine[o.ownerEmail] = mine[o.ownerEmail] || []).push(o); });
   Object.keys(mine).forEach(e => { const M = mine[e]; const late = M.filter(o => o.n < 0).length;

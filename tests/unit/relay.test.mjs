@@ -445,7 +445,7 @@ test("planner: edit and retire; retired items are not reminded", () => {
   assert.equal(plan(r, "saveOb", { item: ob({ every: "Once", due: "" }) }).ok, false);
   const n = plan(r, "saveOb", { item: ob({ title: "Client audit", every: "Once", due: perthYmd(3), form: "" }) }); assert.equal(n.id, "OB-002");
   plan(r, "saveOb", { item: { ...e.items[0], id: "OB-001", status: "Retired" } });
-  const before = r.mail.length; r.ctx.plannerDigest_(new Date());
+  r.props.set("PLANNER_EMAILS", "me"); const before = r.mail.length; r.ctx.plannerDigest_(new Date());
   const m = r.mail.slice(before).find(x => /Your SHEQ day/.test(x.subject)); assert.ok(m); assert.doesNotMatch(m.htmlBody, /DG store/); assert.match(m.htmlBody, /Client audit/);
 });
 
@@ -457,7 +457,7 @@ test("planner: 5 am email to the SHE Manager (overdue, today, week, plan ahead) 
     ob({ title: "Evacuation drill", every: "6 months", form: "", owner: "Darren Frizzell", ownerEmail: "darren.frizzell@genus.com.au", due: perthYmd(16), lead: 30 }),
     ob({ title: "Far away", every: "1 year", form: "", due: perthYmd(200), lead: 30 }),
     ob({ title: "After rain", every: "As required", form: "", due: "" }) ] });
-  const before = r.mail.length; r.ctx.remindersRun(); const M = r.mail.slice(before);
+  r.props.set("PLANNER_EMAILS", "all"); const before = r.mail.length; r.ctx.remindersRun(); const M = r.mail.slice(before);
   const me = M.find(x => /^Your SHEQ day/.test(x.subject)); assert.ok(me, "manager email");
   assert.equal(me.to, "darren.frizzell@genus.com.au"); assert.match(me.subject, /1 overdue, 1 due today, 0 this week/);
   assert.match(me.htmlBody, /Overdue \(1\)[\s\S]*3 days overdue[\s\S]*Due today \(1\)[\s\S]*Plan ahead \(1\)[\s\S]*Evacuation drill/);
@@ -500,4 +500,18 @@ test("submitted forms: Manager PIN, date range, archived PDF readable only for l
   assert.equal(pdf.ok, true); assert.match(Buffer.from(pdf.data, "base64").toString(), /^%PDF/);
   assert.equal(r.post({ key: r.key, action: "reportPdf", pin: "1", id: s.items[0].pdf }).ok, false);
   assert.equal(r.post({ key: r.key, action: "reportPdf", pin: "2468", id: "999" }).ok, false);
+});
+
+test("planner reminder emails are OFF until the SHE Manager turns them on; 'me' emails only the SHE Manager", () => {
+  const r = createRelay();
+  plan(r, "importOb", { items: [ob({ due: perthYmd(-2) }), ob({ title: "Drill", owner: "Darren Frizzell", ownerEmail: "darren.frizzell@genus.com.au", due: perthYmd(0), form: "" })] });
+  assert.equal(plan(r, "planner").emails, "off");
+  let b = r.mail.length; r.ctx.remindersRun(); assert.ok(!r.mail.slice(b).some(x => /SHEQ/.test(x.subject)), "nobody emailed by default");
+  assert.equal(plan(r, "plannerEmails", { mode: "me", pin: "0" }).badPin, true);
+  assert.equal(plan(r, "plannerEmails", { mode: "everyone" }).ok, false);
+  assert.equal(plan(r, "plannerEmails", { mode: "me" }).emails, "me");
+  r.cache.clear(); b = r.mail.length; r.ctx.remindersRun(); const M = r.mail.slice(b);
+  assert.ok(M.some(x => /^Your SHEQ day/.test(x.subject) && x.to === "darren.frizzell@genus.com.au"), "SHE Manager emailed");
+  assert.ok(!M.some(x => x.to === "anphin.thomas@genus.com.au"), "owner not emailed in 'me' mode");
+  assert.equal(plan(r, "plannerEmails", { mode: "off" }).emails, "off");
 });
