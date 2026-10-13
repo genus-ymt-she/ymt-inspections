@@ -75,6 +75,19 @@ await step("Home opens first: HVMB & Fire Status, history, welcome, My Day, Insp
   const labels = await page.$$eval(".tiles .tile b", e => e.map(x => x.textContent.trim()).join("|")); if (labels !== "My Day|Inspect & report|PARRON Radio") throw new Error("home tiles: " + labels);
   await settle(page); await shot(page, "01-home");
 });
+await step("computer screen: side menu and two-column Home; phone keeps one column", async () => {
+  if (await page.$(".home-desk")) throw new Error("phone should not get the desktop layout");
+  const d = await newPage({ viewport: { width: 1440, height: 900 }, hash: "#home" }); await d.waitForSelector(".home-desk .hd-a #stp");
+  const nav = await d.$eval("nav.tabs", e => { const r = e.getBoundingClientRect(); return [r.left, r.width, r.height]; });
+  if (nav[0] !== 0 || nav[1] > 300 || nav[2] < 500) throw new Error("side menu: " + nav);
+  const cols = await d.evaluate(() => [document.querySelector(".hd-a").getBoundingClientRect().left, document.querySelector(".hd-b").getBoundingClientRect().left]);
+  if (!(cols[1] > cols[0] + 300)) throw new Error("two columns: " + cols);
+  await settle(d); await shot(d, "54-home-computer");
+  await d.click("nav.tabs >> text=Inspect"); await d.waitForSelector(".tiles .tile"); await settle(d); await shot(d, "55-inspect-computer");
+  await d.click("nav.tabs >> text=Emergency"); await d.waitForSelector(".em-tile"); await settle(d); await shot(d, "56-emergency-computer");
+  await d.setViewportSize({ width: 800, height: 900 }); await d.evaluate(() => go("#home")); await d.waitForSelector("#stp");
+  if (await d.$(".home-desk")) throw new Error("narrow window should switch back to one column");
+});
 await step("Inspect tab holds the six inspection and report tiles", async () => {
   await page.click("nav.tabs >> text=Inspect"); await page.waitForFunction(() => location.hash === "#inspect"); await page.waitForSelector(".tiles .tile");
   await page.waitForSelector("nav.tabs a[data-t=inspect].on", { timeout: 5000 }).catch(() => { throw new Error("Inspect tab not active"); });
