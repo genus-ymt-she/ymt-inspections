@@ -18,6 +18,11 @@ function viewReference(id){const back={icon:"back",aria:"Back",fn:()=>go(id?"#re
      <p class="foot snn-foot">${esc(SNN_FOOTER)}</p><p class="foot">Source: Genus Safety Non-Negotiables booklet (GNP, web version).</p>`);return}
   if(id==="330kv"){setHeader(HV330.title,"Western Power 330 kV – treat as live",back);
     render(`<div class="alert red">${ic("zap")}<div><b>${esc(HV330.items[0])}</b></div></div>
+     ${(()=>{const C=HV330.clearance;return `<div class="card hv-clr"><h3>${esc(C.title)}</h3><p class="muted">${esc(C.basis)}</p>
+       <div class="hv-low"><small>Lowest measured clearance</small><b>${esc(C.lowest)}</b></div>
+       <table class="hv-tab"><tr><th>Line (west to east)</th><th colspan="2">Measured clearance</th></tr>${C.readings.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join("")}</table>
+       <img src="${C.img}" alt="Survey drawing of HV power line clearances over Lots Y and Z" onclick="zoomImg(this.src,true)"><div class="muted">Tap the drawing to enlarge – pinch to zoom.</div>
+       <div class="alert org" style="margin-bottom:0">${ic("alert")}<div>${esc(C.caution)}</div></div><p class="muted" style="margin-top:8px">Source: ${esc(C.source)}</p></div>`})()}
      <div class="card hv-mad"><h3>Minimum Approach Distances</h3><img src="${HV330.madImg}" alt="Minimum Approach Distances" onclick="zoomImg(this.src,true)" onerror="this.outerHTML='<div class=&quot;hv-fallback&quot;>${esc(HV330.madFallback)}</div>'"></div>
      <div class="card"><ul class="hv-list">${HV330.items.slice(1).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>
      <p class="foot">${esc(HV330.footer)}<br>Sources: ${esc(HV330.sources)}</p>`);return}

@@ -447,9 +447,10 @@ await step("Emergency tab: call 000, site location, 20 situation cards (ERP Rev 
   if ((await page.$$(".tarp")).length !== 4) throw new Error("TARP levels"); if (/Pushparatnam|Sapsford|Linda Wood/.test(await page.textContent("#app"))) throw new Error("client names shown");
   await page.click(".tarp >> nth=1 >> summary"); await settle(page); await shot(page, "38-tarp");
 });
-await step("Traffic tab: five site maps, open full screen", async () => {
+await step("Traffic tab: six site maps (incl. HV clearance drawing), open full screen", async () => {
   await page.click("nav.tabs >> text=Traffic"); await page.waitForSelector(".tmap img");
-  if ((await page.$$(".tmap")).length !== 5) throw new Error("maps");
+  if ((await page.$$(".tmap")).length !== 6) throw new Error("maps");
+  if (!/HV power line clearance – Lots Y & Z/.test(await page.textContent("#app"))) throw new Error("HV clearance map tile");
   await page.waitForFunction(() => [...document.querySelectorAll(".tmap img")].every(i => i.complete && i.naturalWidth > 0), null, { timeout: 15000 });
   await settle(page); await shot(page, "39-traffic");
   await page.click(".tmap >> nth=1"); await page.waitForSelector(".tmap-full img"); await page.click("text=Full screen"); await page.waitForSelector(".zoom img"); await page.click(".zoom .zb button >> nth=1");
@@ -522,6 +523,9 @@ await step("Reference: nine SNN cards with icons, 330 kV card with MAD fallback,
   await settle(page); await shot(page, "46-snn");
   await page.evaluate(() => go("#reference/330kv")); await page.waitForSelector(".hv-fallback", { timeout: 10000 });
   if (!/MAD values: refer to your Western Power permit \/ ESSR/.test(await page.textContent(".hv-fallback"))) throw new Error("MAD fallback");
+  const clr = await page.textContent(".hv-clr"); if (!/19\.3 m/.test(clr) || !/1959-ASC-007 Rev 0/.test(clr) || !/not approach distances/.test(clr)) throw new Error("clearance card: " + clr.slice(0, 200));
+  await page.waitForFunction(() => { const i = document.querySelector(".hv-clr img"); return i && i.complete && i.naturalWidth > 0; }, null, { timeout: 15000 });
+  await page.evaluate(() => document.querySelector(".hv-clr").scrollIntoView({ block: "start" })); await settle(page); await shot(page, "53-hv-clearance");
   if (!/Reference only – your Western Power permit and the ESSR take precedence\./.test(await page.textContent("#app"))) throw new Error("330 footer");
   await settle(page); await shot(page, "47-330kv");
   await page.evaluate(() => { ls("appCfg", JSON.stringify({ chemAlertUrl: "https://example.com/chemalert" })); go("#reference/sds"); }); await page.waitForSelector(".ref-chem a");
