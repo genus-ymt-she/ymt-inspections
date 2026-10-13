@@ -3063,5 +3063,11 @@ const TRAFFIC_MAPS=[
   "title": "Site entry & wheel wash",
   "file": "assets/traffic/site-entry-wheel-wash.jpg",
   "note": "UHF Channel 24, wheel wash, visitor parking, 40 / 20 / 5 km/h zones."
+ },
+ {
+  "id": "hvclear",
+  "title": "HV power line clearance – Lots Y & Z",
+  "file": "assets/traffic/hv-clearance-lots-yz.jpg",
+  "note": "Measured height from the finished surface (asphalt) to the lowest power line: 19.3 m to 22.3 m. Noble Surveys 1959-ASC-007 Rev 0 (11/10/26)."
  }
 ];

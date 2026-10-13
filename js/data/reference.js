@@ -95,6 +95,12 @@ const SNN_CARDS = [
 const SNN_FOOTER = "Think Safe. Work Safe. Home Safe. – Stop Work Authority: if it's not safe, we don't do it.";
 const HV330 = {
   title: "Working near 330 kV lines",
+  /* surveyed clearance to the power lines over Lots Y and Z (Noble Surveys drawing 1959-ASC-007 Rev 0, 11/10/26) */
+  clearance: { title: "Measured clearance – Lots Y & Z", img: "assets/traffic/hv-clearance-lots-yz.jpg",
+    basis: "Values are the height difference from the highest point of the finished surface level (asphalt) to the lowest power line.",
+    readings: [["Western line", "19.5 m", "19.3 m"], ["Centre line", "22.3 m", "22.3 m"], ["Eastern line", "21.7 m", "21.6 m"]], lowest: "19.3 m",
+    source: "Noble Surveys drawing 1959-ASC-007 Rev 0 – Yerramullah Terminal HV Power Line Minimum Clearance (issued 11/10/26)",
+    caution: "These are surveyed clearances, not approach distances. Plant, loads and people must still stay outside the MAD on your Western Power permit." },
   items: [
     "The existing Western Power dual-circuit 330 kV line beside YMT stays in service during the Works. Treat every conductor as live.",
     "Minimum Approach Distances (MADs) apply to people, vehicles, mobile plant (including the load, tag lines and attachments) and objects. MADs are set by Western Power's Electrical System Safety Rules (EDM 41392645) and your Vicinity Access permit – check the MAD on your permit before work.",

@@ -871,3 +871,13 @@ nav.tabs a.em-tab.on .ic{stroke:var(--ua)}
 .al-chk{display:flex;gap:10px;align-items:center;margin-top:14px;font-size:14px}
 .al-chk input{width:20px;height:20px}
 .al-pop{display:flex;flex-direction:column;gap:10px}.al-pop h3{margin:0;font-size:20px}
+
+/* 330 kV page – surveyed clearance (Lots Y & Z) */
+.hv-clr h3{margin:0 0 4px}
+.hv-clr img{width:100%;border-radius:10px;margin-top:12px;cursor:zoom-in;background:var(--surface-2)}
+.hv-low{display:flex;align-items:baseline;gap:10px;margin:10px 0}
+.hv-low small{font-size:13px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.04em}
+.hv-low b{font-size:28px;color:var(--ink)}
+.hv-tab{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.hv-tab th,.hv-tab td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left}
+.hv-tab th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
