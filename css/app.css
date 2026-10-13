@@ -882,6 +882,8 @@ nav.tabs a.em-tab.on .ic{stroke:var(--ua)}
 .hv-tab th,.hv-tab td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left}
 .hv-tab th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 
+.al-mail{display:flex;gap:8px;align-items:flex-start;margin-top:10px;padding:10px 12px;border-radius:var(--r-s);background:var(--c-soft);font-size:13px;color:var(--ink-2)}
+.al-mail.bad{background:var(--ni-soft)}.al-mail>.ic{margin-top:2px;flex:none}.al-mail span{min-width:0;overflow-wrap:anywhere}.al-mail b{display:block;color:var(--ink)}
 /* ---------- My SHEQ Planner (SHE Manager only) ---------- */
 .tile.pl-tile .ti{background:var(--accent-soft);color:var(--accent)}
 .pl-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:2px 0 12px}

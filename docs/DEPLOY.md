@@ -169,6 +169,9 @@ Insights (Lead indicators) and the hazard form also link to it.
 - **Register:** sheets *SHEQ Alerts* (with the *Must acknowledge* column) and *Alert Acks* in the project log; the alert
   page shows who has / hasn't acknowledged. The 6 pm daily email lists who is outstanding; the Monday summary shows the rate.
 - **Team list:** add, remove or rename people in `TEAM` (js/app/config.js). Everyone picks their own name once on their phone.
+- **Emails (v3.11):** each person ticked gets their own email (no BCC), and the alert page shows an *Email record* –
+  how many were emailed and anyone not sent (e.g. Gmail's daily email limit). *Email again to those not yet acknowledged*
+  re-sends to the people still waiting.
 - Close an alert from its page (Manager mode) to take it off Home and the daily email; the register is kept.
 - Relay update required: paste the new `PARRON_Relay_Code.gs`, run `setup` once (creates the sheets), and redeploy as a
   new version.

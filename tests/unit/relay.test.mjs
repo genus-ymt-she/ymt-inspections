@@ -350,11 +350,14 @@ test("SHEQ alerts: Manager PIN required, numbered, emailed to the team (project 
   const r = createRelay();
   const bad = r.post(alertPayload({ pin: "0000" })); assert.equal(bad.ok, false); assert.equal(bad.badPin, true);
   assert.equal(r.post(alertPayload({ title: "" })).ok, false);
-  const a = r.post(alertPayload());
+  const b0 = r.mail.length; const a = r.post(alertPayload());
   assert.equal(a.ok, true); assert.match(a.id, /^SA-\d{4}-001$/); assert.equal(a.alerts[0].title, "Underground service strike"); assert.equal(a.alerts[0].active, true);
-  const m = r.mail.at(-1); assert.match(m.subject, /^CRITICAL – SHEQ Alert: Underground service strike/); assert.equal(m.bcc, "lee.allen@genus.com.au"); assert.match(m.htmlBody, /#alerts\/SA-/);
+  const sent = r.mail.slice(b0); const m = sent[0];
+  assert.deepEqual(sent.map(x => x.to), ["darren.frizzell@genus.com.au", "lee.allen@genus.com.au"], "one email each, project addresses only, no BCC");
+  assert.ok(sent.every(x => !x.bcc)); assert.match(m.subject, /^CRITICAL – SHEQ Alert: Underground service strike/); assert.match(m.htmlBody, /#alerts\/SA-/);
+  assert.match(a.emailed, /emailed 2 of 2$/); assert.match(a.alerts[0].emailed, /emailed 2 of 2$/);
   const b = r.post(alertPayload({ priority: "Info", title: "Site notice", type: "Site notice", email: false }));
-  assert.match(b.id, /-002$/); assert.equal(r.mail.at(-1), m, "no email when switched off");
+  assert.match(b.id, /-002$/); assert.equal(r.mail.length, b0 + 2, "no email when switched off");
   assert.equal(r.get({ action: "alerts", key: r.key }).alerts.length, 2);
 });
 
@@ -393,7 +396,7 @@ test("SHEQ alerts: someone must be ticked; only the people ticked are emailed an
   assert.match(r.post(alertPayload({ required: [] })).error, /Tick who must acknowledge/);
   const a = r.post(alertPayload({ required: ["Lee Allen", "Matthew Smith", "Jayden Mullan"], notify: ["lee.allen@genus.com.au", "matt.smith@genus.com.au"] }));
   assert.deepEqual(JSON.parse(JSON.stringify(a.alerts[0].required)), ["Lee Allen", "Matthew Smith", "Jayden Mullan"]);
-  assert.equal(r.mail.at(-1).bcc, "lee.allen@genus.com.au,matt.smith@genus.com.au");
+  assert.deepEqual(r.mail.slice(-3).map(x => x.to), ["darren.frizzell@genus.com.au", "lee.allen@genus.com.au", "matt.smith@genus.com.au"]);
   const before = r.mail.length; r.ctx.dailyDigest();
   const d = r.mail.slice(before).find(x => /daily summary/.test(x.subject)).htmlBody;
   assert.match(d, /0 of 3/); assert.match(d, /Lee Allen, Matthew Smith, Jayden Mullan/); assert.doesNotMatch(d, /Nicola Rucci/);
@@ -514,4 +517,18 @@ test("planner reminder emails are OFF until the SHE Manager turns them on; 'me' 
   assert.ok(M.some(x => /^Your SHEQ day/.test(x.subject) && x.to === "darren.frizzell@genus.com.au"), "SHE Manager emailed");
   assert.ok(!M.some(x => x.to === "anphin.thomas@genus.com.au"), "owner not emailed in 'me' mode");
   assert.equal(plan(r, "plannerEmails", { mode: "off" }).emails, "off");
+});
+
+test("SHEQ alerts: a failed or over-limit email is recorded, and the SHE Manager can email it again to people not yet acknowledged", () => {
+  const r = createRelay(); let left = 2; r.ctx.MailApp.getRemainingDailyQuota = () => left;
+  const send = r.ctx.MailApp.sendEmail; r.ctx.MailApp.sendEmail = o => { left--; return send(o); };
+  const a = r.post(alertPayload({ required: ["Lee Allen", "Matthew Smith", "Paul Delaney"], notify: ["lee.allen@genus.com.au", "matt.smith@genus.com.au", "paul.delaney@genus.com.au"] }));
+  assert.equal(a.ok, true, "the alert is still published");
+  assert.match(a.emailed, /emailed 2 of 4\. Not sent: matt\.smith@genus\.com\.au \(daily email limit reached\); paul\.delaney@genus\.com\.au \(daily email limit reached\)/);
+  left = 100; r.post({ key: r.key, action: "ackAlert", id: a.id, name: "Lee Allen" });
+  assert.equal(r.post({ key: r.key, action: "emailAlert", id: a.id, pin: "1", notify: [] }).badPin, true);
+  const b = r.mail.length; const e = r.post({ key: r.key, action: "emailAlert", id: a.id, pin: "2468", notify: ["matt.smith@genus.com.au", "paul.delaney@genus.com.au"] });
+  assert.equal(e.ok, true); assert.deepEqual(r.mail.slice(b).map(x => x.to), ["matt.smith@genus.com.au", "paul.delaney@genus.com.au"]);
+  assert.match(e.alerts[0].emailed, /Not sent[\s\S]*\n.*emailed 2 of 2$/);
+  assert.equal(r.post({ key: r.key, action: "emailAlert", id: a.id, pin: "2468", notify: [] }).ok, false);
 });

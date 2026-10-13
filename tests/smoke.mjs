@@ -556,8 +556,15 @@ await step("SHEQ Alerts: SHE Manager publishes a Critical alert to everyone on s
   const before = relay.mail.length; await page.click("#alPub");
   await page.waitForFunction(() => /^#alerts\/SA-\d{4}-\d{3}$/.test(location.hash), null, { timeout: 15000 });
   if (relay.sheet("SHEQ Alerts").getLastRow() !== 2) throw new Error("alert not logged");
-  const m = relay.mail.slice(before).find(x => /CRITICAL – SHEQ Alert/.test(x.subject)); if (!m || !/steven\.pugh@genus\.com\.au/.test(m.bcc || "") || /lee\.allen/.test(m.bcc)) throw new Error("site email: " + (m && m.bcc));
+  const to = relay.mail.slice(before).filter(x => /CRITICAL – SHEQ Alert/.test(x.subject)).map(x => x.to);
+  if (!to.includes("steven.pugh@genus.com.au") || to.includes("lee.allen@genus.com.au") || to.length !== 15) throw new Error("site emails: " + to.join(","));
   await page.waitForSelector(".al-reg"); if (!/0 of 17 acknowledged/.test(await page.textContent("#app"))) throw new Error("register");
+  if (!/emailed 15 of 15/.test(await page.textContent(".al-mail"))) throw new Error("email record: " + await page.textContent(".al-mail"));
+  // email again goes only to people who haven't acknowledged (Genus addresses)
+  const b4 = relay.mail.length; await page.click("text=Email again to those not yet acknowledged"); await page.click("#aYes");
+  await page.waitForFunction(() => /\n.*emailed 14 of 14|emailed 14 of 14/.test(ALERTS.alerts[0].emailed), null, { timeout: 10000 });
+  if (relay.mail.slice(b4).some(x => x.to === "darren.frizzell@genus.com.au" || x.to === "lee.allen@genus.com.au")) throw new Error("email again recipients");
+  await settle(page); await shot(page, "51b-alert-email-record");
   // Nicola opens PARRON: banner at the top of Home and the critical pop-up
   const l = await newPage({ name: "Nicola Rucci", hash: "#home" });
   await l.waitForSelector("#alb .al-banner.crit", { timeout: 15000 }); await l.waitForSelector("#alRead", { timeout: 10000 });

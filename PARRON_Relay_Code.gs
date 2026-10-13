@@ -61,7 +61,7 @@ const HISTORY_EXCLUDE = ['murder', 'massacre', 'killed', 'killing', 'kills', 'te
   'genocide', 'rape', 'suicide', 'war crime', 'hostage', 'behead', 'lynch', 'stabbing', 'torture', 'slaughter', 'atrocit', 'holocaust', 'abduct', 'kidnap', 'died', 'deaths', 'dead', 'crash', 'disaster'];
 /* SHEQ Alerts – read and acknowledge. Published by the SHE Manager (Manager PIN) to the people ticked in the app;
    each person taps "I have read and understood" on their phone and their name and time are recorded. */
-const ALERT_HEAD = ['Alert ID', 'Published', 'Type', 'Priority', 'Title', 'What happened', 'What you must do', 'Attachment', 'Attachment type', 'Published by', 'Active', 'Closed', 'Must acknowledge'];
+const ALERT_HEAD = ['Alert ID', 'Published', 'Type', 'Priority', 'Title', 'What happened', 'What you must do', 'Attachment', 'Attachment type', 'Published by', 'Active', 'Closed', 'Must acknowledge', 'Emailed'];
 const ACK_HEAD = ['Acknowledged', 'Alert ID', 'Name'];
 const ALERT_TYPES = ['SHEQ Alert', 'Lesson learned', 'Plan or procedure change', 'Site notice'];
 const ALERT_PRIORITY = ['Critical', 'Important', 'Info'];
@@ -145,6 +145,7 @@ function doPost(e) {
     if (d.action === 'publishAlert') return publishAlert_(d);
     if (d.action === 'ackAlert') return ackAlert_(d);
     if (d.action === 'closeAlert') return closeAlert_(d);
+    if (d.action === 'emailAlert') return emailAlert_(d);
     if (d.action === 'planner') return planner_(d);
     if (d.action === 'saveOb') return saveOb_(d);
     if (d.action === 'importOb') return importOb_(d);
@@ -662,7 +663,7 @@ function installHistoryTrigger() {
 }
 
 /* ---------- SHEQ Alerts – read and acknowledge ---------- */
-function alertRow_(r) { return { id: r[0], at: iso_(r[1]), type: r[2], priority: r[3], title: r[4], what: r[5], must: r[6], file: driveId_(r[7]), fileType: r[8], by: r[9], active: r[10] !== 'No', closed: iso_(r[11]), required: String(r[12] || '').split('\n').map(clean_).filter(Boolean) }; }
+function alertRow_(r) { return { id: r[0], at: iso_(r[1]), type: r[2], priority: r[3], title: r[4], what: r[5], must: r[6], file: driveId_(r[7]), fileType: r[8], by: r[9], active: r[10] !== 'No', closed: iso_(r[11]), required: String(r[12] || '').split('\n').map(clean_).filter(Boolean), emailed: String(r[13] || '') }; }
 function alertsOut_() {
   const ss = book_(); const acks = rows_(ss.getSheetByName('Alert Acks')).filter(r => r[0]);
   const all = rows_(ss.getSheetByName('SHEQ Alerts')).filter(r => r[0]).map(alertRow_);
@@ -691,19 +692,46 @@ function publishAlert_(d) {
   const required = (Array.isArray(d.required) ? d.required : []).map(clean_).filter(Boolean).slice(0, 80);
   if (!required.length) return out_({ ok: false, error: 'Tick who must acknowledge the alert' });
   sh.appendRow([id, now, type, pri, title, str_(d.what, 4000), str_(d.must, 4000), link, ftype, clean_(d.by) || 'SHE Manager', 'Yes', '', required.join('\n')]);
-  const bcc = String(Array.isArray(d.notify) ? d.notify.join(',') : d.notify || '').split(/[,;]/).map(e => e.trim().toLowerCase())
-    .filter(e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && ALLOWED.test(e) && e !== TO.toLowerCase()).slice(0, 60).join(',');
-  if (d.email !== false) {
-    const col = pri === 'Critical' ? '#C62828' : pri === 'Important' ? '#EC7723' : '#112B4E';
-    const para = s => esc_(s).replace(/\n/g, '<br>');
-    try { MailApp.sendEmail(Object.assign({ to: TO, name: 'PARRON Site Inspections' }, bcc ? { bcc } : {}, { subject: `${pri === 'Info' ? '' : pri.toUpperCase() + ' – '}${type}: ${title}`,
-      htmlBody: `<div style="font-family:Arial,sans-serif;color:#1B2430;max-width:640px"><div style="background:#112B4E;color:#fff;padding:12px 14px;border-bottom:4px solid ${col}"><div style="font-size:12px;color:#EC7723;font-weight:700">PARRON | ${esc_(type.toUpperCase())} · ${esc_(pri.toUpperCase())} · ${id}</div><div style="font-size:18px;font-weight:700">${esc_(title)}</div></div>
-        <h3 style="color:#112B4E;margin-bottom:4px">What happened</h3><p style="font-size:14px">${para(d.what)}</p>${str_(d.must).trim() ? `<h3 style="color:#112B4E;margin-bottom:4px">What you must do</h3><p style="font-size:14px">${para(d.must)}</p>` : ''}
-        <p style="font-size:14px"><a href="${APP_URL}#alerts/${id}" style="background:#EC7723;color:#1B1206;padding:10px 16px;border-radius:8px;font-weight:700;text-decoration:none">Open PARRON to read and acknowledge</a></p>
-        <p style="font-size:12px;color:#5B6675">Please acknowledge in PARRON so the project record shows you have read it.</p></div>`,
-      body: `${type} (${pri}) ${id}: ${title}\n\nWhat happened:\n${d.what}\n\nWhat you must do:\n${d.must || '-'}\n\nRead and acknowledge in PARRON: ${APP_URL}#alerts/${id}` })); } catch (e) {}
-  }
-  return out_(Object.assign({ ok: true, id }, alertsOut_()));
+  const list = alertTo_(d.notify);
+  let result = 'Not emailed (switched off)';
+  if (d.email !== false) result = alertSend_({ id, type, pri, title, what: str_(d.what, 4000), must: str_(d.must, 4000) }, [TO.toLowerCase()].concat(list));
+  sh.getRange(sh.getLastRow(), 14).setValue(result);
+  return out_(Object.assign({ ok: true, id, emailed: result }, alertsOut_()));
+}
+/* Genus addresses of the people ticked (the SHE Manager always gets a copy separately) */
+function alertTo_(v) {
+  return String(Array.isArray(v) ? v.join(',') : v || '').split(/[,;]/).map(e => e.trim().toLowerCase())
+    .filter((e, i, a) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && ALLOWED.test(e) && e !== TO.toLowerCase() && a.indexOf(e) === i).slice(0, 80);
+}
+/* one email per person (not BCC – bulk BCC mail from outside Genus is often held by the mail filter); returns what happened */
+function alertSend_(a, to) {
+  const col = a.pri === 'Critical' ? '#C62828' : a.pri === 'Important' ? '#EC7723' : '#112B4E';
+  const para = s => esc_(s).replace(/\n/g, '<br>');
+  const subject = `${a.pri === 'Info' ? '' : a.pri.toUpperCase() + ' – '}${a.type}: ${a.title}`;
+  const htmlBody = `<div style="font-family:Arial,sans-serif;color:#1B2430;max-width:640px"><div style="background:#112B4E;color:#fff;padding:12px 14px;border-bottom:4px solid ${col}"><div style="font-size:12px;color:#EC7723;font-weight:700">PARRON | ${esc_(a.type.toUpperCase())} · ${esc_(a.pri.toUpperCase())} · ${a.id}</div><div style="font-size:18px;font-weight:700">${esc_(a.title)}</div></div>
+    <h3 style="color:#112B4E;margin-bottom:4px">What happened</h3><p style="font-size:14px">${para(a.what)}</p>${String(a.must || '').trim() ? `<h3 style="color:#112B4E;margin-bottom:4px">What you must do</h3><p style="font-size:14px">${para(a.must)}</p>` : ''}
+    <p style="font-size:14px"><a href="${APP_URL}#alerts/${a.id}" style="background:#EC7723;color:#1B1206;padding:10px 16px;border-radius:8px;font-weight:700;text-decoration:none">Open PARRON to read and acknowledge</a></p>
+    <p style="font-size:12px;color:#5B6675">Please acknowledge in PARRON so the project record shows you have read it.</p></div>`;
+  const body = `${a.type} (${a.pri}) ${a.id}: ${a.title}\n\nWhat happened:\n${a.what}\n\nWhat you must do:\n${a.must || '-'}\n\nRead and acknowledge in PARRON: ${APP_URL}#alerts/${a.id}`;
+  const sent = [], failed = [];
+  to.forEach(e => {
+    if (MailApp.getRemainingDailyQuota() < 1) { failed.push(e + ' (daily email limit reached)'); return; }
+    try { MailApp.sendEmail({ to: e, replyTo: TO, name: 'PARRON Site Inspections', subject, htmlBody, body }); sent.push(e); }
+    catch (err) { failed.push(e + ' (' + String((err && err.message) || err).slice(0, 80) + ')'); }
+  });
+  return `${Utilities.formatDate(new Date(), TZ, 'dd/MM HH:mm')} – emailed ${sent.length} of ${to.length}${failed.length ? '. Not sent: ' + failed.join('; ') : ''}`;
+}
+/* SHE Manager: email the alert again to the people ticked who have not acknowledged it yet */
+function emailAlert_(d) {
+  if (!pinOK_(d.pin)) return out_({ ok: false, error: 'Incorrect Manager PIN', badPin: true });
+  const ss = book_(); const sh = ss.getSheetByName('SHEQ Alerts'); const rows = rows_(sh); const i = rows.findIndex(r => r[0] === d.id);
+  if (i < 0) return out_({ ok: false, error: 'Alert not found' });
+  const a = alertRow_(rows[i]); const acks = rows_(ss.getSheetByName('Alert Acks')).filter(r => r[1] === a.id).map(r => r[2]);
+  const want = alertTo_(d.notify);
+  if (!want.length) return out_({ ok: false, error: 'Everyone with a Genus email has acknowledged it' });
+  const result = alertSend_({ id: a.id, type: a.type, pri: a.priority, title: a.title, what: a.what, must: a.must }, want);
+  sh.getRange(i + 2, 14).setValue((a.emailed ? a.emailed + '\n' : '') + result);
+  return out_(Object.assign({ ok: true, emailed: result, acked: acks.length }, alertsOut_()));
 }
 function ackAlert_(d) {
   const name = clean_(d.name); if (!name) return out_({ ok: false, error: 'Pick your name first' });
