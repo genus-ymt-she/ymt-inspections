@@ -398,3 +398,89 @@ test("SHEQ alerts: someone must be ticked; only the people ticked are emailed an
   const d = r.mail.slice(before).find(x => /daily summary/.test(x.subject)).htmlBody;
   assert.match(d, /0 of 3/); assert.match(d, /Lee Allen, Matthew Smith, Jayden Mullan/); assert.doesNotMatch(d, /Nicola Rucci/);
 });
+
+/* ---------- My SHEQ Planner (obligations register) ---------- */
+const ob = (o = {}) => ({ title: "Weekly DG store inspection", source: "HSDG §21", every: "1 week", owner: "Anphin Thomas", ownerEmail: "anphin.thomas@genus.com.au", lead: 2, form: "18", due: perthYmd(1), notes: "", ...o });
+const plan = (r, action, o = {}) => r.post({ key: r.key, action, pin: "2468", by: "Darren Frizzell", ...o });
+
+test("planner: frequencies roll forward correctly (month ends, years, weeks)", () => {
+  const r = createRelay(); const a = r.ctx.addEvery_;
+  assert.equal(a("2026-01-31", "1 month"), "2026-02-28"); assert.equal(a("2026-10-13", "1 week"), "2026-10-20"); assert.equal(a("2026-10-13", "2 weeks"), "2026-10-27");
+  assert.equal(a("2026-11-30", "3 months"), "2027-02-28"); assert.equal(a("2026-10-13", "5 years"), "2031-10-13"); assert.equal(a("2026-12-31", "1 day"), "2027-01-01");
+  assert.equal(a("2026-10-13", "As required"), "");
+});
+
+test("planner: Manager PIN required; import approves items; bad frequencies are skipped and reported", () => {
+  const r = createRelay();
+  assert.equal(plan(r, "planner", { pin: "0000" }).badPin, true);
+  assert.equal(plan(r, "importOb", { pin: "1", items: [ob()] }).ok, false);
+  const res = plan(r, "importOb", { items: [ob(), ob({ title: "Spill kits", every: "whenever", form: "" }), ob({ title: "Evacuation drill", every: "6 months", form: "", ownerEmail: "someone@gmail.com", due: perthYmd(20), lead: 30 })] });
+  assert.equal(res.ok, true); assert.equal(res.added, 2); assert.match(res.skipped[0], /Spill kits.*frequency/);
+  assert.deepEqual(res.items.map(i => i.id), ["OB-001", "OB-002"]);
+  assert.equal(res.items[1].ownerEmail, "", "only Genus addresses are kept");
+  assert.equal(res.items[0].approvedBy, "Darren Frizzell"); assert.equal(res.items[0].form, "18"); assert.equal(res.items[0].due, perthYmd(1));
+  // not readable without the PIN, and not through the public GET
+  assert.equal(r.get({ action: "planner", key: r.key }).items, undefined);
+});
+
+test("planner: mark done moves the next due date on; sending the linked form ticks it off with the report as evidence", () => {
+  const r = createRelay(); plan(r, "importOb", { items: [ob(), ob({ title: "Monthly road check", every: "1 month", form: "26", owner: "Darren Frizzell", ownerEmail: "" })] });
+  const d = plan(r, "doneOb", { id: "OB-002", date: perthYmd(-1), evidence: "Photos in Drive" });
+  const it = d.items.find(i => i.id === "OB-002"); assert.equal(it.last, perthYmd(-1)); assert.equal(it.due, r.ctx.addEvery_(perthYmd(-1), "1 month"));
+  assert.equal(d.log[0].how, "Marked done"); assert.equal(d.log[0].evidence, "Photos in Drive");
+  r.post(report({ uid: "dg1", reportId: "YMT-18-20261013-0700-AT", meta: { name: "Anphin Thomas", no: "18", title: "Hazardous Chemicals", location: "DG store" } }));
+  const p = plan(r, "planner"); const dg = p.items.find(i => i.id === "OB-001");
+  assert.equal(dg.last, perthYmd(0)); assert.equal(dg.due, r.ctx.addEvery_(perthYmd(0), "1 week")); assert.match(dg.evidence, /^YMT-18-20261013-0700-AT https:\/\/drive/);
+  assert.equal(p.log[0].how, "Form 18 sent"); assert.equal(p.log[0].by, "Anphin Thomas");
+  // a different form does not tick it
+  r.post(report({ uid: "x2", reportId: "YMT-01-X", meta: { name: "A", no: "01", title: "Site", location: "x" } }));
+  assert.equal(plan(r, "planner").log.length, 2);
+});
+
+test("planner: edit and retire; retired items are not reminded", () => {
+  const r = createRelay(); plan(r, "importOb", { items: [ob()] });
+  const e = plan(r, "saveOb", { item: { ...ob({ title: "DG store inspection (weekly)", lead: 3 }), id: "OB-001" } });
+  assert.equal(e.items.length, 1); assert.equal(e.items[0].title, "DG store inspection (weekly)"); assert.equal(e.items[0].lead, 3);
+  assert.equal(plan(r, "saveOb", { item: { ...ob(), id: "OB-999" } }).ok, false);
+  assert.equal(plan(r, "saveOb", { item: ob({ every: "Once", due: "" }) }).ok, false);
+  const n = plan(r, "saveOb", { item: ob({ title: "Client audit", every: "Once", due: perthYmd(3), form: "" }) }); assert.equal(n.id, "OB-002");
+  plan(r, "saveOb", { item: { ...e.items[0], id: "OB-001", status: "Retired" } });
+  const before = r.mail.length; r.ctx.plannerDigest_(new Date());
+  const m = r.mail.slice(before).find(x => /Your SHEQ day/.test(x.subject)); assert.ok(m); assert.doesNotMatch(m.htmlBody, /DG store/); assert.match(m.htmlBody, /Client audit/);
+});
+
+test("planner: 5 am email to the SHE Manager (overdue, today, week, plan ahead) and each owner gets their own items once a day", () => {
+  const r = createRelay();
+  plan(r, "importOb", { items: [
+    ob({ title: "Spill kit inspection", every: "1 month", form: "27", due: perthYmd(-3), lead: 7 }),
+    ob({ title: "DG store", due: perthYmd(0) }),
+    ob({ title: "Evacuation drill", every: "6 months", form: "", owner: "Darren Frizzell", ownerEmail: "darren.frizzell@genus.com.au", due: perthYmd(16), lead: 30 }),
+    ob({ title: "Far away", every: "1 year", form: "", due: perthYmd(200), lead: 30 }),
+    ob({ title: "After rain", every: "As required", form: "", due: "" }) ] });
+  const before = r.mail.length; r.ctx.remindersRun(); const M = r.mail.slice(before);
+  const me = M.find(x => /^Your SHEQ day/.test(x.subject)); assert.ok(me, "manager email");
+  assert.equal(me.to, "darren.frizzell@genus.com.au"); assert.match(me.subject, /1 overdue, 1 due today, 0 this week/);
+  assert.match(me.htmlBody, /Overdue \(1\)[\s\S]*3 days overdue[\s\S]*Due today \(1\)[\s\S]*Plan ahead \(1\)[\s\S]*Evacuation drill/);
+  assert.doesNotMatch(me.htmlBody, /Far away|After rain/); assert.match(me.htmlBody, /form 27 ticks this off/);
+  const own = M.find(x => x.to === "anphin.thomas@genus.com.au"); assert.ok(own, "owner email"); assert.match(own.subject, /1 SHEQ item overdue/);
+  assert.match(own.htmlBody, /Spill kit[\s\S]*DG store/); assert.doesNotMatch(own.htmlBody, /Evacuation/);
+  assert.ok(!M.some(x => x.to === "darren.frizzell@genus.com.au" && /SHEQ item/.test(x.subject)), "the SHE Manager is not sent an owner email as well");
+  const b2 = r.mail.length; r.ctx.remindersRun(); assert.ok(!r.mail.slice(b2).some(x => /SHEQ/.test(x.subject)), "only once a day");
+});
+
+/* ---------- inspection forms added in the app ---------- */
+const tpl = (o = {}) => ({ title: "29 – Daily Haul Road Inspection", short: "Daily Haul Road Inspection", scope: "Daily haul road check.", extra: ["Road section:"], cat: "plant",
+  sections: [{ name: "SURFACE", q: [{ id: "29.1", text: "Is the surface free of potholes?", ref: "TMP §6", snn: ["VD"] }] }], ...o });
+test("custom forms: Manager PIN, numbered 29+, revisions, retire, served to every phone (site code applies)", () => {
+  const r = createRelay(); const f = o => r.post({ key: r.key, action: "saveForm", pin: "2468", num: 29, tpl: tpl(), text: "Title: Daily Haul Road Inspection", by: "Darren Frizzell", ...o });
+  assert.equal(f({ pin: "0" }).badPin, true);
+  assert.equal(f({ num: 12 }).ok, false, "built-in numbers are protected");
+  assert.equal(f({ tpl: tpl({ sections: [] }) }).ok, false);
+  assert.match(f({ tpl: tpl({ scope: "<script>x</script>" }) }).error, /< and >/);
+  const a = f(); assert.equal(a.ok, true); assert.equal(a.forms[0].rev, 0); assert.equal(a.forms[0].status, "Active"); assert.equal(a.forms[0].tpl.sections[0].q[0].id, "29.1");
+  assert.equal(f().forms[0].rev, 1, "publishing again makes a new revision");
+  const g = r.get({ action: "forms", key: r.key }); assert.equal(g.forms.length, 1); assert.equal(g.forms[0].text, "Title: Daily Haul Road Inspection");
+  assert.equal(r.post({ key: r.key, action: "saveForm", pin: "2468", num: 29, status: "Retired" }).forms[0].status, "Retired");
+  assert.equal(r.post({ key: r.key, action: "saveForm", pin: "2468", num: 30, status: "Retired" }).ok, false);
+  r.props.set("SITE_CODE", "Parron26"); assert.equal(r.get({ action: "forms", key: r.key }).needCode, true);
+});

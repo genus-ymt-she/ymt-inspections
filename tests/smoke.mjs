@@ -59,7 +59,7 @@ async function newPage(opts = {}) {
   await page.waitForFunction(() => document.querySelector("#app") && !document.querySelector("#app .skel"));
   return page;
 }
-const step = async (name, fn) => { try { await fn(); console.log("ok   ", name); } catch (e) { console.log("FAIL ", name, "-", e.message.split("\n")[0]); errors.push(name + ": " + e.message.split("\n")[0]); } };
+const step = async (name, fn) => { try { await fn(); console.log("ok   ", name); } catch (e) { console.log("FAIL ", name, "-", e.message.split("\n")[0], process.env.DBG ? (e.stack.match(/smoke.mjs:\d+/g) || []).join(" ") : ""); errors.push(name + ": " + e.message.split("\n")[0]); } };
 const shot = async (page, name) => { if (SHOTS) await page.screenshot({ path: path.join(out, name + ".png"), fullPage: false }); };
 const settle = page => page.waitForTimeout(450);
 
@@ -597,6 +597,79 @@ await step("SHEQ Alerts: SHE Manager publishes a Critical alert to everyone on s
   if (await l.$("#alb .al-banner")) throw new Error("Nicola was not chosen – no banner");
   await l.evaluate(() => go("#alerts")); await l.waitForSelector(".al-item"); if (!/For information/.test(await l.textContent("#app"))) throw new Error("for information label");
   await x.evaluate(async () => { await alRefresh(); go("#home"); route(); }); await x.waitForSelector("#alb .al-banner", { timeout: 10000 });
+});
+await step("My SHEQ Planner: Manager mode only; suggested items → check → approve; Home tile; mark done; edit; import from a Claude table", async () => {
+  const o = await newPage({ name: "Steven Pugh", hash: "#planner" }); await o.waitForSelector(".card.empty");
+  if (!/SHE Manager only/.test(await o.textContent("#app"))) throw new Error("planner should be locked without Manager mode");
+  if (await o.$(".pl-tile")) throw new Error("planner tile shown to a non-manager"); await o.context().close();
+  await page.evaluate(() => { ls("mgrPin", "2468"); go("#planner"); }); await page.waitForSelector("text=Your register is empty");
+  await page.click("text=Start with suggested items"); await page.waitForSelector(".pl-imp");
+  if (await page.$$eval(".pl-imp input[type=checkbox]:checked", e => e.length) !== 5) throw new Error("5 suggested items ticked");
+  const imp = await page.textContent("#plRows"); if (!/Anphin Thomas \(SHE Advisor\)/.test(imp) || !/form 18 ticks it off/.test(imp)) throw new Error("owner / form not resolved: " + imp.slice(0, 200));
+  await settle(page); await shot(page, "60-planner-import");
+  await page.click("#plAdd"); await page.waitForFunction(() => location.hash === "#planner" && document.querySelector(".pl-item"), null, { timeout: 15000 });
+  if (relay.sheet("SHEQ Register").getLastRow() !== 6) throw new Error("register rows: " + relay.sheet("SHEQ Register").getLastRow());
+  if (await page.$$eval(".pl-item", e => e.length) !== 5) throw new Error("planner items");
+  // a weekly item is due within the week → Done moves it on a week and logs it
+  await page.click(".pl-item:has-text('Weekly DG store inspection') >> text=Done"); await page.waitForSelector("#plDs"); await page.click("#plDs");
+  await page.waitForFunction(() => PLAN.log.length === 1, null, { timeout: 10000 });
+  const dg = await page.evaluate(() => { const i = PLAN.items.find(i => /DG store/.test(i.title)); return i.last === todayISO() && i.due === plAddEvery(todayISO(), "1 week") ? "" : JSON.stringify(i); }); if (dg) throw new Error("done: " + dg);
+  // edit: make the road check overdue and owned by me
+  await page.evaluate(() => plDetail(PLAN.items.find(i => /road condition/.test(i.title)).id)); await page.click("#plE"); await page.waitForSelector("#peT");
+  await page.fill("#peD", await page.evaluate(() => addDaysISO(-2))); await page.click("#peOk"); await page.waitForSelector("h2:has-text('Overdue')");
+  await settle(page); await shot(page, "61-planner");
+  await page.evaluate(() => go("#home")); await page.waitForSelector(".pl-tile"); if (!/1 overdue/.test(await page.textContent(".pl-tile"))) throw new Error("home tile count");
+  // paste a table from the Claude Project: a bad frequency is flagged and can't be added
+  await page.evaluate(() => go("#planner/import")); await page.waitForSelector("#plTxt");
+  await page.fill("#plTxt", "Here is the table:\n\n| Obligation | Source | Frequency | Owner | PARRON form | Remind days before | First due | Notes |\n|---|---|---|---|---|---|---|---|\n| Site evacuation drill | ERP §6.4 | 6-monthly | SHE Manager | | 30 | 2026-12-01 | Book with the Chief Warden |\n| Bund inspection after rain | HSDG §18 | After rain events | SHE Advisor | 18 | | | |\n| Toolbox | WHSMP §9 | sometimes | Supervisor | | | | |\n| Weekly DG store inspection | HSDG §21 | Weekly | SHE Advisor | 18 | 2 | | |");
+  await page.click("#plRead"); await page.waitForSelector(".pl-imp");
+  const st = await page.$$eval(".pl-imp input[type=checkbox]", e => e.map(x => x.disabled ? "x" : x.checked ? "1" : "0").join(""));
+  if (st !== "11x0") throw new Error("ticks (ok, ok, bad, duplicate): " + st);
+  if (!/not understood/.test(await page.textContent(".pl-imp.bad"))) throw new Error("bad frequency message");
+  await page.click("#plAdd"); await page.waitForFunction(() => location.hash === "#planner" && PLAN.items.length === 7, null, { timeout: 15000 });
+  const rain = await page.evaluate(() => PLAN.items.find(i => /after rain/.test(i.title))); if (rain.every !== "As required") throw new Error("event item: " + rain.every);
+  if (!/As required – when triggered/.test(await page.textContent("#app"))) throw new Error("as required group");
+  // 5 am email
+  relay.cache.delete("planner_" + perth(0)); const before = relay.mail.length; relay.ctx.plannerDigest_(new Date());
+  const m = relay.mail.slice(before).find(x => /^Your SHEQ day/.test(x.subject)); if (!m || !/Monthly road condition check/.test(m.htmlBody)) throw new Error("planner email");
+});
+await step("computer: planner and form builder side by side", async () => {
+  const d = await newPage({ viewport: { width: 1440, height: 900 }, hash: "#planner" }); await d.evaluate(() => { ls("mgrPin", "2468"); go("#planner"); });
+  await d.waitForSelector(".pl-item"); await settle(d); await shot(d, "62-planner-computer");
+  await d.evaluate(() => go("#forms/new")); await d.waitForSelector("#cfTxt"); await d.click("#cfEx"); await d.waitForSelector("#cfPrev .q");
+  const cols = await d.evaluate(() => [document.querySelector(".cf-in").getBoundingClientRect().left, document.querySelector(".cf-prev").getBoundingClientRect().left]);
+  if (!(cols[1] > cols[0] + 300)) throw new Error("form builder columns: " + cols);
+  await settle(d); await shot(d, "63-form-builder-computer"); await d.context().close();
+});
+await step("Add a form: example → preview → publish as 29 → in every phone's inspection list → works → retire", async () => {
+  await page.evaluate(() => go("#forms")); await page.waitForSelector("text=No forms added yet");
+  await page.click("text=Add a form"); await page.waitForSelector("#cfTxt");
+  await page.fill("#cfTxt", "Title: Haul road\n## SURFACE\nthis line is wrong"); await page.waitForTimeout(400);
+  if (!/not understood/.test(await page.textContent("#cfPrev"))) throw new Error("error shown for a bad line");
+  await page.click("#cfEx"); await page.waitForSelector("#cfPrev .q");
+  const pv = await page.$$eval("#cfPrev .q .id", e => e.map(x => x.textContent).join(",")); if (pv !== "29.1,29.2,29.3,29.4") throw new Error("preview ids: " + pv);
+  if (!/Vehicles &amp; Driving|Vehicles & Driving/.test(await page.innerHTML("#cfPrev"))) throw new Error("SNN badge in preview");
+  await settle(page); await shot(page, "64-form-builder");
+  await page.click("#cfPub"); await page.click("#aYes"); await page.waitForFunction(() => location.hash === "#forms" && document.querySelector(".cf-item"), null, { timeout: 15000 }).catch(async e => { throw new Error("publish: " + await page.textContent("#toast") + " | " + await page.evaluate(() => location.hash)); });
+  if (relay.sheet("Custom Forms").getLastRow() !== 2) throw new Error("form not stored");
+  await page.evaluate(() => go("#inspections")); await page.waitForSelector("#lib .card");
+  if (await page.$$eval("#lib .card", e => e.length) !== 25) throw new Error("library should have 25 forms");
+  await page.click("#libcats >> text=Plant & traffic"); await page.waitForSelector("#lib .card:has-text('Daily Haul Road Inspection')"); await page.click("#libcats >> text=All");
+  // another phone picks it up at its next sync and can complete it
+  const o = await newPage({ name: "Matthew Smith", hash: "#inspections" }); await o.waitForSelector("#lib .card:has-text('Daily Haul Road Inspection')", { timeout: 10000 });
+  await o.click("#lib .card:has-text('Daily Haul Road Inspection')"); await o.waitForSelector("#q-29_1");
+  if (!/Road or section inspected/.test(await o.textContent("#app"))) throw new Error("details box");
+  await o.fill('[data-d="location"]', "Haul road north"); await o.evaluate(() => allQ(tabByNum(29)).forEach(q => rate(q.id, "C")));
+  const p = await o.evaluate(() => problems(CUR)); if (p.length) throw new Error("problems: " + p.join("; "));
+  if (!/29 – Daily Haul Road Inspection/.test(await o.evaluate(() => bodyText(CUR)))) throw new Error("email text");
+  await settle(o); await shot(o, "65-added-form-in-use"); await o.evaluate(async () => { await dbDel("drafts", CUR.id); }); await o.context().close();
+  // revise, then retire
+  await page.evaluate(() => go("#forms/29")); await page.waitForSelector("#cfTxt");
+  await page.fill("#cfTxt", (await page.inputValue("#cfTxt")) + "\n- Is the turnaround area clear of stockpiles and parked plant? [TMP §6.4]\n"); await page.waitForTimeout(400);
+  await page.click("#cfPub"); await page.click("#aYes"); await page.waitForFunction(() => location.hash === "#forms" && /Rev 1 · 5 items/.test(document.querySelector(".cf-item")?.textContent), null, { timeout: 15000 });
+  await page.evaluate(() => go("#forms/29")); await page.waitForSelector("#cfRet"); await page.click("#cfRet"); await page.click("#aYes");
+  await page.waitForFunction(() => location.hash === "#forms" && /Retired/.test(document.querySelector(".cf-item")?.textContent), null, { timeout: 15000 });
+  await page.evaluate(() => go("#inspections")); await page.waitForSelector("#lib .card"); if (await page.$$eval("#lib .card", e => e.length) !== 24) throw new Error("retired form still listed");
 });
 await step("CSV exports", async () => {
   const [dl] = await Promise.all([page.waitForEvent("download"), page.evaluate(() => exportActions())]);

@@ -32,3 +32,11 @@ test("no two scripts declare the same top-level name, and none hide a browser gl
   const shadow = Object.keys(seen).filter(n => BROWSER.has(n));
   assert.deepEqual(shadow, [], "top-level names that hide browser globals");
 });
+
+test("the Claude Project prompts in the docs match the ones the app copies", () => {
+  const doc = fs.readFileSync(path.join(root, "docs/CLAUDE_PROJECT_PROMPTS.md"), "utf8");
+  for (const [f, n] of [["js/app/planner.js", "PL_PROMPT"], ["js/app/forms.js", "CF_PROMPT"]]) {
+    const m = fs.readFileSync(path.join(root, f), "utf8").match(new RegExp("const " + n + "=`([\\s\\S]*?)`;"));
+    assert.ok(m && doc.includes(m[1]), `${n} in docs/CLAUDE_PROJECT_PROMPTS.md is out of date`);
+  }
+});
