@@ -6,7 +6,7 @@
  * and the Monday weekly summary to the SHE Manager, emails people their own repeating reminders (5 am),
  * supplies the official Fire Danger Rating (Bureau of Meteorology) for the home screen, keeps the SHE Manager's SHEQ
  * obligations register (My SHEQ Planner – 5 am reminder emails, ticked off when the linked form is sent) and serves
- * the inspection forms the SHE Manager adds in the app.
+ * the inspection forms the SHE Manager adds in the app, and lists every submitted report (with its Drive PDF) for the SHE Manager.
  *
  * FIRST TIME: paste this whole file in, Save, choose "setup" in the toolbar and click Run.
  *   Then Deploy > New deployment > Web app (Execute as: Me, Who has access: Anyone).
@@ -150,6 +150,8 @@ function doPost(e) {
     if (d.action === 'importOb') return importOb_(d);
     if (d.action === 'doneOb') return doneOb_(d);
     if (d.action === 'saveForm') return saveForm_(d);
+    if (d.action === 'submitted') return submitted_(d);
+    if (d.action === 'reportPdf') return reportPdf_(d);
     if (d.action === 'pin') return out_({ ok: pinOK_(d.pin), error: pinOK_(d.pin) ? '' : 'Incorrect PIN' });
     return send_(d);
   } catch (err) {
@@ -871,6 +873,29 @@ function saveForm_(d) {
   const row = [num, clean_(t.short), i >= 0 ? (Number(rows[i][2]) || 0) + 1 : 0, 'Active', new Date(), clean_(d.by) || 'SHE Manager', str_(d.text, 50000), json];
   if (i >= 0) sh.getRange(i + 2, 1, 1, FORM_HEAD.length).setValues([row]); else sh.appendRow(row);
   return out_({ ok: true, forms: formsOut_() });
+}
+
+/* ---------- Submitted forms register (SHE Manager only) – every report sent through PARRON, with its archived PDF ---------- */
+function submitted_(d) {
+  if (!pinOK_(d.pin)) return out_({ ok: false, error: 'Incorrect Manager PIN', badPin: true });
+  const ss = book_(); const S = idx_(SENT_HEAD); const day = v => Utilities.formatDate(new Date(v), TZ, 'yyyy-MM-dd');
+  const from = isoOK_(d.from) ? d.from : '0000-00-00', to = isoOK_(d.to) ? d.to : '9999-99-99';
+  const items = rows_(ss.getSheetByName('Sent')).filter(r => r[0] && day(r[0]) >= from && day(r[0]) <= to).slice(-3000).reverse().map(r => ({
+    sentAt: iso_(r[0]), reportId: String(r[3] || ''), uid: String(r[4] || ''), name: String(r[5] || ''), no: no_(r[6]), title: String(r[7] || ''), location: String(r[8] || ''),
+    ua: num_(r[9]), ni: num_(r[10]), snn: num_(r[11]), via: String(r[12] || ''), c: r[S.C], na: r[S.NA], pct: r[S['Compliance %']], inspDate: dstr_(r[S['Inspection date']]),
+    crew: String(r[S.Crew] || ''), supervisor: String(r[S.Supervisor] || ''), pdf: driveId_(r[S['PDF link']] || '') }));
+  const open = rows_(ss.getSheetByName('Status')).filter(r => r[7] === 'draft' || r[7] === 'outbox').map(r => ({
+    name: String(r[1] || ''), no: no_(r[2]), title: String(r[3] || ''), location: String(r[4] || ''), started: iso_(r[5]), updated: iso_(r[6]), state: r[7] }));
+  return out_({ ok: true, items, open });
+}
+/* one archived report PDF – only files recorded in the Sent log can be read */
+function reportPdf_(d) {
+  if (!pinOK_(d.pin)) return out_({ ok: false, error: 'Incorrect Manager PIN', badPin: true });
+  const id = String(d.id || ''); if (!/^[\w-]{1,80}$/.test(id)) return out_({ ok: false, error: 'Bad file id' });
+  const S = idx_(SENT_HEAD); const known = rows_(book_().getSheetByName('Sent')).some(r => driveId_(r[S['PDF link']] || '') === id);
+  if (!known) return out_({ ok: false, error: 'Not found' });
+  const bytes = DriveApp.getFileById(id).getBlob().getBytes(); if (bytes.length > 25 * 1024 * 1024) return out_({ ok: false, error: 'Too large' });
+  return out_({ ok: true, type: 'application/pdf', data: Utilities.base64Encode(bytes) });
 }
 
 /* hazard reports and positive observations for the in-app list (last 13 months, newest first) */

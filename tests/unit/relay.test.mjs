@@ -484,3 +484,20 @@ test("custom forms: Manager PIN, numbered 29+, revisions, retire, served to ever
   assert.equal(r.post({ key: r.key, action: "saveForm", pin: "2468", num: 30, status: "Retired" }).ok, false);
   r.props.set("SITE_CODE", "Parron26"); assert.equal(r.get({ action: "forms", key: r.key }).needCode, true);
 });
+
+test("submitted forms: Manager PIN, date range, archived PDF readable only for logged reports", () => {
+  const r = createRelay();
+  r.post(report());
+  r.post(report({ uid: "d2", reportId: "YMT-18-20261013-0700-AT", meta: { name: "Anphin Thomas", no: "18", title: "Hazardous Chemicals", location: "DG store" } }));
+  r.post({ key: r.key, action: "status", uid: "d9", state: "draft", meta: { name: "Matthew Smith", no: "26", title: "Monthly Road Condition Check", location: "Cowalla Rd", started: new Date().toISOString() } });
+  assert.equal(r.post({ key: r.key, action: "submitted", pin: "0" }).badPin, true);
+  const s = r.post({ key: r.key, action: "submitted", pin: "2468" });
+  assert.equal(s.ok, true); assert.equal(s.items.length, 2); assert.equal(s.items[0].reportId, "YMT-18-20261013-0700-AT", "newest first");
+  assert.equal(s.items[0].no, "18"); assert.equal(s.items[0].name, "Anphin Thomas"); assert.ok(s.items[0].pdf);
+  assert.equal(s.open.length, 1); assert.equal(s.open[0].name, "Matthew Smith");
+  assert.equal(r.post({ key: r.key, action: "submitted", pin: "2468", from: perthYmd(1) }).items.length, 0);
+  const pdf = r.post({ key: r.key, action: "reportPdf", pin: "2468", id: s.items[0].pdf });
+  assert.equal(pdf.ok, true); assert.match(Buffer.from(pdf.data, "base64").toString(), /^%PDF/);
+  assert.equal(r.post({ key: r.key, action: "reportPdf", pin: "1", id: s.items[0].pdf }).ok, false);
+  assert.equal(r.post({ key: r.key, action: "reportPdf", pin: "2468", id: "999" }).ok, false);
+});
