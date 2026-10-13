@@ -881,3 +881,34 @@ nav.tabs a.em-tab.on .ic{stroke:var(--ua)}
 .hv-tab{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
 .hv-tab th,.hv-tab td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left}
 .hv-tab th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+
+/* ---------- Computer layout (screens 1100 px and wider) – side menu, wider content, two-column Home ---------- */
+@media (min-width:1100px){
+  :root{--side:236px;--content:1280px}
+  nav.tabs{top:var(--hdr,64px);bottom:0;right:auto;width:var(--side);border-top:0;border-right:1px solid var(--line);padding:18px 12px;background:var(--surface);backdrop-filter:none;-webkit-backdrop-filter:none;overflow-y:auto}
+  nav.tabs .in{max-width:none;display:flex;flex-direction:column;gap:4px}
+  nav.tabs a{flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;font-size:15px;letter-spacing:0;min-height:0;border-radius:12px}
+  nav.tabs a:hover{background:var(--surface-3);color:var(--ink)}
+  nav.tabs a.on:hover{background:var(--accent-soft)}
+  nav.tabs a.em-tab{margin-top:10px;border:1.5px solid color-mix(in srgb,var(--ua) 35%,transparent)}
+  nav.tabs .bdg{position:static;margin-left:auto}
+  main{max-width:none;margin:0 0 0 var(--side);padding:24px max(28px,calc((100vw - var(--side) - var(--content)) / 2)) 56px}
+  body.task main{margin-left:0;padding:24px max(28px,calc((100vw - 920px) / 2)) 150px}
+  body.radio-on main,body.voiceon main{padding-bottom:180px}
+  .home-desk{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:24px;align-items:start}
+  .hd-a,.hd-b{display:flex;flex-direction:column;min-width:0}
+  .hd-b .hero{margin-top:0}
+  .tiles{grid-template-columns:repeat(4,1fr)}
+  .hd-b .tiles{grid-template-columns:repeat(2,1fr)}
+  .em-grid{grid-template-columns:repeat(4,1fr)}
+  .tmaps{grid-template-columns:repeat(3,1fr)}
+  .ref-list{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .ref-list>.card{margin:0}
+  .hd-a .ref-list{grid-template-columns:1fr}
+  .rdock{left:calc(var(--side) + 16px);right:auto;bottom:20px;width:min(560px,calc(100vw - var(--side) - 32px))}
+  body.task .rdock:not(.full){bottom:96px}
+  .rdock.full{left:auto;right:24px;width:560px}
+  .bar{left:0}
+  .sheet-bg{padding-left:var(--side)}
+  body.task .sheet-bg{padding-left:0}
+}

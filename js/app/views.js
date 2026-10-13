@@ -1,6 +1,11 @@
 "use strict";
 /* ---------- router ---------- */
 let CUR=null,ROUTE_SEQ=0;
+/* computer screens (1100 px and wider) get the desktop layout: side menu and a two-column Home */
+const DESK=window.matchMedia?window.matchMedia("(min-width:1100px)"):{matches:false};
+const isDesk=()=>!!DESK.matches;
+if(DESK.addEventListener)DESK.addEventListener("change",()=>{document.documentElement.classList.toggle("desk",isDesk());if(["","#home"].includes(location.hash))route()});
+document.documentElement.classList.toggle("desk",isDesk());
 /* async screens capture ROUTE_SEQ when they start and stop if the user has navigated away meanwhile */
 const stale=seq=>seq!==ROUTE_SEQ;
 window.addEventListener("hashchange",route);
@@ -53,7 +58,8 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   const me=ls("inspector")||"";const drafts=await dbAll("drafts");const ob=await dbAll("outbox");if(stale(seq))return;
   const reg=regAll();const st=regStats(reg);const mine=reg.filter(f=>isMine(f)&&f.status==="Open");
   const mon=new Date();mon.setDate(1);mon.setHours(0,0,0,0);const sentMonth=(await dbAll("sent")).filter(s=>s.sentAt>=mon.getTime()).length;if(stale(seq))return;
-  let h=`<div id="alb">${alertBannerHTML()}</div><div id="stp">${statusPanelHTML()}</div><div id="hcd">${historyCardHTML()}</div><section class="hero"><div class="hi">${esc(greeting())}${me?",":""}</div><h1>${esc(firstName(me)||"Welcome")}</h1>
+  const A=`<div id="alb">${alertBannerHTML()}</div><div id="stp">${statusPanelHTML()}</div><div id="hcd">${historyCardHTML()}</div>`;
+  let h=`<section class="hero"><div class="hi">${esc(greeting())}${me?",":""}</div><h1>${esc(firstName(me)||"Welcome")}</h1>
    <div class="proj">${ic("pin","s")} ${esc(CONFIG.jobNo)} · ${esc(CONFIG.projectShort)} · ${new Date().toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"})}</div>
    ${wxHTML()}
    <div class="kp"><button onclick="go('#inspect')"><b>${drafts.length}</b><span>In progress</span></button>
@@ -67,7 +73,9 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
    <button class="tile wide myday" onclick="go('#myday')"><span class="ti">${ic("cal","l")}</span><span class="tw"><b>My Day ${ic("lock","s")}</b><small>${n?`${n} to do today`:"Plan your day"} · private to you</small></span>${ic("chev")}</button>
    <button class="tile wide" onclick="go('#inspect')"><span class="ti t-info">${ic("clipboard","l")}</span><span class="tw"><b>Inspect &amp; report</b><small>Inspections · observations · hazards${drafts.length?` · ${drafts.length} in progress`:""}</small></span>${ic("chev")}</button>
    <button class="tile wide radio ${RADIO.playing?"on":""}" onclick="go('#radio')"><span class="ti t-blue">${ic("radio","l")}</span><span class="tw"><b>PARRON Radio</b><small>${RADIO.playing?"Now playing":"Shuffle play"}</small></span>${ic("chev")}</button></div>`}
-  h+=`<div id="refsec">${referenceHTML()}</div>`;
+  const B=h,R=`<div id="refsec">${referenceHTML()}</div>`;
+  // computer: today's site status + reference on the left, welcome / weather / tiles on the right; phone: one column
+  h=isDesk()?`<div class="home-desk"><div class="hd-a">${A}${R}</div><div class="hd-b">${B}</div></div>`:A+B+R;
   if(!recipientOK())h+=`<div class="alert red">${ic("alert")}<div><b>Report recipient not set.</b> Set it under Settings.</div></div>`;
   h+=`<p class="foot">PARRON v${esc(CONFIG.appVersion)} · Proactive Assessment, Reporting, Risk &amp; Observation Network<br>Works offline · Data stays on this phone until you send it</p>`;
   render(h);
