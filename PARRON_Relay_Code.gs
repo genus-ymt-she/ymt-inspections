@@ -4,7 +4,9 @@
  * them when it is overdue), sends an urgent alert for UA / Critical findings, logs quick hazard reports and
  * positive observations, archives report PDFs and photos to Google Drive, sends the 6 pm daily summary
  * and the Monday weekly summary to the SHE Manager, emails people their own repeating reminders (5 am),
- * and supplies the official Fire Danger Rating (Bureau of Meteorology) for the home screen.
+ * supplies the official Fire Danger Rating (Bureau of Meteorology) for the home screen, keeps the SHE Manager's SHEQ
+ * obligations register (My SHEQ Planner – 5 am reminder emails, ticked off when the linked form is sent) and serves
+ * the inspection forms the SHE Manager adds in the app.
  *
  * FIRST TIME: paste this whole file in, Save, choose "setup" in the toolbar and click Run.
  *   Then Deploy > New deployment > Web app (Execute as: Me, Who has access: Anyone).
@@ -63,6 +65,9 @@ const ALERT_HEAD = ['Alert ID', 'Published', 'Type', 'Priority', 'Title', 'What 
 const ACK_HEAD = ['Acknowledged', 'Alert ID', 'Name'];
 const ALERT_TYPES = ['SHEQ Alert', 'Lesson learned', 'Plan or procedure change', 'Site notice'];
 const ALERT_PRIORITY = ['Critical', 'Important', 'Info'];
+const OB_HEAD = ['ID', 'Obligation', 'Source', 'Every', 'Owner', 'Owner email', 'Remind days before', 'Completed by form', 'Next due', 'Last done', 'Last evidence', 'Status', 'Approved by', 'Approved', 'Notes', 'Updated'];
+const OBLOG_HEAD = ['Recorded', 'ID', 'Obligation', 'Done date', 'By', 'Evidence', 'How'];
+const FORM_HEAD = ['Form no', 'Title', 'Rev', 'Status', 'Published', 'Published by', 'Form text', 'Template (JSON)'];
 const REM_HEAD = ['ID', 'Name', 'Email', 'Reminder', 'Repeat', 'Time', 'Created', 'Last sent', 'Active'];
 const ST = { spot: 'Closed on spot', open: 'Open', closed: 'Closed', verified: 'Verified' };
 
@@ -85,6 +90,8 @@ function setup() {
     '\nPersonal reminders: emailed between 5 and 6 am (Perth time).' +
     '\nWeekly fuel, hours & pre-start register: Mondays to ' + FUEL_TO + '.' +
     '\nThis day in history: prepared every day between 4 and 5 am (Perth time)' + (PropertiesService.getScriptProperties().getProperty('HISTORY_EMAIL') ? ' and emailed to ' + PropertiesService.getScriptProperties().getProperty('HISTORY_EMAIL') : '') + '.' +
+    '\nMy SHEQ Planner: your obligations register (SHEQ Register sheet) – emailed to you between 5 and 6 am when items are due; owners get their own items.' +
+    '\nInspection forms you add in the app are kept in the Custom Forms sheet.' +
     '\nSHEQ Alerts: published from the app in Manager mode – tick who must acknowledge; the register is in the Alert Acks sheet.' +
     '\nToday on site status PIN: ' + (PropertiesService.getScriptProperties().getProperty('STATUS_PIN') ? 'set' : 'NOT SET – add STATUS_PIN under Script properties so the site status can be updated.') +
     '\nFire Danger Rating: ' + (fdrFetch_(true).today ? 'reading from the Bureau of Meteorology' : 'could not be read automatically – set it in the app (Manager mode) or choose the district') +
@@ -99,6 +106,7 @@ function book_() {
   if (!ss) { ss = SpreadsheetApp.create('PARRON – Inspection Log (YMT)'); p.setProperty('SHEET_ID', ss.getId()); }
   sheet_(ss, 'Sent', SENT_HEAD); sheet_(ss, 'Status', STAT_HEAD); sheet_(ss, 'Findings', FIND_HEAD); sheet_(ss, 'Observations', OBS_HEAD); sheet_(ss, 'Reminders', REM_HEAD); sheet_(ss, 'Fuel', FUEL_HEAD); sheet_(ss, 'Site Status', SITESTAT_HEAD); sheet_(ss, 'This Day', HIST_HEAD);
   sheet_(ss, 'SHEQ Alerts', ALERT_HEAD); sheet_(ss, 'Alert Acks', ACK_HEAD);
+  sheet_(ss, 'SHEQ Register', OB_HEAD); sheet_(ss, 'Register Log', OBLOG_HEAD); sheet_(ss, 'Custom Forms', FORM_HEAD);
   const s1 = ss.getSheetByName('Sheet1'); if (s1 && ss.getSheets().length > 8) ss.deleteSheet(s1);
   return ss;
 }
@@ -137,6 +145,11 @@ function doPost(e) {
     if (d.action === 'publishAlert') return publishAlert_(d);
     if (d.action === 'ackAlert') return ackAlert_(d);
     if (d.action === 'closeAlert') return closeAlert_(d);
+    if (d.action === 'planner') return planner_(d);
+    if (d.action === 'saveOb') return saveOb_(d);
+    if (d.action === 'importOb') return importOb_(d);
+    if (d.action === 'doneOb') return doneOb_(d);
+    if (d.action === 'saveForm') return saveForm_(d);
     if (d.action === 'pin') return out_({ ok: pinOK_(d.pin), error: pinOK_(d.pin) ? '' : 'Incorrect PIN' });
     return send_(d);
   } catch (err) {
@@ -164,6 +177,7 @@ function send_(d) {
   logSent_(uid, d.reportId, d.meta || {}, 'Direct', d.report || {}, link);
   if (Array.isArray(d.findings)) { logFindings_(d); alert_(d, d.findings); }
   if (d.fuel && Array.isArray(d.fuel.rows)) logFuel_(d);
+  try { obAutoTick_(d.meta || {}, d.reportId, link); } catch (e) { console.error(e); }
   return out_({ ok: true, pdf: link });
 }
 
@@ -360,11 +374,12 @@ function upsert_(ss, uid, m, state, sentAt) {
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  if (['weather', 'dashboard', 'reports', 'photo', 'getStatus', 'getHistory', 'alerts', 'alertFile'].includes(p.action) && p.key === KEY && !codeOK_(p.code)) return out_({ ok: false, error: 'Site code required', needCode: true });
+  if (['weather', 'dashboard', 'reports', 'photo', 'getStatus', 'getHistory', 'alerts', 'alertFile', 'forms'].includes(p.action) && p.key === KEY && !codeOK_(p.code)) return out_({ ok: false, error: 'Site code required', needCode: true });
   if (p.action === 'weather') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_({ ok: true, fdr: fdrFetch_(false) }); }
   if (p.action === 'getStatus') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_(Object.assign({ ok: true }, statusOut_())); }
   if (p.action === 'getHistory') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_(history_(false)); }
   if (p.action === 'alerts') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_(Object.assign({ ok: true }, alertsOut_())); }
+  if (p.action === 'forms') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_({ ok: true, forms: formsOut_() }); }
   if (p.action === 'alertFile') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return alertFile_(p.id); }
   if (p.action === 'reports') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_({ ok: true, reports: reports_() }); }
   if (p.action === 'photo') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return photo_(p.id); }
@@ -476,6 +491,7 @@ function remindersRun() {
       sh.getRange(i + 2, H['Last sent'] + 1).setValue("'" + today);
     } catch (e) {}
   });
+  try { plannerDigest_(now); } catch (e) { console.error(e); }
 }
 
 /* ---------- Fire Danger Rating (Bureau of Meteorology, fire-district areas) ---------- */
@@ -719,6 +735,142 @@ function alertsDigest_(today, includeAll) {
       const waiting = expected.filter(n => !done.some(x => sameName_(x, n)));
       return { id: a.id, title: a.title, priority: a.priority, expected: expected.length, acked: expected.length - waiting.length, waiting }; });
   return { rows: includeAll ? rows : rows.filter(a => a.waiting.length) };
+}
+
+/* ---------- My SHEQ Planner – the SHE Manager's register of SHEQ obligations (Manager PIN only) ----------
+   Obligations are drafted from the project plans (e.g. in the SHE Manager's own Claude Project), pasted into PARRON and
+   approved there – nothing reminds anyone until it is approved. Reminders are fixed rules (no AI): the SHE Manager gets
+   one email between 5 and 6 am, each owner is emailed their own items, and sending the linked PARRON form ticks an item off. */
+function every_(s) { const m = String(s || '').trim().toLowerCase().match(/^(\d{1,3})\s*(day|week|month|year)s?$/); return m && Number(m[1]) > 0 ? { n: Number(m[1]), u: m[2] } : null; }
+const obEveryOK_ = s => !!every_(s) || s === 'As required' || s === 'Once';
+const isoOK_ = s => /^\d{4}-\d\d-\d\d$/.test(String(s || ''));
+function addEvery_(iso, every) {
+  const e = every_(every); if (!e || !isoOK_(iso)) return '';
+  const [y, mo, d] = iso.split('-').map(Number); let dt;
+  if (e.u === 'day' || e.u === 'week') dt = new Date(Date.UTC(y, mo - 1, d + e.n * (e.u === 'week' ? 7 : 1)));
+  else { const k = e.n * (e.u === 'year' ? 12 : 1); const last = new Date(Date.UTC(y, mo + k, 0)).getUTCDate(); dt = new Date(Date.UTC(y, mo - 1 + k, Math.min(d, last))); }
+  return dt.toISOString().slice(0, 10);
+}
+const daysBetween_ = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5);
+function obRow_(r) {
+  const H = idx_(OB_HEAD); const g = k => r[H[k]];
+  return { id: String(g('ID')), title: String(g('Obligation')), source: String(g('Source') || ''), every: String(g('Every') || ''), owner: String(g('Owner') || ''), ownerEmail: String(g('Owner email') || ''),
+    lead: num_(g('Remind days before')), form: String(g('Completed by form') || ''), due: dstr_(g('Next due')).slice(0, 10), last: dstr_(g('Last done')).slice(0, 10), evidence: String(g('Last evidence') || ''),
+    status: String(g('Status') || 'Active'), approvedBy: String(g('Approved by') || ''), approved: iso_(g('Approved')), notes: String(g('Notes') || ''), updated: iso_(g('Updated')) };
+}
+function plannerOut_() {
+  const ss = book_(); const items = rows_(ss.getSheetByName('SHEQ Register')).filter(r => r[0]).map(obRow_);
+  const log = rows_(ss.getSheetByName('Register Log')).filter(r => r[0]).slice(-400).reverse().map(r => ({ at: iso_(r[0]), id: String(r[1]), title: String(r[2]), date: dstr_(r[3]).slice(0, 10), by: String(r[4]), evidence: String(r[5]), how: String(r[6]) }));
+  return { items, log };
+}
+function planner_(d) { if (!pinOK_(d.pin)) return out_({ ok: false, error: 'Incorrect Manager PIN', badPin: true }); return out_(Object.assign({ ok: true }, plannerOut_())); }
+/* one checked obligation as a sheet row (or an error message) */
+function obClean_(o, by, keep) {
+  o = o || {}; const title = clean_(o.title); const every = String(o.every || '').trim();
+  if (!title) return 'Every obligation needs a name';
+  if (!obEveryOK_(every)) return `"${title}": frequency not understood`;
+  const due = isoOK_(o.due) ? o.due : '';
+  if (every === 'Once' && !due) return `"${title}": a one-off item needs a due date`;
+  const form = /^\d{1,3}$/.test(String(o.form || '').trim()) ? String(Number(o.form)) : '';
+  const status = ['Active', 'Retired', 'Done'].includes(o.status) ? o.status : 'Active';
+  return ['', title, clean_(o.source), every, clean_(o.owner), email_(o.ownerEmail), Math.max(0, Math.min(365, Math.round(num_(o.lead)))), form ? "'" + form : '', due ? "'" + due : '',
+    keep && dstr_(keep[9]) ? "'" + dstr_(keep[9]).slice(0, 10) : '', keep ? keep[10] : '', status, keep ? keep[12] : (clean_(by) || 'SHE Manager'), keep ? keep[13] : new Date(), str_(o.notes, 1000), new Date()];
+}
+function obNextId_(rows) { return 'OB-' + ('00' + (rows.reduce((m, r) => Math.max(m, Number(String(r[0]).replace(/^OB-/, '')) || 0), 0) + 1)).slice(-3); }
+function saveOb_(d) {
+  if (!pinOK_(d.pin)) return out_({ ok: false, error: 'Incorrect Manager PIN', badPin: true });
+  const sh = book_().getSheetByName('SHEQ Register'); const rows = rows_(sh); const o = d.item || {};
+  const i = o.id ? rows.findIndex(r => String(r[0]) === String(o.id)) : -1;
+  if (o.id && i < 0) return out_({ ok: false, error: 'Item not found' });
+  const row = obClean_(o, d.by, i >= 0 ? rows[i] : null); if (typeof row === 'string') return out_({ ok: false, error: row });
+  if (i >= 0) { row[0] = rows[i][0]; sh.getRange(i + 2, 1, 1, OB_HEAD.length).setValues([row]); }
+  else { row[0] = obNextId_(rows); sh.appendRow(row); }
+  return out_(Object.assign({ ok: true, id: row[0] }, plannerOut_()));
+}
+function importOb_(d) {
+  if (!pinOK_(d.pin)) return out_({ ok: false, error: 'Incorrect Manager PIN', badPin: true });
+  const list = Array.isArray(d.items) ? d.items.slice(0, 200) : []; if (!list.length) return out_({ ok: false, error: 'Nothing to add' });
+  const sh = book_().getSheetByName('SHEQ Register'); const rows = rows_(sh); const bad = []; let added = 0;
+  list.forEach(o => { const row = obClean_(o, d.by, null); if (typeof row === 'string') { bad.push(row); return; } row[0] = obNextId_(rows); rows.push(row); sh.appendRow(row); added++; });
+  return out_(Object.assign({ ok: true, added, skipped: bad }, plannerOut_()));
+}
+/* record an item as done: the next due date moves on by its frequency */
+function obDone_(sh, i, r, date, evidence, by, how) {
+  const o = obRow_(r); const next = every_(o.every) ? addEvery_(date, o.every) : o.due;
+  sh.getRange(i + 2, 9, 1, 3).setValues([[next ? "'" + next : '', "'" + date, str_(evidence, 500)]]);
+  if (o.every === 'Once') sh.getRange(i + 2, 12).setValue('Done');
+  sh.getRange(i + 2, 16).setValue(new Date());
+  book_().getSheetByName('Register Log').appendRow([new Date(), o.id, o.title, "'" + date, clean_(by), str_(evidence, 500), how]);
+}
+function doneOb_(d) {
+  if (!pinOK_(d.pin)) return out_({ ok: false, error: 'Incorrect Manager PIN', badPin: true });
+  const sh = book_().getSheetByName('SHEQ Register'); const rows = rows_(sh); const i = rows.findIndex(r => String(r[0]) === String(d.id));
+  if (i < 0) return out_({ ok: false, error: 'Item not found' });
+  const today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd'); const date = isoOK_(d.date) && d.date <= today ? d.date : today;
+  obDone_(sh, i, rows[i], date, d.evidence, d.by || 'SHE Manager', 'Marked done');
+  return out_(Object.assign({ ok: true }, plannerOut_()));
+}
+/* sending a PARRON form ticks off every active item linked to that form number, with the report as evidence */
+function obAutoTick_(m, reportId, link) {
+  const no = String(m.no || '').replace(/^0+/, ''); if (!/^\d{1,3}$/.test(no)) return;
+  const sh = book_().getSheetByName('SHEQ Register'); const rows = rows_(sh); const today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+  rows.forEach((r, i) => { const o = obRow_(r); if (o.status !== 'Active' || o.form !== no) return;
+    obDone_(sh, i, r, today, [reportId, link].filter(Boolean).join(' '), m.name || '', 'Form ' + no + ' sent'); });
+}
+function plannerMail_(title, sub, inner) {
+  return `<div style="font-family:Arial,sans-serif;color:#1B2430;max-width:720px"><div style="background:#112B4E;color:#fff;padding:12px 14px;border-bottom:4px solid #EC7723"><div style="font-size:12px;color:#EC7723;font-weight:700">PARRON | ${esc_(sub)}</div><div style="font-size:18px;font-weight:700">${esc_(title)}</div></div>${inner}</div>`;
+}
+/* between 5 and 6 am (with the personal reminders): the SHE Manager's planner email, and each owner's own items */
+function plannerDigest_(now) {
+  const ss = book_(); const sh = ss.getSheetByName('SHEQ Register'); if (!sh) return;
+  const today = Utilities.formatDate(now, TZ, 'yyyy-MM-dd'); const cache = CacheService.getScriptCache();
+  if (cache.get('planner_' + today)) return; cache.put('planner_' + today, '1', 21600);
+  const L = rows_(sh).filter(r => r[0]).map(obRow_).filter(o => o.status === 'Active' && o.due && o.every !== 'As required')
+    .map(o => Object.assign(o, { n: daysBetween_(today, o.due) })).sort((a, b) => a.n - b.n);
+  const dmy = s => s.split('-').reverse().join('/');
+  const when = o => o.n < 0 ? `<b style="color:#C62828">${-o.n} day${o.n === -1 ? '' : 's'} overdue</b>` : o.n === 0 ? '<b style="color:#E8660D">Due today</b>' : o.n === 1 ? 'Due tomorrow' : `${dmy(o.due)} (in ${o.n} days)`;
+  const td = 'style="border:1px solid #D0D5DD;padding:6px 8px;font-size:13px;vertical-align:top"', th = 'style="background:#112B4E;color:#fff;padding:6px 8px;text-align:left;font-size:12px"';
+  const tbl = (rows, own) => `<table style="border-collapse:collapse;width:100%"><tr><th ${th}>Obligation</th>${own ? `<th ${th}>Owner</th>` : ''}<th ${th}>Due</th></tr>${rows.map(o => `<tr><td ${td}><b>${esc_(o.title)}</b>${o.source ? `<br><span style="color:#5B6675">${esc_(o.source)}</span>` : ''}${o.form ? `<br><span style="color:#2E7D32">Sending PARRON form ${esc_(o.form)} ticks this off</span>` : ''}</td>${own ? `<td ${td}>${esc_(o.owner || 'SHE Manager')}</td>` : ''}<td ${td}>${when(o)}</td></tr>`).join('')}</table>`;
+  const sec = (h, c, rows, own) => rows.length ? `<h3 style="color:${c};margin:16px 0 6px">${h} (${rows.length})</h3>${tbl(rows, own)}` : '';
+  const over = L.filter(o => o.n < 0), tod = L.filter(o => o.n === 0), wk = L.filter(o => o.n > 0 && o.n <= 7), ahead = L.filter(o => o.n > 7 && o.n <= o.lead);
+  if (over.length + tod.length + wk.length + ahead.length) {
+    MailApp.sendEmail({ to: TO, name: 'PARRON Site Inspections', subject: `Your SHEQ day – ${Utilities.formatDate(now, TZ, 'EEE d MMM')}: ${over.length} overdue, ${tod.length} due today, ${wk.length} this week`,
+      htmlBody: plannerMail_(Utilities.formatDate(now, TZ, 'EEEE d MMMM yyyy'), 'MY SHEQ PLANNER',
+        sec('Overdue', '#C62828', over, true) + sec('Due today', '#E8660D', tod, true) + sec('Due in the next 7 days', '#112B4E', wk, true) + sec('Plan ahead', '#1A5FB4', ahead, true) +
+        `<p style="font-size:12px;color:#5B6675">Open <a href="${APP_URL}#planner">My SHEQ Planner</a> (Manager mode) to mark items done or change them. Owners with a Genus email are reminded of their own items.</p>`),
+      body: L.filter(o => o.n <= Math.max(7, o.lead)).map(o => `${o.title} – ${o.owner || 'SHE Manager'} – ${o.due}`).join('\n') + `\n${APP_URL}#planner` });
+  }
+  // owners: on the day the reminder period starts, the day before, on the day, and every day while overdue
+  const mine = {}; L.filter(o => o.ownerEmail && o.ownerEmail.toLowerCase() !== TO.toLowerCase() && (o.n < 0 || o.n <= 1 || o.n === o.lead)).forEach(o => { (mine[o.ownerEmail] = mine[o.ownerEmail] || []).push(o); });
+  Object.keys(mine).forEach(e => { const M = mine[e]; const late = M.filter(o => o.n < 0).length;
+    try { MailApp.sendEmail({ to: e, replyTo: TO, name: 'PARRON Site Inspections', subject: late ? `PARRON: ${late} SHEQ item${late > 1 ? 's' : ''} overdue` : `PARRON: ${M.length} SHEQ item${M.length > 1 ? 's' : ''} coming up`,
+      htmlBody: plannerMail_(`Your SHEQ items – ${Utilities.formatDate(now, TZ, 'EEE d MMM')}`, 'SHEQ REMINDER', sec('Overdue', '#C62828', M.filter(o => o.n < 0), false) + sec('Coming up', '#112B4E', M.filter(o => o.n >= 0), false) +
+        '<p style="font-size:12px;color:#5B6675">From the SHE Manager\'s SHEQ register. Where a PARRON form is named, sending it in PARRON ticks the item off – otherwise reply to this email when it is done.</p>'),
+      body: M.map(o => `${o.title} – due ${o.due}`).join('\n') }); } catch (err) {} });
+}
+
+/* ---------- Inspection forms added by the SHE Manager in the app (no code change needed) ----------
+   The template is built and checked by the app; the relay keeps every revision's latest copy and serves them to every phone. */
+function formsOut_() {
+  const sh = book_().getSheetByName('Custom Forms');
+  return rows_(sh).filter(r => r[0]).map(r => { let tpl = null; try { tpl = JSON.parse(r[7] || 'null'); } catch (e) { tpl = null; }
+    return { num: Number(r[0]), title: String(r[1]), rev: Number(r[2]) || 0, status: String(r[3] || 'Active'), at: iso_(r[4]), by: String(r[5] || ''), text: String(r[6] || ''), tpl }; }).filter(f => f.tpl);
+}
+function saveForm_(d) {
+  if (!pinOK_(d.pin)) return out_({ ok: false, error: 'Incorrect Manager PIN', badPin: true });
+  const num = Number(d.num); if (!(num >= 29 && num <= 999 && Math.floor(num) === num)) return out_({ ok: false, error: 'Form number must be 29 or above' });
+  const sh = book_().getSheetByName('Custom Forms'); const rows = rows_(sh); const i = rows.findIndex(r => Number(r[0]) === num);
+  if (d.status && !d.tpl) {   // retire or restore only
+    if (i < 0) return out_({ ok: false, error: 'Form not found' });
+    sh.getRange(i + 2, 4).setValue(d.status === 'Retired' ? 'Retired' : 'Active'); return out_({ ok: true, forms: formsOut_() });
+  }
+  const t = d.tpl || {}; const json = JSON.stringify(t);
+  if (json.length > 100000) return out_({ ok: false, error: 'Form too large' });
+  if (/[<>]/.test(json) || /[<>]/.test(String(d.text || ''))) return out_({ ok: false, error: 'Remove < and > characters from the form' });
+  if (!clean_(t.short) || !Array.isArray(t.sections) || !t.sections.length || !t.sections.every(s => Array.isArray(s.q) && s.q.length)) return out_({ ok: false, error: 'The form needs a title and at least one section with items' });
+  const row = [num, clean_(t.short), i >= 0 ? (Number(rows[i][2]) || 0) + 1 : 0, 'Active', new Date(), clean_(d.by) || 'SHE Manager', str_(d.text, 50000), json];
+  if (i >= 0) sh.getRange(i + 2, 1, 1, FORM_HEAD.length).setValues([row]); else sh.appendRow(row);
+  return out_({ ok: true, forms: formsOut_() });
 }
 
 /* hazard reports and positive observations for the in-app list (last 13 months, newest first) */

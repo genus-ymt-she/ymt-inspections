@@ -172,3 +172,33 @@ Insights (Lead indicators) and the hazard form also link to it.
 - Close an alert from its page (Manager mode) to take it off Home and the daily email; the register is kept.
 - Relay update required: paste the new `PARRON_Relay_Code.gs`, run `setup` once (creates the sheets), and redeploy as a
   new version.
+
+## My SHEQ Planner and Inspection forms (v3.9) – SHE Manager only
+
+Both screens open only in **Manager mode** (Settings → Manager PIN). The relay checks the Manager PIN on every
+planner and form change, so nobody else can read the register or change forms.
+
+**My SHEQ Planner** (Home tile, or Settings → *My SHEQ Planner*)
+- A register of SHEQ obligations: obligation, source clause, frequency, owner, the PARRON form that completes it,
+  reminder lead time and next due date. Grouped into Overdue / Due this week / Next 30 days / Later / As required.
+- **Import from Claude:** copy the *SHEQ obligations prompt* (button on the import screen, or
+  docs/CLAUDE_PROJECT_PROMPTS.md) into your Claude Project that holds the plans, paste the table it returns, check each
+  row and approve. Nothing reminds anyone until it is approved. *Suggested items from PARRON forms* gives a starter set
+  (forms 18, 20, 22, 26, 27) to check against the plans.
+- **Automatic tick-off:** when a form linked to an item is sent (e.g. Inspection 18 for the weekly DG store inspection),
+  the item is marked done with the report number and PDF link as evidence, and the next due date moves on.
+- **Emails (between 5 and 6 am, no AI):** you get *Your SHEQ day* when anything is overdue, due today, due this week or
+  inside its reminder period. Owners with a Genus email (e.g. the SHE Advisor) get their own items on the day the
+  reminder period starts, the day before, on the day and every day while overdue. Overdue items stay in your email.
+- Sheets: *SHEQ Register* and *Register Log* in the project log.
+
+**Inspection forms** (Planner → *Inspection forms*, or Settings → *Inspection forms – add or change*)
+- Copy the *new inspection form prompt* into your Claude Project, describe the inspection, paste the result into
+  *Add a form*, check the live preview and publish. It becomes form 29, 30, … under Inspect › Inspection on every phone
+  at its next sync, and works like the built-in checklists (ratings, photos, findings, actions, PDF, email).
+- Publishing again creates the next revision (Rev 1, 2, …). *Retire* takes it off the list; sent reports are kept.
+- Forms 01–28 and anything with special behaviour (calculations, fixed email recipients, sign-off tables) are still
+  changed in the code. Sheet: *Custom Forms*.
+
+Relay update required: paste the new `PARRON_Relay_Code.gs`, run `setup` once (creates the three sheets), and redeploy
+as a new version (Deploy → Manage deployments → Edit → New version).

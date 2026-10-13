@@ -3,7 +3,7 @@
 openDB().then(async()=>{setNet();await loadLocalSent();updateBadges();await route();const was=RELAY.url;await loadRelay();
   // refresh the screen once the latest settings have loaded, so "Direct send" and Insights show the current state
   if(RELAY.url!==was||!was){if((location.hash||"").startsWith("#insp")){/* keep the open form as it is */}else if(location.hash.startsWith("#review")&&CUR)viewReview(CUR);else await route()}
-  await relayVersion();flushOutbox();regRefresh().then(()=>updateBadges())});
+  await relayVersion();flushOutbox();cfRefresh().then(ch=>{if(ch&&location.hash==="#inspections")renderLib(window._sent)});regRefresh().then(()=>updateBadges())});
 /* ask the phone to keep PARRON's data (drafts, photos, Outbox) permanently instead of clearing it when space is low */
 async function keepStorage(){try{if(!navigator.storage||!navigator.storage.persist)return null;return (await navigator.storage.persisted())||(await navigator.storage.persist())}catch(e){return null}}
 keepStorage();

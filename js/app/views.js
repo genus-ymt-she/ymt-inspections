@@ -32,8 +32,10 @@ async function route(){const seq=++ROUTE_SEQ;const h=location.hash||"#home";cons
   if(v==="history")return viewHistory();
   if(v==="reference")return viewReference(id);
   if(v==="alerts")return viewAlerts(id);
+  if(v==="planner")return viewPlanner(id);
+  if(v==="forms")return viewForms(id);
   return viewHome()}
-function setNav(v){const m={home:"home","":"home",inspect:"inspect",inspections:"inspect",report:"inspect",ta:"inspect",myday:"home",radio:"home",insights:"insights",dash:"insights",actions:"actions",reports:"actions",emergency:"emergency",traffic:"traffic",status:"home",history:"home",reference:"home",alerts:"home"};const k=m[v]||"";
+function setNav(v){const m={home:"home","":"home",inspect:"inspect",inspections:"inspect",report:"inspect",ta:"inspect",myday:"home",radio:"home",insights:"insights",dash:"insights",actions:"actions",reports:"actions",emergency:"emergency",traffic:"traffic",status:"home",history:"home",reference:"home",alerts:"home",planner:"home",forms:"home"};const k=m[v]||"";
   document.querySelectorAll("#tabs a").forEach(a=>{const on=a.dataset.t===k;a.classList.toggle("on",on);if(on)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
 function setHeader(title,sub,btn){$("#hTitle").textContent=title;$("#hSub").textContent=sub;const b=$("#hBtn");
   if(btn){b.innerHTML=(btn.icon?ic(btn.icon):"")+(btn.label?`<span>${esc(btn.label)}</span>`:"");b.setAttribute("aria-label",btn.aria||btn.label||"");b.onclick=btn.fn;b.classList.remove("hide")}else b.classList.add("hide")}
@@ -72,6 +74,7 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   {const n=mdTodayCount();h+=`<div class="tiles">
    <button class="tile wide myday" onclick="go('#myday')"><span class="ti">${ic("cal","l")}</span><span class="tw"><b>My Day ${ic("lock","s")}</b><small>${n?`${n} to do today`:"Plan your day"} · private to you</small></span>${ic("chev")}</button>
    <button class="tile wide" onclick="go('#inspect')"><span class="ti t-info">${ic("clipboard","l")}</span><span class="tw"><b>Inspect &amp; report</b><small>Inspections · observations · hazards${drafts.length?` · ${drafts.length} in progress`:""}</small></span>${ic("chev")}</button>
+   ${plTileHTML()}
    <button class="tile wide radio ${RADIO.playing?"on":""}" onclick="go('#radio')"><span class="ti t-blue">${ic("radio","l")}</span><span class="tw"><b>PARRON Radio</b><small>${RADIO.playing?"Now playing":"Shuffle play"}</small></span>${ic("chev")}</button></div>`}
   const B=h,R=`<div id="refsec">${referenceHTML()}</div>`;
   // computer: today's site status + reference on the left, welcome / weather / tiles on the right; phone: one column
@@ -80,6 +83,7 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   h+=`<p class="foot">PARRON v${esc(CONFIG.appVersion)} · Proactive Assessment, Reporting, Risk &amp; Observation Network<br>Works offline · Data stays on this phone until you send it</p>`;
   render(h);
   regRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home"&&!stale(seq))viewHome()});
+  if(isManager())plRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home"&&!stale(seq))viewHome()});
   stRefresh().then(ch=>{const e=document.getElementById("stp");if(ch&&e&&!stale(seq))e.innerHTML=statusPanelHTML()});
   alertPopup();alRefresh().then(ch=>{const e=document.getElementById("alb");if(ch&&e&&!stale(seq)){e.innerHTML=alertBannerHTML();alertPopup()}});
   histLoad().then(ch=>{const e=document.getElementById("hcd");if(ch&&e&&!stale(seq))e.innerHTML=historyCardHTML()});
@@ -115,21 +119,22 @@ async function viewInspections(){const seq=ROUTE_SEQ;setHeader("Inspections",`${
   const sentAll=(await dbAll("sent")).sort((a,b)=>b.sentAt-a.sentAt);if(stale(seq))return;
   render(`<div class="search">${ic("search")}<input id="libq" type="search" placeholder="Search inspections, e.g. crane, permit, fire" value="${esc(LIB.q)}" autocomplete="off" aria-label="Search inspections"></div>
    <div class="libbar"><div class="chips scroll" id="libcats"></div><div class="vtog" role="group" aria-label="List view">${[["compact","layers","Compact view"],["detail","clipboard","Detailed view"]].map(([k,i,l])=>`<button class="${libView()===k?"on":""}" aria-label="${l}" aria-pressed="${libView()===k}" onclick="setLibView('${k}')">${ic(i,"s")}</button>`).join("")}</div></div><div class="lib ${libView()}" id="lib"></div>`);
-  const q=$("#libq");q.addEventListener("input",()=>{LIB.q=q.value;renderLib(sentAll)});renderLib(sentAll)}
+  const q=$("#libq");q.addEventListener("input",()=>{LIB.q=q.value;renderLib(sentAll)});renderLib(sentAll);
+  cfRefresh().then(ch=>{if(ch&&!stale(seq))renderLib(sentAll)})}
 const libView=()=>ls("libView")||"compact";
 function setLibView(v){ls("libView",v);document.querySelectorAll(".vtog button").forEach((b,i)=>{const on=(i===0)===(v==="compact");b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)});const l=$("#lib");if(l){l.className="lib "+v;renderLib(window._sent)}}
-const LIB_TABS=()=>TABS.filter(t=>!HOME_TILE_FORMS.includes(t.num));
-function catOf(t){const c=CATEGORIES.find(c=>c.nums.includes(t.num));return c?c.key:"other"}
+const LIB_TABS=()=>TABS.filter(t=>!HOME_TILE_FORMS.includes(t.num)&&!t.retired);
+function catOf(t){if(t.custom)return CATEGORIES.some(c=>c.key===t.cat)?t.cat:"other";const c=CATEGORIES.find(c=>c.nums.includes(t.num));return c?c.key:"other"}
 function renderLib(sentAll){const box=$("#lib");if(!box)return;const q=LIB.q.trim().toLowerCase();
   const last={};(sentAll||[]).forEach(s=>{const k=(s.title||"").slice(0,2);if(!last[k])last[k]=s.sentAt});
   const match=t=>!q||[t.title,t.short,t.scope,...allQ(t).map(x=>x.text)].join(" ").toLowerCase().includes(q);
-  const cats=[{key:"all",label:"All"},...CATEGORIES];
+  const cats=[{key:"all",label:"All"},...CATEGORIES,{key:"other",label:"Other"}];
   $("#libcats").innerHTML=cats.map(c=>{const n=LIB_TABS().filter(t=>(c.key==="all"||catOf(t)===c.key)&&match(t)).length;return n||c.key==="all"?`<button class="chip ${LIB.cat===c.key?"on":""}" onclick="LIB.cat='${c.key}';renderLib(window._sent)">${esc(c.label)}<span class="c">${n}</span></button>`:""}).join("");
   window._sent=sentAll;
   const list=LIB_TABS().filter(t=>(LIB.cat==="all"||catOf(t)===LIB.cat)&&match(t));
   box.innerHTML=list.length?list.map((t,i)=>{const REC=t.kind==="record";const nq=REC?0:allQ(t).length;const snn=REC?0:allQ(t).filter(x=>(x.snn||[]).length).length;const ls_=last[pad(t.num)];
     return `<div class="card tap" style="--i:${Math.min(i,12)}" onclick="startInsp(${t.num})" role="button" tabindex="0" onkeydown="if(event.key==='Enter')startInsp(${t.num})"><div class="tab"><div class="n">${pad(t.num)}</div><div class="x"><b>${esc(t.short)}</b>${libView()==="compact"?"":`<span>${esc(t.scope)}</span>`}
-      <div class="libmeta">${REC?`<span class="tag">Record</span>`:`<span class="tag">${nq} items</span>`}${snn?`<span class="tag o">${snn} SNN</span>`:""}${ls_?`<span class="tag g">Sent ${ago(new Date(ls_).toISOString())}</span>`:""}</div></div>${ic("chev")}</div></div>`}).join("")
+      <div class="libmeta">${REC?`<span class="tag">Record</span>`:`<span class="tag">${nq} items</span>`}${t.custom?`<span class="tag">Added · Rev ${esc(t.rev)}</span>`:""}${snn?`<span class="tag o">${snn} SNN</span>`:""}${ls_?`<span class="tag g">Sent ${ago(new Date(ls_).toISOString())}</span>`:""}</div></div>${ic("chev")}</div></div>`}).join("")
     :`<div class="card empty" style="grid-column:1/-1">${ic("search")}<b>No inspections match “${esc(LIB.q)}”</b>Try a different word.</div>`}
 async function startInsp(num){
   if(!(ls("inspector")||"").trim()){const n=await askName();if(!n)return}
@@ -166,7 +171,7 @@ async function viewSettings(){setHeader("Settings","This phone only",{icon:"back
    <div class="seg" role="group" aria-label="Theme">${[["auto","Auto"],["light","Light"],["dark","Dark"]].map(([k,l])=>`<button class="${th===k?"on":""}" onclick="setTheme('${k}')">${l}</button>`).join("")}</div>
    <div class="set" style="margin-top:6px">${ic("sun")}<div><b>High contrast</b><span>Stronger text and borders for bright sunlight.</span></div><label class="switch"><input type="checkbox" ${hc?"checked":""} onchange="setContrast(this.checked)"><i></i></label></div></div>
   <h2>Manager mode</h2><div class="card"><div class="set">${ic("lock")}<div><b>${isManager()?"On – this phone can verify, re-open and reassign actions":"Off"}</b><span>For the SHE Manager. Needs the Manager PIN set in the relay.</span></div></div>
-   ${isManager()?`<button class="btn o w" onclick="go('#alerts/new')">${ic("bell","s")} Publish a SHEQ Alert</button><button class="btn g w" onclick="mgrOff()">Turn off on this phone</button>`:`<label class="f" for="mPin">Manager PIN</label><input class="t" id="mPin" type="password" inputmode="numeric" autocomplete="off" maxlength="12"><button class="btn w" onclick="mgrOn()">${ic("lock","s")} Turn on</button>`}</div>
+   ${isManager()?`<button class="btn o w" onclick="go('#planner')">${ic("shield","s")} My SHEQ Planner</button><button class="btn g w" onclick="go('#forms')">${ic("clipboard","s")} Inspection forms – add or change</button><button class="btn g w" onclick="go('#alerts/new')">${ic("bell","s")} Publish a SHEQ Alert</button><button class="btn g w" onclick="mgrOff()">Turn off on this phone</button>`:`<label class="f" for="mPin">Manager PIN</label><input class="t" id="mPin" type="password" inputmode="numeric" autocomplete="off" maxlength="12"><button class="btn w" onclick="mgrOn()">${ic("lock","s")} Turn on</button>`}</div>
   <h2>Connection</h2><div class="card"><div class="set">${ic("send")}<div><b>Direct send</b><span id="cState">${directOn()?"On – reports email automatically":"Not set up – reports are shared via Outlook"}</span></div></div>
    <div class="set">${ic("layers")}<div><b>Project log</b><span id="rState">${directOn()?(v3()?"Connected – shared actions, action emails and Insights":"Checking…"):"Not connected"}</span></div></div>
    ${directOn()?`<div class="set">${ic("lock")}<div><b>Site access code</b><span>${siteCode()?"Saved on this phone":"Not entered – only needed once the SHE Manager turns it on"}</span></div><button class="btn g s" onclick="askSiteCode(true)">${siteCode()?"Change":"Enter"}</button></div>`:""}
@@ -186,7 +191,7 @@ async function mgrOn(){const p=$("#mPin").value.trim();if(!p){toast("Enter the P
   if(await relayVersion(true)<3){toast("The relay needs updating to v3 before Manager mode can be used",5000);return}
   try{const r=await relayPost({payload:{action:"pin",pin:p}},false);if(r&&r.ok){ls("mgrPin",p);toast("Manager mode on");updateBadges();viewSettings()}else toast((r&&r.error)||"PIN not accepted",4000)}
   catch(e){toast("No connection – try again with signal",4000)}}
-function mgrOff(){lsDel("mgrPin");toast("Manager mode off");updateBadges();viewSettings()}
+function mgrOff(){lsDel("mgrPin");lsDel("planner");PLAN={at:0,items:[],log:[]};toast("Manager mode off");updateBadges();viewSettings()}
 async function testRelay(){toast("Testing…",1500);const v=await relayVersion(true);
   try{const r=await fetch(RELAY.url,{redirect:"follow"});const j=await r.json();toast(j.ok?`Connected · relay v${v} · ${j.emailsLeftToday} emails left today`:"Relay replied with an error",5000)}catch(e){toast("Could not reach the relay – check signal",4000)}
   if(location.hash==="#settings")viewSettings()}
