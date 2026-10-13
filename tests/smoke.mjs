@@ -671,6 +671,35 @@ await step("Add a form: example → preview → publish as 29 → in every phone
   await page.waitForFunction(() => location.hash === "#forms" && /Retired/.test(document.querySelector(".cf-item")?.textContent), null, { timeout: 15000 });
   await page.evaluate(() => go("#inspections")); await page.waitForSelector("#lib .card"); if (await page.$$eval("#lib .card", e => e.length) !== 24) throw new Error("retired form still listed");
 });
+await step("Submitted forms (Manager mode): every sent report, filters, findings, PDF from Drive through the relay, not-sent list, CSV", async () => {
+  const o = await newPage({ name: "Steven Pugh", hash: "#submitted" }); await o.waitForSelector(".card.empty");
+  if (!/SHE Manager only/.test(await o.textContent("#app"))) throw new Error("register should be locked without Manager mode"); await o.context().close();
+  await page.evaluate(() => { ls("mgrPin", "2468"); SBF.p = "all"; go("#submitted"); }); await page.waitForSelector(".sb-item");
+  const sentRows = relay.sheet("Sent").getLastRow() - 1;
+  const n = await page.$$eval(".sb-item", e => e.length); if (n !== Math.min(sentRows, 60)) throw new Error(`listed ${n}, sent ${sentRows}`);
+  await page.selectOption("#sbNo", "01"); await page.waitForTimeout(200);
+  const nos = await page.$$eval(".sb-item .n", e => [...new Set(e.map(x => x.textContent))].join()); if (nos !== "01") throw new Error("form filter: " + nos);
+  await settle(page); await shot(page, "66-submitted");
+  await page.click(".sb-item"); await page.waitForSelector("#sbPdf");
+  if (!/Findings/.test(await page.textContent(".sheet"))) throw new Error("findings in detail");
+  // headless Chromium can't display a PDF tab, so record where the new tab is sent instead
+  await page.evaluate(() => { window._open = window.open; window._opened = ""; window.open = () => ({ closed: false, document: { write() {} }, location: { set href(v) { window._opened = v; } } }); });
+  await page.click("#sbPdf"); await page.waitForFunction(() => /^blob:/.test(window._opened), null, { timeout: 10000 });
+  await page.evaluate(() => { window.open = window._open; closeSheet(); });
+  await page.selectOption("#sbNo", "");
+  const [dl] = await Promise.all([page.waitForEvent("download"), page.click("text=CSV")]); const csv = fs.readFileSync(await dl.path(), "utf8");
+  if (!/Report ID/.test(csv) || !/drive\.google\.com\/file\/d\//.test(csv)) throw new Error("csv");
+});
+await step("Monthly figures (Manager mode): inspections (not mentoring / fuel register) and hazard reports for the client report", async () => {
+  await page.evaluate(() => { FGM = todayISO().slice(0, 7); go("#figures"); }); await page.waitForSelector(".fg-kpis");
+  const S = relay.sheet("Sent").data.slice(1); const mon = perth(0).slice(0, 7);
+  const want = S.filter(r => !["23", "28"].includes(String(r[6]).padStart(2, "0")) && String(r[2]) === mon).length;
+  const haz = relay.sheet("Observations").data.slice(1).filter(r => r[4] === "Hazard").length;
+  const got = await page.$$eval(".fg-kpis b", e => e.map(x => +x.textContent));
+  if (got[0] !== want || got[1] !== haz) throw new Error(`figures ${got} want ${want},${haz}`);
+  if (!/Inspections <b>[A-Z]+51<\/b>/.test(await page.innerHTML(".alert.blue"))) throw new Error("App 7 cell hint");
+  await settle(page); await shot(page, "67-monthly-figures");
+});
 await step("CSV exports", async () => {
   const [dl] = await Promise.all([page.waitForEvent("download"), page.evaluate(() => exportActions())]);
   const p = await dl.path(); const csv = fs.readFileSync(p, "utf8"); if (!/Corrective action/.test(csv) || csv.split("\n").length < 3) throw new Error("csv content");

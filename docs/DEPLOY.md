@@ -202,3 +202,26 @@ planner and form change, so nobody else can read the register or change forms.
 
 Relay update required: paste the new `PARRON_Relay_Code.gs`, run `setup` once (creates the three sheets), and redeploy
 as a new version (Deploy → Manage deployments → Edit → New version).
+
+## Submitted forms and Monthly figures (v3.10) – SHE Manager only
+
+**Submitted forms** (Planner, or Settings → *Submitted forms*)
+- Every report sent through PARRON by anyone, newest first: search by report ID, location or crew; filter by period,
+  form, person, or *With UA / NI*. Tap a report for its details and findings, *Open the PDF* (fetched through the relay
+  with the Manager PIN, so it opens on any device without a Google sign-in) or *Open in Google Drive*.
+- *Started, not sent* lists inspections begun on any phone that haven't been sent – earlier days are flagged.
+- *CSV* exports the filtered list with the Drive link for each PDF (for MYOSH or the project folder).
+- PDFs are archived automatically in Google Drive → *PARRON – Reports* → one folder per month (the Google account
+  that owns the relay). Share that folder read-only in Drive if others need it.
+
+**Monthly figures** (Planner, or Settings → *Monthly figures*)
+- For the client monthly report (Atmos App 7): **Inspections** = every PARRON inspection and task observation carried
+  out in the month (all forms except 23 Mentoring and 28 Fuel register, including forms added in the app), and
+  **Hazard reports** submitted in PARRON. Copy buttons, breakdown by form and by person, and the App 7 cell to paste
+  into (HSE Metrics → Principal Contractor → that month's *Actual*).
+- Counted by the date the inspection was carried out, so a report sent late still lands in the right month.
+- Everything else in App 7 (hours, audits, SHEDs, meetings, near misses, incidents, fuel, water, quality) comes from
+  MYOSH and site records.
+
+Relay update required for *Submitted forms*: paste the new `PARRON_Relay_Code.gs` and deploy a new version
+(Deploy → Manage deployments → Edit → New version). No `setup` run or new sheets needed.

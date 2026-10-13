@@ -916,6 +916,19 @@ nav.tabs a.em-tab.on .ic{stroke:var(--ua)}
 .pl-imp.bad{border-color:color-mix(in srgb,var(--ua) 45%,transparent)}
 .pl-first{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;font-weight:700;margin-top:4px}.pl-first .t{width:auto;min-height:38px;padding:4px 8px;margin:0}
 .pl-first em,.pl-warn{font-style:normal;color:var(--ni-ink);font-size:12.5px;font-weight:700}.pl-err{font-style:normal;color:var(--ua);font-size:13px;font-weight:700}
+/* ---------- Submitted forms and Monthly figures (SHE Manager only) ---------- */
+.sb-bar .search{margin-bottom:10px}.sb-bar .chips{margin-bottom:10px}.sb-bar .grid2 .t{margin-top:0}
+.sb-item{display:flex;gap:12px;align-items:center;width:100%;text-align:left}
+.sb-item .n{flex:none;min-width:40px;height:32px;border-radius:9px;background:var(--brand);color:#fff;font-weight:800;display:grid;place-items:center}
+.sb-item .x{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.sb-item .x small{font-size:13px}.sb-item .libmeta{margin-top:4px}
+.sb-item>.ic{color:var(--faint)}
+.sb-open h2 .tag{margin-left:4px}
+.fg-kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 4px}
+.fg-kpis .card{display:flex;flex-direction:column;gap:4px;margin:0;border-top:4px solid var(--accent)}
+.fg-kpis b{font-size:40px;line-height:1.05;font-variant-numeric:tabular-nums}.fg-kpis small{color:var(--muted);font-size:12.5px;flex:1}
+.fg-kpis .btn{align-self:flex-start;margin-top:6px}
+.fg-man{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+@media (max-width:420px){.fg-kpis{grid-template-columns:1fr}}
 /* ---------- Inspection forms added in the app ---------- */
 .cf-item{display:flex;gap:12px;align-items:center;width:100%;text-align:left}
 .cf-item .n{flex:none;min-width:40px;height:32px;border-radius:9px;background:var(--brand);color:#fff;font-weight:800;display:grid;place-items:center}
