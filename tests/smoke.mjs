@@ -55,6 +55,8 @@ async function newPage(opts = {}) {
   page.on("pageerror", e => errors.push("pageerror: " + e.message));
   page.on("console", m => { if (m.type() === "error" && !/favicon|404|net::ERR_FAILED|ERR_INTERNET_DISCONNECTED/.test(m.text())) errors.push("console: " + m.text()); });
   await page.addInitScript(n => { try { if (n) localStorage.setItem("inspector", n); } catch (e) {} }, opts.name ?? "Test Inspector");
+  // the once-a-day fire danger pop-up is tested on its own; other steps start with it already seen
+  if (!opts.firePopup) await page.addInitScript(() => { try { const d = new Date(); localStorage.setItem(`fdPop_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`, "1"); } catch (e) {} });
   await page.goto(`http://localhost:${port}/${opts.hash || ""}`);
   await page.waitForFunction(() => document.querySelector("#app") && !document.querySelector("#app .skel"));
   return page;
@@ -473,7 +475,7 @@ const BAD_WORDS = ["murder", "massacre", "killed", "killing", "terrorist", "bomb
 await step("Today on site: not set → wrong PIN rejected → Morning High / TFB No / HVMB Yes → HVMB box first, next check 12:00", async () => {
   await page.evaluate(() => { localStorage.removeItem("siteStatus"); localStorage.removeItem("statusPin"); SITEST = null; go("#home"); }); await page.waitForSelector("#stp .st-panel");
   if (!/NOT SET TODAY/.test(await page.textContent("#stp"))) throw new Error("should start NOT SET TODAY");
-  const first = await page.evaluate(() => [...document.querySelector("#app").children].find(e => e.innerHTML.trim()).id); if (first !== "stp") throw new Error("status panel is not at the top of Home");
+  const first = await page.evaluate(() => [...document.querySelector("#app").children].find(e => e.innerHTML.trim()).id); if (first !== "stp" && first !== "fdb") throw new Error("status panel is not at the top of Home: " + first);
   await page.click("#stp .st-upd"); await page.waitForSelector(".st-pick");
   await page.click(".st-pick button:has-text('High')"); await page.click(".seg[data-k=tfb] button:has-text('No')"); await page.click(".seg[data-k=hvmb] button:has-text('Yes')"); await page.click(".seg[data-k=type] button:has-text('Morning')");
   await page.fill("#stPin", "1111"); await page.click("#stSave"); await page.waitForFunction(() => /Incorrect status PIN/.test(document.querySelector("#toast").textContent));
@@ -712,6 +714,25 @@ await step("Monthly figures (Manager mode): inspections (not mentoring / fuel re
   if (got[0] !== want || got[1] !== haz) throw new Error(`figures ${got} want ${want},${haz}`);
   if (!/Inspections <b>[A-Z]+51<\/b>/.test(await page.innerHTML(".alert.blue"))) throw new Error("App 7 cell hint");
   await settle(page); await shot(page, "67-monthly-figures");
+});
+await step("High-or-above fire danger day: Home banner with today's controls, pop-up for supervisors, Inspection 25 pre-filled, ticks off when sent; tomorrow note", async () => {
+  const f = await newPage({ name: "Matthew Smith", hash: "#home", firePopup: true });
+  await f.waitForSelector("#fdb .fd-banner"); const b = await f.textContent("#fdb");
+  for (const w of ["FIRE DANGER TODAY", "HIGH", "High-day controls apply (BFMP Table 13)", "Inspection 25 – Fire Danger Day", "Midday re-check", "Nominate a lookout"]) if (!b.includes(w)) throw new Error("banner missing " + w);
+  await f.waitForSelector(".fd-pop", { timeout: 10000 }); if (!/Inspection 25 is required today/.test(await f.textContent(".fd-pop"))) throw new Error("pop-up");
+  await settle(f); await shot(f, "68-fire-day-popup");
+  await f.click("#fdGo"); await f.waitForFunction(() => location.hash.startsWith("#insp/") && CUR && CUR.tab === 25);
+  if (await f.evaluate(() => CUR.details.extra["Fire Danger Rating today (High / Extreme / Catastrophic):"]) !== "High") throw new Error("rating not pre-filled");
+  await f.evaluate(() => go("#home")); await f.waitForSelector("#fdb .fd-banner"); if (!/Continue/.test(await f.textContent("#fdb"))) throw new Error("draft should show Continue");
+  if (await f.$(".fd-pop")) throw new Error("pop-up should only show once a day");
+  // a supervisor sends Inspection 25 → the banner shows it done for everyone
+  relay.post({ key: relay.key, uid: "fd1", reportId: "YMT-25-TEST", to: "darren.frizzell@genus.com.au", subject: "25", text: "x", meta: { name: "Paul Delaney", no: "25", title: "Fire Danger Day – High and Above", location: "Site" }, report: {} });
+  await f.evaluate(async () => { await fdRefresh(true); go("#home"); }); await f.waitForSelector("#fdb .fd-step.ok");
+  if (!/Sent by Paul Delaney/.test(await f.textContent("#fdb"))) throw new Error("done by");
+  await f.evaluate(() => window.scrollTo(0, 0)); await settle(f); await shot(f, "69-fire-day-banner");
+  const nxt = await f.evaluate(() => { ls("fdr", JSON.stringify({ at: Date.now(), date: todayISO(), today: "Moderate", tomorrow: "Extreme" })); const S = SITEST; SITEST = null; const h = fdBannerHTML(); SITEST = S; return h; });
+  if (!/Tomorrow: EXTREME fire danger/.test(nxt)) throw new Error("tomorrow note");
+  await f.context().close();
 });
 await step("CSV exports", async () => {
   const [dl] = await Promise.all([page.waitForEvent("download"), page.evaluate(() => exportActions())]);

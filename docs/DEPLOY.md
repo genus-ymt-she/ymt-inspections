@@ -230,3 +230,17 @@ as a new version (Deploy → Manage deployments → Edit → New version).
 
 Relay update required for *Submitted forms*: paste the new `PARRON_Relay_Code.gs` and deploy a new version
 (Deploy → Manage deployments → Edit → New version). No `setup` run or new sheets needed.
+
+## High-or-above fire danger days (v3.12)
+
+When today's Fire Danger Rating is **High, Extreme or Catastrophic** – from the Bureau of Meteorology feed or the
+HVMB & Fire Status set on site, whichever is higher – Home shows a banner at the top:
+- the rating and what applies (BFMP Table 13; Appendix D on Extreme; Project Director decision on Catastrophic);
+- **Inspection 25 – Fire Danger Day**: not done / started on this phone / sent by whom and when (from every phone),
+  with *Start* (the rating is filled in for you);
+- **Midday re-check**: done or due, with *Update* (HVMB & Fire Status);
+- *What must be done today* – the day's controls with BFMP references.
+
+Supervisors, the SHE team, managers and Manager mode also get a pop-up once a day until Inspection 25 is sent.
+When tomorrow's rating is High or above, Home shows a plan-ahead note (Catastrophic: Project Director decides today).
+No relay update needed.
