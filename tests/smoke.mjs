@@ -719,11 +719,10 @@ await step("Monthly figures (Manager mode): inspections (not mentoring / fuel re
   await settle(page); await shot(page, "67-monthly-figures");
 });
 await step("High-or-above fire danger day: Home banner with today's controls, pop-up for supervisors, Inspection 25 pre-filled, ticks off when sent; tomorrow note", async () => {
-  const f = await newPage({ name: "Matthew Smith", hash: "#home", firePopup: true });
+  // Lee Allen (SHE team) wasn't ticked on the earlier Critical SHEQ Alert, so no alert pop-up competes with this one
+  const f = await newPage({ name: "Lee Allen", hash: "#home", firePopup: true });
   await f.waitForSelector("#fdb .fd-banner"); const b = await f.textContent("#fdb");
   for (const w of ["FIRE DANGER TODAY", "HIGH", "High-day controls apply (BFMP Table 13)", "Inspection 25 – Fire Danger Day", "Midday re-check", "Nominate a lookout"]) if (!b.includes(w)) throw new Error("banner missing " + w);
-  // a Critical SHEQ Alert pop-up takes priority; the fire pop-up then shows at the next chance
-  await f.waitForFunction(() => FD.date === todayISO(), null, { timeout: 10000 }); await f.evaluate(() => { if (!document.querySelector(".fd-pop")) { closeSheet(); fdPopup(); } });
   await f.waitForSelector(".fd-pop", { timeout: 10000 }); if (!/Inspection 25 is required today/.test(await f.textContent(".fd-pop"))) throw new Error("pop-up");
   await settle(f); await shot(f, "68-fire-day-popup");
   await f.click("#fdGo"); await f.waitForFunction(() => location.hash.startsWith("#insp/") && CUR && CUR.tab === 25);
