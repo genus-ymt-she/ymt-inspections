@@ -70,7 +70,7 @@ function sbCSV(){const L=sbFilter();downloadBlob(new Blob([toCSV([["Sent","Repor
   ...L.map(s=>[fmtDT(s.sentAt),s.reportId,s.no,s.title,s.name,s.location,s.inspDate,s.crew,s.supervisor,s.c,s.ua,s.ni,s.na,s.snn,s.pct,s.pdf?`https://drive.google.com/file/d/${s.pdf}/view`:""])])],{type:"text/csv"}),`PARRON-submitted-forms-${todayISO()}.csv`)}
 
 /* ---------- Monthly figures – the numbers PARRON captures, for the client's monthly report ---------- */
-const FG_NOT_INSP=[23,28];   // Mentoring discussion record and the fuel register are not inspections
+const FG_NOT_INSP=[23,28,50];   // Mentoring discussion record, the fuel register and Take 5s are not inspections (Take 5s are counted on their own)
 const fgIsInsp=no=>+no>0&&!FG_NOT_INSP.includes(+no);
 let FGM="";
 /* Atmos App 7 – HSE Metrics: Principal Contractor "Actual" column for a month (template runs Jul 2025 – Mar 2027) */
@@ -88,24 +88,26 @@ async function viewFigures(){const seq=ROUTE_SEQ;
   catch(e){if(!stale(seq)){render(pick+`<div class="card empty">${ic("wifioff")}<b>Couldn't load ${esc(lab(FGM))}</b>Open this with signal.</div>`);$("#fgM").onchange=e=>{FGM=e.target.value;viewFigures()}}return}
   if(stale(seq))return;
   // reports are counted in the month they were carried out (sent late still counts); de-duplicated across the two months fetched
-  const sent=[...new Map([...(a.sent||[]),...(b.sent||[])].map(s=>[s.reportId||s.uid,s])).values()].filter(s=>fgMonthOf(s)===FGM);
+  const sent=[...new Map([...(a.sent||[]),...(b.sent||[])].map(s=>[(s.uid||"")+"|"+(s.reportId||""),s])).values()].filter(s=>fgMonthOf(s)===FGM);
   const obs=[...new Map([...(a.obs||[]),...(b.obs||[])].map(o=>[o.reportId||o.at,o])).values()].filter(o=>sbLocalDay(o.at).slice(0,7)===FGM);
-  const ins=sent.filter(s=>fgIsInsp(s.no)),haz=obs.filter(o=>o.type==="hazard"),pos=obs.filter(o=>o.type!=="hazard"),other=sent.filter(s=>!fgIsInsp(s.no));
+  const ins=sent.filter(s=>fgIsInsp(s.no)),haz=obs.filter(o=>o.type==="hazard"),pos=obs.filter(o=>o.type!=="hazard"),other=sent.filter(s=>!fgIsInsp(s.no)&&+s.no!==T5_NUM);const t5=sent.filter(s=>+s.no===T5_NUM),t5stop=t5.filter(s=>+s.ua>0);
   const pend=[...(a.open||[]),...(b.open||[])].filter(o=>fgIsInsp(o.no)&&sbLocalDay(o.started).slice(0,7)===FGM);
   const pendU=[...new Map(pend.map(o=>[o.name+o.no+o.started,o])).values()];
   const by=(L,k)=>{const m={};L.forEach(x=>{const key=k(x);m[key]=(m[key]||0)+1});return Object.entries(m).sort((x,y)=>y[1]-x[1]||x[0].localeCompare(y[0]))};
   const tbl=(rows,h1)=>rows.length?`<table class="hv-tab"><tr><th>${h1}</th><th style="text-align:right">Count</th></tr>${rows.map(([k,n])=>`<tr><td>${esc(k)}</td><td style="text-align:right"><b>${n}</b></td></tr>`).join("")}</table>`:`<p class="muted">None.</p>`;
   const cI=fgCell(FGM,51),cH=fgCell(FGM,56);
   let h=pick+`<div class="fg-kpis">
-    <div class="card"><span class="muted">Inspections</span><b>${ins.length}</b><small>All PARRON inspections and task observations${FG_NOT_INSP.length?" (not mentoring or the fuel register)":""}</small><button class="btn g s" onclick="copyText('${ins.length}','Inspections')">${ic("copy","s")} Copy</button></div>
-    <div class="card"><span class="muted">Hazard reports</span><b>${haz.length}</b><small>Hazard reports submitted in PARRON</small><button class="btn g s" onclick="copyText('${haz.length}','Hazard reports')">${ic("copy","s")} Copy</button></div></div>
+    <div class="card"><span class="muted">Inspections</span><b>${ins.length}</b><small>All PARRON inspections and task observations(not mentoring, the fuel register or Take 5s)</small><button class="btn g s" onclick="copyText('${ins.length}','Inspections')">${ic("copy","s")} Copy</button></div>
+    <div class="card"><span class="muted">Hazard reports</span><b>${haz.length}</b><small>Hazard reports submitted in PARRON</small><button class="btn g s" onclick="copyText('${haz.length}','Hazard reports')">${ic("copy","s")} Copy</button></div>
+    <div class="card fg-t5"><span class="muted">Take 5s</span><b>${t5.length}</b><small>${t5stop.length} stopped – referred to a Supervisor</small><button class="btn g s" onclick="copyText('${t5.length}','Take 5s')">${ic("copy","s")} Copy</button></div></div>
     ${cI?`<div class="alert blue">${ic("info")}<div>Atmos App 7 › <b>HSE Metrics</b> › Principal Contractor › ${esc(lab(FGM))} <b>Actual</b>: Inspections <b>${cI}</b>, Hazard reports <b>${cH}</b>.</div></div>`:""}
     ${pendU.length?`<div class="alert org">${ic("clock")}<div><b>${pendU.length} inspection${pendU.length>1?"s":""} started in ${esc(lab(FGM))} not sent yet</b> – not counted until sent.<br>${pendU.slice(0,6).map(o=>`${esc(o.no)} ${esc(o.title)} – ${esc(o.name)}`).join("<br>")}</div></div>`:""}
     <h2>Inspections by form</h2><div class="card">${tbl(by(ins,s=>`${s.no} – ${s.title}`),"Form")}</div>
+    <h2>Take 5s by person <span class="cnt">${t5.length}</span></h2><div class="card">${tbl(by(t5,s=>s.name||"(no name)"),"Person")}${t5stop.length?`<p class="muted" style="margin:8px 0 0"><b style="color:var(--ua)">${t5stop.length} DO NOT PROCEED:</b> ${t5stop.map(s=>`${esc(s.name)} – ${esc(s.location||"")} (${esc(fmtD(sbLocalDay(s.sentAt)))})`).join("; ")}</p>`:""}</div>
     <h2>Inspections by person</h2><div class="card">${tbl(by(ins,s=>s.name||"(no name)"),"Person")}</div>
     <h2>Hazard reports <span class="cnt">${haz.length}</span></h2><div class="card pl-log">${haz.length?haz.map(o=>`<div><span><b>${esc(o.reportId||"")} · ${esc(o.level||"Not rated")}</b><small>${esc(fmtD(sbLocalDay(o.at)))} · ${esc(o.name||"")} · ${esc(o.location||"")}${o.description?` – ${esc(String(o.description).slice(0,90))}`:""}</small></span></div>`).join(""):`<p class="muted">None.</p>`}</div>
     <h2>Also captured (not in App 7)</h2><div class="card"><table class="hv-tab"><tr><td>Positive observations</td><td style="text-align:right"><b>${pos.length}</b></td></tr>${by(other,s=>`${s.no} – ${s.title}`).map(([k,n])=>`<tr><td>${esc(k)}</td><td style="text-align:right"><b>${n}</b></td></tr>`).join("")}</table></div>
     <h2>Enter from MYOSH and site records</h2><div class="card"><ul class="fg-man">${["Hours worked (including subcontractors)","HSE audits","Leadership interactions (SHEDs)","Team meetings (toolbox, HSE / SIMOPS)","Near miss reports","Injury, significant, property, vehicle, environment and community incidents","Fuel and water consumption","Quality defects (Category A–D)"].map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>
-    <button class="btn g w" onclick="copyText('Inspections\\t${ins.length}\\nHazard reports\\t${haz.length}','Figures')">${ic("copy","s")} Copy both (paste into Excel)</button>
+    <button class="btn g w" onclick="copyText('Inspections\\t${ins.length}\\nHazard reports\\t${haz.length}\\nTake 5s\\t${t5.length}','Figures')">${ic("copy","s")} Copy all three (paste into Excel)</button>
     <p class="foot">Counted by the date each inspection was carried out. Hazard reports are entered in MYOSH from PARRON, so the two totals should match.</p>`;
   render(h);$("#fgM").onchange=e=>{FGM=e.target.value;viewFigures()}}

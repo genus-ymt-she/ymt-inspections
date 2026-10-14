@@ -2,7 +2,7 @@
 /* ---------- PDF ---------- */
 const PDFSAFE=s=>String(s??"").replace(/₆/g,"6").replace(/₂/g,"2").replace(/⚠/g,"!").replace(/≥/g,">=").replace(/≤/g,"<=").replace(/→/g,"->").replace(/[“”]/g,'"').replace(/[‘’]/g,"'").replace(/•/g,"-").replace(/[^\x00-\xFF–—…×÷²³¼½¾€]/g,"");
 function hex(c){return [parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)]}
-async function buildPDF(d){if(PDFBLOB)return PDFBLOB;if(tabByNum(d.tab).kind==="record")return buildRecordPDF(d);if(tabByNum(d.tab).kind==="fuel")return buildFuelPDF(d);const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:"mm",format:"a4"});
+async function buildPDF(d){if(PDFBLOB)return PDFBLOB;if(tabByNum(d.tab).kind==="record")return buildRecordPDF(d);if(tabByNum(d.tab).kind==="take5")return buildTake5PDF(d);if(tabByNum(d.tab).kind==="fuel")return buildFuelPDF(d);const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:"mm",format:"a4"});
   const t=tabByNum(d.tab);const s=stats(d);const D=d.details;const W=210,M=12;const NAVY=hex("#112B4E"),ORG=hex("#EC7723"),GREY=hex("#F2F4F7");
   const docId=`${CONFIG.docPrefix}-${pad(t.num)}`;
   // header

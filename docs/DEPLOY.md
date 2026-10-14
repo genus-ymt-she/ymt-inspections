@@ -250,3 +250,17 @@ controls. The evening before an Extreme or Catastrophic day (6–7 pm) they get 
 Director decides that day). One email each, once a day. The rating is your manual rating for the day if set, otherwise
 the official BoM ratings feed. Change the recipients without editing code: Script property `FIRE_DAY_TO` =
 comma-separated Genus addresses. Relay update required (paste, deploy a new version).
+
+## Take 5 (form 50, v3.13)
+
+The Genus Take Five form, as its own screen. Open it from the **Take 5** tile on the Inspect tab or the **Take 5** card on
+the Trade Assistants tab.
+- **Before you start** – 7 × YES / NO. Any **NO** = **DO NOT PROCEED, refer to Supervisor** (the Supervisor's name is
+  required) – the Take 5 is still sent so the stop is recorded.
+- **Consider the hazards** – 7 × YES / NO. Each **YES** needs controls: tick the form's standard responses (1a, 2a–2c, 3a,
+  4a, 5a, 6a – the codes as printed on the back of the paper form) and/or write another control (2d, 3b, 4b, 5b, 6b, 7a).
+- **Do these controls effectively manage the hazard?** YES = **PROCEED TO COMPLETE TASK**; NO = **DO NOT PROCEED**.
+- Signed and sent like every report: PDF emailed to the SHE Manager, archived in Google Drive (PARRON – Reports), logged
+  in the Sent sheet (form 50; a DO NOT PROCEED is recorded as 1 in the UA column) and listed in Submitted forms.
+- **Monthly figures** shows Take 5s and how many stopped, by person, separately from Inspections. The Monthly HSE summary
+  PDF lists them under Lead indicators. No relay update needed.

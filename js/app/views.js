@@ -98,6 +98,7 @@ async function viewInspect(){const seq=ROUTE_SEQ;setHeader("Inspect","Inspection
   const sentAll=(await dbAll("sent")).sort((a,b)=>b.sentAt-a.sentAt);const ob=await dbAll("outbox");if(stale(seq))return;
   let h=`<div class="tiles">
    <button class="tile wide" onclick="go('#inspections')"><span class="ti t-info">${ic("clipboard","l")}</span><span class="tw"><b>Inspection</b><small>${LIB_TABS().length} forms · browse by category</small></span>${ic("chev")}</button>
+   <button class="tile wide t5tile" onclick="startInsp(T5_NUM)"><span class="ti t-green">${ic("circlecheck","l")}</span><span class="tw"><b>Take 5</b><small>Before you start a task · 2 minutes</small></span>${ic("chev")}</button>
    <button class="tile" onclick="startInsp(24)"><span class="ti t-accent">${ic("eye","l")}</span><b>Task Observation</b><span>Observe a crew</span></button>
    <button class="tile" onclick="startInsp(23)"><span class="ti t-purple">${ic("users","l")}</span><b>Mentoring</b><span>Discussion record</span></button>
    <button class="tile" onclick="go('#report/hazard')"><span class="ti t-red">${ic("alert","l")}</span><b>Hazard</b><span>Quick report</span></button>
@@ -109,7 +110,7 @@ async function viewInspect(){const seq=ROUTE_SEQ;setHeader("Inspect","Inspection
   if(!recipientOK())h+=`<div class="alert red">${ic("alert")}<div><b>Report recipient not set.</b> Set it under Settings.</div></div>`;
   if(!me)h+=`<div class="alert blue">${ic("user")}<div><b>Who are you?</b> Pick your name once so it fills in on every report.<br><button class="btn o s" style="margin-top:8px" onclick="askName().then(()=>viewInspect())">Pick my name</button></div></div>`;
   if(drafts.length){h+=`<h2 id="drafts">Continue <span class="cnt">${drafts.length}</span></h2>`;
-    drafts.forEach(d=>{const t=tabByNum(d.tab);const FUEL=t.kind==="fuel";const REC=t.kind==="record"||FUEL;const s=REC?null:stats(d);const p=FUEL?(FU(d).amAt?.5:.1):REC?Math.max(0,8-recProblems(d).length)/8:(s.total?s.rated/s.total:0);
+    drafts.forEach(d=>{const t=tabByNum(d.tab);const FUEL=t.kind==="fuel";const T5K=t.kind==="take5";const REC=t.kind==="record"||FUEL||T5K;const s=REC?null:stats(d);const p=FUEL?(FU(d).amAt?.5:.1):T5K?t5Answered(d)/14:REC?Math.max(0,8-recProblems(d).length)/8:(s.total?s.rated/s.total:0);
       h+=`<div class="card tap draft" onclick="go('#insp/${d.id}')"><div class="tab">${ring(p)}<div class="x"><b>${pad(t.num)} · ${esc(t.short)}</b><span>${esc(d.details.location||"No location yet")} · ${fmtDT(d.details.datetime)}</span>
         ${s?`<div class="libmeta"><span class="tag">${s.rated}/${s.total} rated</span>${s.UA?`<span class="tag r">${s.UA} UA</span>`:""}${s.NI?`<span class="tag o">${s.NI} NI</span>`:""}</div>`:""}</div>
         <button class="iconbtn" aria-label="Delete draft" onclick="event.stopPropagation();delDraft('${d.id}')">${ic("trash")}</button></div></div>`})}
@@ -155,8 +156,8 @@ function askName(){return new Promise(res=>{const s=sheet(`<h3>Who are you?</h3>
 async function delDraft(id){if(!await ask2("Delete this draft?","The unfinished inspection and its photos are removed from this phone. This cannot be undone.","Delete",true))return;const d=await dbGet("drafts",id);await dbDel("drafts",id);if(d)queuePing(d,"deleted");toast("Draft deleted");route()}
 /* ---------- status pings: lets Insights see inspections that are started but not sent (name, inspection, location and times only) ---------- */
 function pingMeta(d){const t=tabByNum(d.tab);const s=stats(d);
-  const progress=t.kind==="fuel"?(FU(d).amAt?"start of day done":"start of day"):t.kind==="record"?`${Math.max(0,8-recProblems(d).length)}/8 fields`:`${s.rated}/${s.total} rated`;
-  return {name:(d.details.inspector||ls("inspector")||"").trim(),no:pad(t.num),title:t.short,location:d.details.location||"",started:new Date(d.created).toISOString(),ua:s.UA,ni:s.NI,snn:s.snnN,progress}}
+  const progress=t.kind==="fuel"?(FU(d).amAt?"start of day done":"start of day"):t.kind==="take5"?`${t5Answered(d)}/14 answered`:t.kind==="record"?`${Math.max(0,8-recProblems(d).length)}/8 fields`:`${s.rated}/${s.total} rated`;
+  return {name:(d.details.inspector||ls("inspector")||"").trim(),no:pad(t.num),title:t.short,location:d.details.location||"",started:new Date(d.created).toISOString(),ua:t.kind==="take5"?(t5Stop(d)?1:0):s.UA,ni:s.NI,snn:s.snnN,progress}}
 function getPings(){try{return JSON.parse(ls("pings")||"{}")}catch(e){return {}}}
 function queuePing(d,state,extra){if(state==="draft"&&!problems(d).length)state="finished";const p=getPings();p[d.id]={action:"status",uid:d.id,state,meta:pingMeta(d),...(extra||{})};ls("pings",JSON.stringify(p));d._pinged=Date.now();flushPings()}
 let PINGING=false;
