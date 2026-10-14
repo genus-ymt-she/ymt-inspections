@@ -93,7 +93,7 @@ await step("computer screen: side menu and two-column Home; phone keeps one colu
 await step("Inspect tab holds the six inspection and report tiles", async () => {
   await page.click("nav.tabs >> text=Inspect"); await page.waitForFunction(() => location.hash === "#inspect"); await page.waitForSelector(".tiles .tile");
   await page.waitForSelector("nav.tabs a[data-t=inspect].on", { timeout: 5000 }).catch(() => { throw new Error("Inspect tab not active"); });
-  const labels = await page.$$eval(".tiles .tile b", e => e.map(x => x.textContent.trim()).join("|")); if (labels !== "Inspection|Task Observation|Mentoring|Hazard|Positive|Trade Assistants") throw new Error("inspect tiles: " + labels);
+  const labels = await page.$$eval(".tiles .tile b", e => e.map(x => x.textContent.trim()).join("|")); if (labels !== "Inspection|Take 5|Task Observation|Mentoring|Hazard|Positive|Trade Assistants") throw new Error("inspect tiles: " + labels);
   if (await page.$("#stp")) throw new Error("status panel should be on Home only");
   await settle(page); await shot(page, "01b-inspect");
 });
@@ -739,6 +739,53 @@ await step("High-or-above fire danger day: Home banner with today's controls, po
   const nxt = await f.evaluate(() => { ls("fdr", JSON.stringify({ at: Date.now(), date: todayISO(), today: "Moderate", tomorrow: "Extreme" })); const S = SITEST; SITEST = null; const h = fdBannerHTML(); SITEST = S; return h; });
   if (!/Tomorrow: EXTREME fire danger/.test(nxt)) throw new Error("tomorrow note");
   await f.context().close();
+});
+await step("Take 5: from the Inspect tab – Yes/No questions, hazard controls from the form, PROCEED → signed, emailed PDF; DO NOT PROCEED from the Trade Assistants tab; counted in Monthly figures", async () => {
+  const sign = async p => { const box = await p.locator("#sig").boundingBox(); await p.mouse.move(box.x + 30, box.y + 90); await p.mouse.down(); await p.mouse.move(box.x + 160, box.y + 40, { steps: 8 }); await p.mouse.up(); };
+  const p = await newPage({ name: "Jayden Mullan", hash: "#inspect" }); await p.waitForSelector(".tile.t5tile");
+  await p.click(".tile.t5tile"); await p.waitForFunction(() => CUR && CUR.tab === 50); await p.waitForSelector(".t5-yn");
+  await p.fill('[data-d="location"]', "Switchyard bay 3"); await p.fill('[data-t5="task"]', "Pull cable into conduit run C2");
+  for (let i = 0; i < 7; i++) await p.click(`.t5-list .t5-q:nth-of-type(${i + 1}) .t5-yn .y`);
+  if (!/Consider the following hazards/.test(await p.textContent("#app"))) throw new Error("hazards should show after all Yes");
+  const hz = await p.$$(".t5-list"); if (hz.length !== 2) throw new Error("hazard list");
+  const H = i => `.t5-list >> nth=1 >> .t5-q >> nth=${i}`;
+  for (let i = 0; i < 7; i++) await p.click(`${H(i)} >> .t5-yn >> ${i === 1 || i === 6 ? ".y" : ".n"}`);
+  if ((await p.evaluate(() => problems(CUR))).filter(x => /Hazard [27]/.test(x)).length !== 2) throw new Error("controls should be required for hazards 2 and 7");
+  await p.check(".t5-ctl >> nth=0 >> input[type=checkbox] >> nth=0");
+  await p.fill('[data-t5o="6"]', "Uneven ground at the pit edge – timber mats laid, spotter");
+  await p.click(".card .t5-q .t5-yn .y >> nth=-1");
+  await p.waitForSelector(".t5-out.go"); if (!/PROCEED TO COMPLETE TASK/.test(await p.textContent(".t5-out.go"))) throw new Error("proceed banner");
+  const pr = await p.evaluate(() => problems(CUR)); if (pr.length) throw new Error("problems: " + pr.join("; "));
+  await settle(p); await shot(p, "70-take5-form");
+  await p.evaluate(() => toReview()); await p.waitForFunction(() => location.hash.startsWith("#review/")); await sign(p);
+  await p.waitForFunction(() => typeof PDFFILE !== "undefined" && PDFFILE && PDFFILE.size > 10000, null, { timeout: 30000 });
+  if (!/I have completed this Take 5 honestly/.test(await p.textContent("#app"))) throw new Error("declaration");
+  await settle(p); await shot(p, "71-take5-review");
+  const before = relay.mail.length; await p.click("#bShare"); await p.waitForFunction(() => location.hash === "#inspect", null, { timeout: 30000 });
+  const m = relay.mail.slice(before).find(x => /^YMT Take 5/.test(x.subject || ""));
+  if (!m || !m.attachments || m.to !== "darren.frizzell@genus.com.au" || !/\| Proceed$/.test(m.subject)) throw new Error("take 5 email: " + (m && m.subject));
+  if (!/2a – I have confirmed/.test(m.htmlBody) || !/7a – Uneven ground/.test(m.htmlBody)) throw new Error("controls in email");
+  const row = relay.sheet("Sent").data.slice(1).find(r => String(r[6]) === "50"); if (!row || row[9] !== 0) throw new Error("Sent log row");
+  // from the Trade Assistants tab: a No → DO NOT PROCEED, supervisor named, still sent so the stop is recorded
+  await p.evaluate(() => go("#ta")); await p.waitForSelector(".tacard >> text=Take 5 – before you start a task");
+  if (!/1 sent today/.test(await p.textContent(".tacard >> nth=1"))) throw new Error("TA card count");
+  await p.click(".tacard >> text=Take 5 – before you start a task"); await p.waitForFunction(() => CUR && CUR.tab === 50); await p.waitForSelector(".t5-yn");
+  await p.fill('[data-d="location"]', "Laydown 2"); await p.fill('[data-t5="task"]', "Unload cable drums with telehandler");
+  await p.click(".t5-list .t5-q:nth-of-type(1) .t5-yn .y"); await p.click(".t5-list .t5-q:nth-of-type(6) .t5-yn .n");
+  await p.waitForSelector(".t5-out.stop"); if (await p.$(".t5-ctl") || /Consider the following hazards/.test(await p.textContent("#app"))) throw new Error("hazards should hide after a No");
+  if (!(await p.evaluate(() => problems(CUR))).some(x => /name the Supervisor/.test(x))) throw new Error("supervisor required");
+  await p.fill('[data-t5="sup"]', "Paul Delaney"); await settle(p); await shot(p, "72-take5-stop");
+  await p.evaluate(() => toReview()); await p.waitForFunction(() => location.hash.startsWith("#review/")); await sign(p);
+  await p.waitForFunction(() => typeof PDFFILE !== "undefined" && PDFFILE && PDFFILE.size > 10000, null, { timeout: 30000 });
+  const b2 = relay.mail.length; await p.click("#bShare"); await p.waitForFunction(() => location.hash === "#inspect", null, { timeout: 30000 });
+  const m2 = relay.mail.slice(b2).find(x => /^YMT Take 5/.test(x.subject || "")); if (!m2 || !/DO NOT PROCEED – referred to Supervisor/.test(m2.subject)) throw new Error("stop email: " + (m2 && m2.subject));
+  await p.context().close();
+  // monthly figures: 2 Take 5s, 1 stopped; not counted as inspections
+  await page.evaluate(() => { ls("mgrPin", "2468"); FGM = todayISO().slice(0, 7); go("#figures"); }); await page.waitForSelector(".fg-t5");
+  if (!/^Take 5s\s*2\s*1 stopped/.test((await page.textContent(".fg-t5")).trim())) throw new Error("figures: " + await page.textContent(".fg-t5"));
+  const insp = +(await page.textContent(".fg-kpis .card >> nth=0 >> b")); const want = relay.sheet("Sent").data.slice(1).filter(r => !["23", "28", "50"].includes(String(r[6]).padStart(2, "0")) && String(r[2]) === perth(0).slice(0, 7)).length;
+  if (insp !== want) throw new Error(`inspections ${insp} want ${want}`);
+  await settle(page); await shot(page, "73-figures-take5");
 });
 await step("CSV exports", async () => {
   const [dl] = await Promise.all([page.waitForEvent("download"), page.evaluate(() => exportActions())]);

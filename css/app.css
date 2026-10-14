@@ -905,6 +905,25 @@ nav.tabs a.em-tab.on .ic{stroke:var(--ua)}
 .fd-next>.ic{flex:none;margin-top:2px;color:var(--accent)}.fd-next span{display:flex;flex-direction:column}.fd-next b{font-size:14.5px}
 .fd-pop{text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}.fd-pop h3{margin:8px 0 0}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .fd-do summary{color:var(--ink)}}
+/* ---------- 50 – Take 5 ---------- */
+.t5-note{margin-top:0}
+.t5-list{padding:4px 12px}
+.t5-q{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.t5-list>.t5-q:last-of-type{border-bottom:0}
+.t5-q.bad .t5-t{color:var(--ua);font-weight:700}.t5-q.warn .t5-t{font-weight:700}
+.t5-n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--surface-3);display:grid;place-items:center;font-weight:800;font-size:13px;color:var(--brand)}
+.t5-t{flex:1;min-width:0;font-size:15px;line-height:1.35}
+.t5-yn{display:flex;gap:6px;flex:none}
+.t5-yn button{min-width:58px;min-height:46px;border-radius:12px;border:2px solid var(--line-2);background:var(--surface);font-weight:900;font-size:14px;color:var(--ink-2)}
+.t5-yn .y.on{background:var(--c);border-color:var(--c);color:#fff}.t5-yn .n.on{background:var(--ua);border-color:var(--ua);color:#fff}
+.t5-ctl{margin:0 0 10px 36px;padding:10px 12px;border-radius:12px;background:var(--ni-soft);border:1px solid color-mix(in srgb,var(--ni) 35%,transparent)}
+.t5-ctl>b{display:block;margin-bottom:6px;font-size:14px}
+.t5-c{display:flex;gap:10px;align-items:flex-start;padding:6px 0;font-size:13.5px;line-height:1.4;cursor:pointer}
+.t5-c input{width:22px;height:22px;flex:none;margin-top:1px;accent-color:var(--c)}
+.t5-out{display:flex;gap:12px;align-items:center;border-radius:var(--r);padding:12px 14px;margin:12px 0;color:#fff}
+.t5-out>.ic{width:26px;height:26px;flex:none}.t5-out span{display:flex;flex-direction:column;font-size:13px}.t5-out b{font-size:16px;letter-spacing:.02em}
+.t5-out.go{background:#2E7D32}.t5-out.stop{background:#C62828}.t5-out.big b{font-size:19px}
+@media (max-width:420px){.t5-q{flex-wrap:wrap}.t5-yn{margin-left:36px}}
 /* ---------- My SHEQ Planner (SHE Manager only) ---------- */
 .tile.pl-tile .ti{background:var(--accent-soft);color:var(--accent)}
 .pl-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:2px 0 12px}
@@ -951,6 +970,8 @@ nav.tabs a.em-tab.on .ic{stroke:var(--ua)}
 .fg-kpis .card{display:flex;flex-direction:column;gap:4px;margin:0;border-top:4px solid var(--accent)}
 .fg-kpis b{font-size:40px;line-height:1.05;font-variant-numeric:tabular-nums}.fg-kpis small{color:var(--muted);font-size:12.5px;flex:1}
 .fg-kpis .btn{align-self:flex-start;margin-top:6px}
+.fg-kpis .fg-t5{grid-column:1/-1}.fg-kpis .fg-t5 b{color:#1E8E3E}
+.t5tile .ti{background:var(--c-soft);color:var(--c)}
 .fg-man{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:14px}
 @media (max-width:420px){.fg-kpis{grid-template-columns:1fr}}
 /* ---------- Inspection forms added in the app ---------- */

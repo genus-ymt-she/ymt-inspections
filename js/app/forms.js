@@ -28,7 +28,7 @@ cfApply();
 function cfStore(forms){const before=JSON.stringify(CFORMS.forms);CFORMS={at:Date.now(),forms:forms||[]};ls("customForms",JSON.stringify(CFORMS));cfApply();return JSON.stringify(CFORMS.forms)!==before}
 async function cfRefresh(){if(!directOn()||navigator.onLine===false)return false;
   try{const r=await fetch(relayQ("action=forms"),{redirect:"follow"});const j=await r.json();if(!j.ok||!Array.isArray(j.forms))return false;return cfStore(j.forms)}catch(e){return false}}
-const cfNext=()=>Math.max(CF_FIRST-1,...TABS.map(t=>t.num),...(CFORMS.forms||[]).map(f=>f.num))+1;
+const cfNext=()=>Math.max(CF_FIRST-1,...TABS.filter(t=>t.num!==T5_NUM).map(t=>t.num),...(CFORMS.forms||[]).map(f=>f.num))+1;
 const cfClean=s=>String(s||"").replace(/[<>]/g,"").replace(/\s+/g," ").trim();
 /* SNN given as a code (VD) or a name (Vehicles & Driving) */
 const cfSnn=x=>{x=cfClean(x);return SNN[x.toUpperCase()]?x.toUpperCase():Object.keys(SNN).find(k=>nameEq(SNN[k],x))||""};
