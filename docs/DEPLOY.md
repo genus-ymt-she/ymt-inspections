@@ -230,3 +230,23 @@ as a new version (Deploy → Manage deployments → Edit → New version).
 
 Relay update required for *Submitted forms*: paste the new `PARRON_Relay_Code.gs` and deploy a new version
 (Deploy → Manage deployments → Edit → New version). No `setup` run or new sheets needed.
+
+## High-or-above fire danger days (v3.12)
+
+When today's Fire Danger Rating is **High, Extreme or Catastrophic** – from the Bureau of Meteorology feed or the
+HVMB & Fire Status set on site, whichever is higher – Home shows a banner at the top:
+- the rating and what applies (BFMP Table 13; Appendix D on Extreme; Project Director decision on Catastrophic);
+- **Inspection 25 – Fire Danger Day**: not done / started on this phone / sent by whom and when (from every phone),
+  with *Start* (the rating is filled in for you);
+- **Midday re-check**: done or due, with *Update* (HVMB & Fire Status);
+- *What must be done today* – the day's controls with BFMP references.
+
+Supervisors, the SHE team, managers and Manager mode also get a pop-up once a day until Inspection 25 is sent.
+When tomorrow's rating is High or above, Home shows a plan-ahead note (Catastrophic: Project Director decides today).
+**Fire danger emails (relay v3.12):** on a High, Extreme or Catastrophic day an email goes between 5 and 6 am to the
+SHE Manager, Senior SHE Advisor, SHE Advisor, Senior Civil and Electrical Supervisors, Civil and Electrical Supervisors and
+the Construction Manager – Inspection 25 before work, pre-start brief, TFB/HVMB check, midday re-check and the day's
+controls. The evening before an Extreme or Catastrophic day (6–7 pm) they get a plan-ahead email (Catastrophic: Project
+Director decides that day). One email each, once a day. The rating is your manual rating for the day if set, otherwise
+the official BoM ratings feed. Change the recipients without editing code: Script property `FIRE_DAY_TO` =
+comma-separated Genus addresses. Relay update required (paste, deploy a new version).

@@ -44,7 +44,7 @@ function viewStatus(){setHeader("HVMB & Fire Status","Harvest & Vehicle Movement
     if(!S.notToday){const s=S.s;h+=`<h2>Restrictions today</h2>`;
       if(s.hvmb==="Yes")h+=stBox(STATUS_REF.hvmb.title,STATUS_REF.hvmb.items,STATUS_REF.hvmb.lead,"hv");
       if(s.tfb==="Yes")h+=stBox(STATUS_REF.tfb.title,STATUS_REF.tfb.items,"","tfb");
-      const key=s.fdr==="No Rating"||s.fdr==="Moderate"?"No Rating / Moderate":s.fdr;h+=stBox(`Fire Danger Rating: ${key} (BFMP Table 13)`,STATUS_REF.fdr[key]||[],"","fdr")}
+      const key=s.fdr==="No Rating"||s.fdr==="Moderate"?"No Rating / Moderate":s.fdr;h+=stBox(`Fire Danger Rating: ${key} (BFMP Table 13)`,STATUS_REF.fdr[key]||[],"","fdrbox")}
     h+=`<button class="btn o w" onclick="statusEdit()">${ic("edit","s")} Update status</button>
      <h2>Check the status</h2><div class="card st-links">
       <a href="https://www.dfes.wa.gov.au/hazard-information/fire-danger-ratings" target="_blank" rel="noopener">${ic("ext","s")} DFES Fire Danger Ratings</a>

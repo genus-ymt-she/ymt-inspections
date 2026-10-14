@@ -62,7 +62,7 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   const me=ls("inspector")||"";const drafts=await dbAll("drafts");const ob=await dbAll("outbox");if(stale(seq))return;
   const reg=regAll();const st=regStats(reg);const mine=reg.filter(f=>isMine(f)&&f.status==="Open");
   const mon=new Date();mon.setDate(1);mon.setHours(0,0,0,0);const sentMonth=(await dbAll("sent")).filter(s=>s.sentAt>=mon.getTime()).length;if(stale(seq))return;
-  const A=`<div id="alb">${alertBannerHTML()}</div><div id="stp">${statusPanelHTML()}</div><div id="hcd">${historyCardHTML()}</div>`;
+  const A=`<div id="alb">${alertBannerHTML()}</div><div id="fdb">${fdBannerHTML()}</div><div id="stp">${statusPanelHTML()}</div><div id="hcd">${historyCardHTML()}</div>`;
   let h=`<section class="hero"><div class="hi">${esc(greeting())}${me?",":""}</div><h1>${esc(firstName(me)||"Welcome")}</h1>
    <div class="proj">${ic("pin","s")} ${esc(CONFIG.jobNo)} · ${esc(CONFIG.projectShort)} · ${new Date().toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"})}</div>
    ${wxHTML()}
@@ -86,10 +86,12 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   render(h);
   regRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home"&&!stale(seq))viewHome()});
   if(isManager())plRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home"&&!stale(seq))viewHome()});
-  stRefresh().then(ch=>{const e=document.getElementById("stp");if(ch&&e&&!stale(seq))e.innerHTML=statusPanelHTML()});
+  const fdUpd=()=>{const e=document.getElementById("fdb");if(e&&!stale(seq)){e.innerHTML=fdBannerHTML();fdPopup()}};
+  stRefresh().then(ch=>{const e=document.getElementById("stp");if(ch&&e&&!stale(seq))e.innerHTML=statusPanelHTML();if(ch)fdUpd()});
+  fdRefresh().then(ch=>{if(ch||FD.done.length===0)fdUpd()});
   alertPopup();alRefresh().then(ch=>{const e=document.getElementById("alb");if(ch&&e&&!stale(seq)){e.innerHTML=alertBannerHTML();alertPopup()}});
   histLoad().then(ch=>{const e=document.getElementById("hcd");if(ch&&e&&!stale(seq))e.innerHTML=historyCardHTML()});
-  Promise.all([wxRefresh(),fdrRefresh()]).then(r=>{if(r.some(Boolean)&&(location.hash||"#home")==="#home"&&!stale(seq)){const w=document.querySelector(".hero .wx");if(w)w.outerHTML=wxHTML()}})}
+  Promise.all([wxRefresh(),fdrRefresh()]).then(r=>{if(r.some(Boolean)&&(location.hash||"#home")==="#home"&&!stale(seq)){const w=document.querySelector(".hero .wx");if(w)w.outerHTML=wxHTML();fdUpd()}})}
 /* Inspect tab – start an inspection or report, carry on a draft, see what was sent */
 async function viewInspect(){const seq=ROUTE_SEQ;setHeader("Inspect","Inspections, observations and reports",SETTINGS_BTN);
   const me=ls("inspector")||"";const drafts=(await dbAll("drafts")).sort((a,b)=>b.updated-a.updated);

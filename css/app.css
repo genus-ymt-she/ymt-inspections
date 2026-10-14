@@ -787,7 +787,7 @@ nav.tabs a.em-tab.on .ic{stroke:var(--ua)}
 .st-ns b{display:block;font-size:22px;color:var(--ink)}.st-ns span{display:block;font-weight:700;color:var(--ink-2);margin-top:2px}
 .st-upd{margin-top:10px}
 .st-box h3{margin:0 0 6px;font-size:16px}.st-box ul{margin:0;padding-left:20px}.st-box li{margin:6px 0;line-height:1.45}
-.st-box.hv{border-left:6px solid #C62828}.st-box.tfb{border-left:6px solid #C62828}.st-box.fdr{border-left:6px solid var(--accent)}
+.st-box.hv{border-left:6px solid #C62828}.st-box.tfb{border-left:6px solid #C62828}.st-box.fdrbox{border-left:6px solid var(--accent)}
 .st-lead{font-weight:800;color:#C62828;margin-bottom:4px}
 .st-links{display:grid;gap:4px}.st-links a,.st-links span{display:flex;gap:8px;align-items:center;min-height:44px;font-weight:700}
 .st-hist{padding:8px 0}.st-hist+.st-hist{border-top:1px solid var(--line)}.st-hist small{display:block;color:var(--muted)}
@@ -884,6 +884,27 @@ nav.tabs a.em-tab.on .ic{stroke:var(--ua)}
 
 .al-mail{display:flex;gap:8px;align-items:flex-start;margin-top:10px;padding:10px 12px;border-radius:var(--r-s);background:var(--c-soft);font-size:13px;color:var(--ink-2)}
 .al-mail.bad{background:var(--ni-soft)}.al-mail>.ic{margin-top:2px;flex:none}.al-mail span{min-width:0;overflow-wrap:anywhere}.al-mail b{display:block;color:var(--ink)}
+/* ---------- High-or-above fire danger days ---------- */
+.fd-banner{border-radius:var(--r-l);padding:14px 16px;margin:0 0 12px;background:var(--surface);border:3px solid var(--fb);box-shadow:var(--shadow-2)}
+.fd-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.fd-r{display:inline-flex;flex-direction:column;background:var(--fb);color:var(--fi);border-radius:12px;padding:6px 14px;line-height:1.1}
+.fd-r small{font-size:11px;font-weight:800;letter-spacing:.1em}.fd-r b{font-size:24px;font-weight:900;letter-spacing:.04em}
+.fd-src{font-size:12.5px;color:var(--muted);font-weight:600}
+.fd-lead{margin:10px 0 8px;font-weight:700;font-size:15px}
+.fd-steps{display:flex;flex-direction:column;gap:6px}
+.fd-step{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line)}
+.fd-step>.ic{flex:none;color:var(--muted)}.fd-step span{flex:1;min-width:0;display:flex;flex-direction:column}.fd-step small{color:var(--muted);font-size:12.5px}
+.fd-step.ok{background:var(--c-soft);border-color:color-mix(in srgb,var(--c) 30%,transparent)}.fd-step.ok>.ic{color:var(--c)}
+.fd-step.late{background:var(--ua-soft);border-color:color-mix(in srgb,var(--ua) 35%,transparent)}.fd-step.late>.ic{color:var(--ua)}
+.fd-go{flex:none;min-height:38px}
+.fd-do{margin-top:10px}.fd-do summary{cursor:pointer;font-weight:800;font-size:14px;min-height:36px;display:flex;align-items:center;color:var(--brand)}
+:root[data-theme="dark"] .fd-do summary{color:var(--ink)}
+.fd-do ul{margin:4px 0 0 18px;padding:0;display:flex;flex-direction:column;gap:5px;font-size:14px}.fd-do small{color:var(--muted);white-space:nowrap}
+.fd-banner.lv1 .fd-lead,.fd-banner.lv2 .fd-lead{color:var(--ua)}
+.fd-next{display:flex;gap:10px;align-items:flex-start;border-radius:var(--r);padding:10px 12px;margin:0 0 12px;background:var(--surface);border:2px dashed var(--fb);font-size:13.5px}
+.fd-next>.ic{flex:none;margin-top:2px;color:var(--accent)}.fd-next span{display:flex;flex-direction:column}.fd-next b{font-size:14.5px}
+.fd-pop{text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}.fd-pop h3{margin:8px 0 0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .fd-do summary{color:var(--ink)}}
 /* ---------- My SHEQ Planner (SHE Manager only) ---------- */
 .tile.pl-tile .ti{background:var(--accent-soft);color:var(--accent)}
 .pl-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:2px 0 12px}
