@@ -8,7 +8,12 @@ function prepPDF(d){PDFFILE=null;setShareState(false);clearTimeout(prepPDF._t);p
   PDFFILE=new File([b],fileName(d),{type:"application/pdf"});setShareState(true)}catch(e){console.error(e);toast("Could not create the PDF");setShareState(true)}},200)}
 function isMobile(){return !!((navigator.userAgentData&&navigator.userAgentData.mobile)||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent)))}
 /* who a report goes to: the SHE Manager, or the form's own list (e.g. the fuel register goes to the Project Admin as well) */
-function sendTo(d){return d&&tabByNum(d.tab).kind==="fuel"?fuelRecipients(d).join(","):recipient()}
+function sendTo(d){if(d&&tabByNum(d.tab).kind==="fuel")return fuelRecipients(d).join(",");const me=ccMe(d);return me&&!recipient().toLowerCase().split(/[,;]\s*/).includes(me)?`${recipient()},${me}`:recipient()}
+/* "Email me a copy": the person completing the form (Genus address, from the team list or their own Settings) – remembered on the phone */
+function myCopyEmail(d){const n=(d&&d.details.inspector)||ls("inspector")||"";const p=teamBy(n);const e=(p&&p.email)||(nameEq(n,ls("inspector")||"")?ls("myEmail")||"":"");return /@genus\.com\.au$/i.test(e)?e.toLowerCase():""}
+const ccMe=d=>ls("ccMe")==="1"?myCopyEmail(d):"";
+function ccMeHTML(d){const e=myCopyEmail(d);if(!e)return `<div class="muted cc-me">${ic("info","s")} Want a copy? Pick your name in Settings – a Genus email address is needed.</div>`;
+  return `<label class="al-chk cc-me"><input type="checkbox" id="ccMe" ${ls("ccMe")==="1"?"checked":""} onchange="ls('ccMe',this.checked?'1':'0')"> <span>Email me a copy too <span class="muted">(${esc(e)})</span></span></label>`}
 function copyAddr(){try{if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(sendTo(CUR)).catch(()=>{})}catch(e){}}
 function sendShare(){const d=CUR;if(!PDFFILE){toast("Report still being prepared – tap again in a moment");return}
   if(!(isMobile()&&navigator.canShare&&navigator.canShare({files:[PDFFILE]}))){sendOutlookLink();return}

@@ -38,6 +38,7 @@ function problems(d){const p=[];const t=tabByNum(d.tab);if(t.kind==="record")ret
 function logVal(d,r,c){return ((d.details.log||{})[r+"|"+c]||"").trim()}
 function logState(d,c){const t=tabByNum(d.tab);const n=t.log.rows.filter((_,r)=>logVal(d,r,c)).length;return n===0?"none":n===t.log.rows.length?"done":"part"}
 function logWarnings(d){const t=tabByNum(d.tab);if(!t.log)return[];const w=[];t.log.rows.forEach((row,r)=>{if(!row.warnIf)return;t.log.cols.forEach((col,c)=>{if(logVal(d,r,c)===row.warnIf)w.push(`${col}: ${row.warn}`)})});return w}
+function chkExtras(d,c){return ((d.details.checkExtra||{})[c])||[]}
 function chkPhoto(d,c,k){return ((d.details.checkPhotos||{})[c+"|"+k])||null}
 function checkStarted(d,c){const t=tabByNum(d.tab);return !!(chkVal(d,c,0)||chkVal(d,c,2)||(t.checks.photos||[]).some((_,k)=>chkPhoto(d,c,k)))}
 function chkVal(d,c,r){return ((d.details.checks||{})[c+"|"+r]||"").trim()}

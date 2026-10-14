@@ -24,7 +24,7 @@ function bodyText(d,limit){const K=tabByNum(d.tab).kind;if(K==="record"||K==="fu
   if(t.fixed)t.fixed.forEach(f=>{if(!/^(Company|Project|Principal|Job|Area)/.test(f[0]))L.push(`• ${f[0]}: ${f[1]}`)});
   if(t.log){const Lg=t.log;Lg.cols.forEach((col,c)=>{if(logState(d,c)!=="none")L.push(`• ${col}: ${Lg.rows.map((row,r)=>`${row.no} ${logVal(d,r,c)||"-"}`).join(" | ")}`)});logWarnings(d).forEach(w=>L.push(`⚠ ${w}`))}
   {const vr=visualPhotos(d).length;if(vr)L.push(`• Visual record photos (compliant items): ${vr} (in PDF)`)}
-  if(t.checks)t.checks.cols.forEach((c,i)=>L.push(`• ${c}: ${chkVal(d,i,0)||"not recorded"}${chkVal(d,i,1)?` – ${chkVal(d,i,1)}`:""}${chkVal(d,i,2)?` – ${chkVal(d,i,2)}`:""}${(t.checks.photos||[]).filter((_,k)=>chkPhoto(d,i,k)).length?` – ${(t.checks.photos||[]).filter((_,k)=>chkPhoto(d,i,k)).length} timestamped photos (in PDF)`:""}`));
+  if(t.checks)t.checks.cols.forEach((c,i)=>L.push(`• ${c}: ${chkVal(d,i,0)||"not recorded"}${chkVal(d,i,1)?` – ${chkVal(d,i,1)}`:""}${chkVal(d,i,2)?` – ${chkVal(d,i,2)}`:""}${(t.checks.photos||[]).filter((_,k)=>chkPhoto(d,i,k)).length+chkExtras(d,i).length?` – ${(t.checks.photos||[]).filter((_,k)=>chkPhoto(d,i,k)).length+chkExtras(d,i).length} timestamped photos (in PDF)`:""}`));
   {const nr=narrRows(d);if(nr.length){L.push("");L.push("OBSERVATION RECORD");nr.forEach(r=>{L.push(`${r[0]}:`);L.push(r[1])})}}
   L.push("");L.push("RESULT");
   L.push(`C ${s.C}  |  UA ${s.UA}  |  NI ${s.NI}  |  N/A ${s.NA}${s.pct!==null?`  |  ${s.pct}% compliant`:""}`);
@@ -63,7 +63,7 @@ function htmlBody(d){if(tabByNum(d.tab).kind==="record")return recHtml(d);if(tab
   if(t.fixed)t.fixed.forEach(f=>{if(!/^(Company|Project|Principal|Job|Area)/.test(f[0]))rows.push(f)});
   if(t.log){t.log.cols.forEach((col,c)=>{if(logState(d,c)!=="none")rows.push([`Part 1 – ${col}`,t.log.rows.map((row,r)=>`${row.no} ${logVal(d,r,c)||"-"}`).join("  |  ")])})}
   {const vr=visualPhotos(d).length;if(vr)rows.push(["Visual record photos",`${vr} photo(s) of compliant items in the PDF`])}
-  if(t.checks)t.checks.cols.forEach((c,i)=>rows.push([c,[chkVal(d,i,0)||"not recorded",chkVal(d,i,1),chkVal(d,i,2),(()=>{const n=(t.checks.photos||[]).filter((_,k)=>chkPhoto(d,i,k)).length;return n?n+" timestamped photos (in PDF)":""})()].filter(Boolean).join(" – ")]));
+  if(t.checks)t.checks.cols.forEach((c,i)=>rows.push([c,[chkVal(d,i,0)||"not recorded",chkVal(d,i,1),chkVal(d,i,2),(()=>{const n=(t.checks.photos||[]).filter((_,k)=>chkPhoto(d,i,k)).length+chkExtras(d,i).length;return n?n+" timestamped photos (in PDF)":""})()].filter(Boolean).join(" – ")]));
   let h=`<div style="font-family:Arial,Helvetica,sans-serif;color:#1B2430;max-width:860px">
   <div style="background:#112B4E;color:#fff;padding:12px 14px;border-bottom:4px solid #EC7723"><div style="font-size:12px;color:#EC7723;font-weight:700;letter-spacing:.06em">PARRON | SITE INSPECTION REPORT</div><div style="font-size:18px;font-weight:700">${e(t.title)}</div></div>
   <table style="border-collapse:collapse;margin:12px 0;width:100%">${rows.map(r=>`<tr><td ${td.replace('"',  '"background:#F2F4F7;font-weight:700;color:#112B4E;width:200px;')}>${e(r[0])}</td><td ${td}>${e(r[1])}</td></tr>`).join("")}</table>

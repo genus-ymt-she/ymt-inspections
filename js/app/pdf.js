@@ -81,7 +81,8 @@ async function buildPDF(d){if(PDFBLOB)return PDFBLOB;if(tabByNum(d.tab).kind==="
   {const vp=visualPhotos(d);if(vp.length){if(y>230){doc.addPage();y=16}sectionTitle(`PHOTOS – VISUAL RECORD, COMPLIANT ITEMS (${vp.length})`);const pw=(W-2*M-2*4)/3;let rh=0;
     vp.forEach((it,i)=>{const ip=doc.getImageProperties(it.p);const phh=Math.min(pw*ip.height/ip.width,70);const col=i%3;if(col===0&&i>0){y+=rh+6;rh=0}if(col===0&&y+phh>280){doc.addPage();y=16}
       const x=M+col*(pw+4);const iw=phh*ip.width/ip.height;doc.addImage(it.p,"JPEG",x,y,Math.min(iw,pw),phh);doc.setFontSize(7);doc.setTextColor(80);doc.text(`Item ${it.id}`,x,y+phh+3.5);rh=Math.max(rh,phh)});y+=rh+8}}
-  if(t.checks&&(t.checks.photos||[]).length){const C=t.checks;const list=[];C.cols.forEach((col,c)=>C.photos.forEach((_,k)=>{const ph=chkPhoto(d,c,k);if(ph)list.push({ph,cap:`${col} – ${(C.photoShort||[])[k]||""}`})}));
+  if(t.checks&&(t.checks.photos||[]).length){const C=t.checks;const list=[];C.cols.forEach((col,c)=>{C.photos.forEach((_,k)=>{const ph=chkPhoto(d,c,k);if(ph)list.push({ph,cap:`${col} – ${(C.photoShort||[])[k]||""}`})});
+      chkExtras(d,c).forEach((ph,i)=>list.push({ph,cap:`${col} – Additional ${i+1}${(ph.cap||"").trim()?`: ${ph.cap.trim()}`:""}`}))});
     if(list.length){if(y>200){doc.addPage();y=16}sectionTitle(`TRAFFIC MANAGEMENT PHOTOS – TIMESTAMPED (${list.length})`);const pw=(W-2*M-6)/2;let rowH=0;
       list.forEach((it,i)=>{const ip=doc.getImageProperties(it.ph.img);const ph=Math.min(pw*ip.height/ip.width,95);const iw=ph*ip.width/ip.height;const col=i%2;
         if(col===0&&i>0){y+=rowH+8;rowH=0}if(col===0&&y+ph>280){doc.addPage();y=16}

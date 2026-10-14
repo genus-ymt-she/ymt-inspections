@@ -10,6 +10,8 @@ document.documentElement.classList.toggle("desk",isDesk());
 const stale=seq=>seq!==ROUTE_SEQ;
 window.addEventListener("hashchange",route);
 function go(h){if(location.hash===h)route();else location.hash=h}
+/* Genus logo: back to Home from anywhere – an open form is saved on the phone first */
+function logoHome(e){if(e)e.preventDefault();closeSheet();if(CUR&&/^#(insp|review)\//.test(location.hash)){save(CUR,true);queuePing(CUR,"draft");toast("Saved on this phone – find it under Inspect › Continue",3500)}go("#home");return false}
 async function route(){const seq=++ROUTE_SEQ;const h=location.hash||"#home";const [v,id,id2]=h.slice(1).split("/");window.scrollTo(0,0);closeSheet();
   if(v!=="insp"){const b=document.getElementById("bar");if(b)b.remove()}
   document.body.classList.toggle("task",v==="insp"||v==="review"||v==="report");setNav(v);

@@ -264,3 +264,13 @@ the Trade Assistants tab.
   in the Sent sheet (form 50; a DO NOT PROCEED is recorded as 1 in the UA column) and listed in Submitted forms.
 - **Monthly figures** shows Take 5s and how many stopped, by person, separately from Inspections. The Monthly HSE summary
   PDF lists them under Lead indicators. No relay update needed.
+
+## Team suggestions (v3.14)
+- **Genus logo = Home:** tap the Genus logo (top left) on any screen to go to Home. An open inspection is saved on the
+  phone first and stays under Inspect › Continue.
+- **Additional photos on the TMP check (form 21):** each AM / PM check has an *Additional photos* box (up to 10) for signs,
+  devices, defects or conditions, each with an optional caption. They are time-stamped like the direction photos and go in
+  the PDF after them.
+- **Email me a copy:** on *Review & send*, the person completing the form can tick *Email me a copy too*. Their Genus
+  address (from the team list) is added to the report email; the choice is remembered on the phone. People without a
+  Genus email are told to pick their name in Settings. Each copy is one more recipient on the relay's daily email limit.

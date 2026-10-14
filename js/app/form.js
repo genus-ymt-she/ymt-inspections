@@ -93,7 +93,20 @@ function renderBar(d){let b=document.getElementById("bar");if(!b){b=document.cre
 function cphHTML(d,c){const t=tabByNum(d.tab);const C=t.checks;return (C.photos||[]).map((lab,k)=>{const ph=chkPhoto(d,c,k);
   const inp=(src,lbl,cls)=>`<label class="${cls}" style="text-align:center">${lbl}<input type="file" accept="image/*" ${src==="camera"?'capture="environment"':""} class="hide" onchange="addChkPhoto(${c},${k},this,'${src}')"></label>`;
   return `<div class="slot ${ph?"ok":""}"><b>📷 ${esc(lab)} <span class="req">*</span></b>${ph?`<img src="${ph.img}" onclick="zoomImg(this.src)"><div class="row">${inp("camera","Retake","addph")}${inp("upload","Upload instead","addph")}<button class="linkbtn" onclick="delChkPhoto(${c},${k})">Remove</button></div>`
-   :`<div class="pbtns">${inp("camera","📷 Take photo","btn o")}${inp("upload","🖼 Upload photo","btn g")}</div>`}</div>`}).join("")}
+   :`<div class="pbtns">${inp("camera","📷 Take photo","btn o")}${inp("upload","🖼 Upload photo","btn g")}</div>`}</div>`}).join("")+cxHTML(d,c)}
+/* optional extra photos on a check (signs, devices, defects, conditions) – each with a short caption */
+const CX_MAX=10;
+function cxHTML(d,c){const L=chkExtras(d,c);const inp=(src,lbl,cls)=>`<label class="${cls}">${lbl}<input type="file" accept="image/*" ${src==="camera"?'capture="environment"':""} class="hide" onchange="addChkExtra(${c},this,'${src}')"></label>`;
+  return `<div class="slot cx"><b>📷 Additional photos <span class="muted">· optional – signs, devices, defects, conditions</span></b>
+    ${L.length?`<div class="cx-list">${L.map((x,i)=>`<div class="cx-item"><img src="${x.img}" onclick="zoomImg(this.src)" alt="Additional photo ${i+1}"><input class="t" placeholder="What does this show? (optional)" value="${esc(x.cap||"")}" oninput="capChkExtra(${c},${i},this.value)"><button class="linkbtn" onclick="delChkExtra(${c},${i})">Remove</button></div>`).join("")}</div>`:""}
+    ${L.length<CX_MAX?`<div class="pbtns">${inp("camera",`📷 ${L.length?"Add another":"Take photo"}`,"btn g")}${inp("upload","🖼 Upload","btn g")}</div>`:`<div class="muted">Maximum ${CX_MAX} additional photos.</div>`}</div>`}
+async function addChkExtra(c,inp,src){const f=inp.files&&inp.files[0];if(!f)return;const d=CUR;const t=tabByNum(d.tab);
+  try{toast("Stamping photo…",1500);const n=chkExtras(d,c).length+1;const tgs=t.fixed?(t.fixed.find(x=>/TGS/.test(x[0]))||[])[1]:"";
+    const ph=await stampPhoto(f,[[`${t.checks.cols[c]} – Additional ${n}`,chkVal(d,c,1)||d.details.inspector].filter(Boolean).join("  ·  "),[d.details.location,tgs].filter(Boolean).join("  ·  ")],{source:src||"camera",ref:checkRefTime(d,c)});
+    ((d.details.checkExtra=d.details.checkExtra||{})[c]=d.details.checkExtra[c]||[]).push({...ph,cap:""});save(d,true);$("#cph-"+c).innerHTML=cphHTML(d,c)}
+  catch(e){console.error(e);toast("Could not read that photo")}}
+function capChkExtra(c,i,v){const L=chkExtras(CUR,c);if(L[i]){L[i].cap=v;save(CUR)}}
+async function delChkExtra(c,i){if(!await ask2("Remove this photo?","The additional photo is removed from this inspection.","Remove",true))return;chkExtras(CUR,c).splice(i,1);save(CUR);$("#cph-"+c).innerHTML=cphHTML(CUR,c)}
 function checkRefTime(d,c){const tm=chkVal(d,c,0);const dt=(d.details.datetime||"").slice(0,10);if(!tm||!dt)return null;const v=new Date(`${dt}T${tm}`);return isNaN(v)?null:v.getTime()}
 async function addChkPhoto(c,k,inp,src){const f=inp.files&&inp.files[0];if(!f)return;const d=CUR;const t=tabByNum(d.tab);
   try{toast("Stamping photo…",1500);const lab=`${t.checks.cols[c]} – ${(t.checks.photoShort||[])[k]||"Photo "+(k+1)}`;
@@ -183,7 +196,7 @@ function viewReview(d){const t=tabByNum(d.tab);if(t.kind==="fuel")return viewFue
   }else if(p.length)h+=`<div class="alert red">${ic("alert")}<div><b>Not ready to send</b><ul>${p.map(x=>`<li>${esc(x)}</li>`).join("")}</ul><button class="btn s" style="margin-top:10px" onclick="go('#insp/${d.id}')">${ic("back","s")} Back to record</button></div></div>`;
   h+=`<h2>Sign-off</h2>${REC?`<div class="muted" style="margin:0 4px 6px">${esc(t.form.declaration)}</div>`:""}<div class="card"><canvas class="sig" id="sig" aria-label="Signature pad"></canvas><div style="display:flex;justify-content:space-between;align-items:center"><span class="muted">Sign with your finger</span><button class="linkbtn" onclick="clearSig()">Clear</button></div></div>`;
   h+=`<h2>Send to SHE Manager</h2><div class="card">
-   ${recipientOK()?`<div class="muted">Report goes to <b style="color:var(--ink)">${esc(recipient())}</b></div>`:`<div class="alert red">${ic("alert")}<div>Recipient email not set – see Settings.</div></div>`}
+   ${recipientOK()?`<div class="muted">Report goes to <b style="color:var(--ink)">${esc(recipient())}</b></div>${ccMeHTML(d)}`:`<div class="alert red">${ic("alert")}<div>Recipient email not set – see Settings.</div></div>`}
    ${directOn()?`<button class="btn o w" id="bShare" ${p.length?'data-blocked="1" disabled':"disabled"} onclick="sendDirect()">${p.length?"Send report":"Preparing report…"}</button>
    <div class="muted" style="margin-top:8px">One tap. The PDF and summary are emailed straight to the SHE Manager. No signal? The report waits in the Outbox and sends automatically when you are back in range.</div>
    <details style="margin-top:14px"><summary class="muted" style="cursor:pointer;min-height:40px;display:flex;align-items:center">Other ways to send</summary>
