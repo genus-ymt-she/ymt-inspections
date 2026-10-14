@@ -787,6 +787,32 @@ await step("Take 5: from the Inspect tab – Yes/No questions, hazard controls f
   if (insp !== want) throw new Error(`inspections ${insp} want ${want}`);
   await settle(page); await shot(page, "73-figures-take5");
 });
+await step("Team suggestions: Genus logo goes Home from anywhere (form saved); extra captioned photos on the TMP check (21) in the PDF; 'Email me a copy' adds the inspector", async () => {
+  const p = await newPage({ name: "Matthew Smith", hash: "#inspect" }); await p.waitForSelector(".tiles .tile");
+  await p.evaluate(() => startInsp(21)); await p.waitForFunction(() => CUR && CUR.tab === 21); await p.waitForSelector("#cph-0 .slot.cx");
+  // additional photos on the AM check, with a caption
+  await p.setInputFiles('#cph-0 .slot.cx input[type=file] >> nth=1', path.join(root, "icon-192.png")); await p.waitForSelector("#cph-0 .cx-item img");
+  await p.fill("#cph-0 .cx-item input.t", "Speed sign 80 reinstated"); await p.setInputFiles('#cph-0 .slot.cx input[type=file] >> nth=1', path.join(root, "icon-192.png"));
+  await p.waitForFunction(() => document.querySelectorAll("#cph-0 .cx-item").length === 2);
+  const ex = await p.evaluate(() => chkExtras(CUR, 0).map(x => x.cap)); if (ex[0] !== "Speed sign 80 reinstated" || ex.length !== 2) throw new Error("extras: " + ex);
+  await p.locator("#cph-0 .slot.cx").scrollIntoViewIfNeeded(); await settle(p); await shot(p, "74-tmp-extra-photos");
+  const pdf = await p.evaluate(async () => { PDFBLOB = null; const b = await buildPDF(CUR); return b.size; }); if (!(pdf > 20000)) throw new Error("pdf " + pdf);
+  // logo → Home, the open form stays saved as a draft
+  const id = await p.evaluate(() => CUR.id); await p.click("header.top a.logo"); await p.waitForFunction(() => location.hash === "#home");
+  if (!(await p.evaluate(i => dbGet("drafts", i).then(d => !!d && chkExtras(d, 0).length === 2), id))) throw new Error("draft not kept");
+  await p.evaluate(() => go("#settings")); await p.waitForSelector("#sRec"); await p.click("header.top a.logo"); await p.waitForFunction(() => location.hash === "#home");
+  // email me a copy: off by default, then on → the inspector's Genus address is added to the report's To
+  const d = await p.evaluate(() => { CUR = null; return null; });
+  await p.evaluate(i => go("#review/" + i), id); await p.waitForSelector("#ccMe");
+  if (await p.isChecked("#ccMe")) throw new Error("copy should be off by default");
+  if (await p.evaluate(() => sendTo(CUR)) !== "darren.frizzell@genus.com.au") throw new Error("to without copy");
+  await p.check("#ccMe"); if (await p.evaluate(() => sendTo(CUR)) !== "darren.frizzell@genus.com.au,matt.smith@genus.com.au") throw new Error("to with copy: " + await p.evaluate(() => sendTo(CUR)));
+  await settle(p); await shot(p, "75-email-me-a-copy");
+  // someone with no Genus email gets the hint instead
+  const q = await newPage({ name: "Jayden Mullan", hash: "#inspect" }); await q.evaluate(() => startInsp(50)); await q.waitForFunction(() => CUR && CUR.tab === 50);
+  await q.evaluate(() => toReview()); await q.waitForSelector(".cc-me"); if (await q.$("#ccMe") || !/Pick your name in Settings/.test(await q.textContent(".cc-me"))) throw new Error("no-email hint");
+  await q.context().close(); await p.context().close();
+});
 await step("CSV exports", async () => {
   const [dl] = await Promise.all([page.waitForEvent("download"), page.evaluate(() => exportActions())]);
   const p = await dl.path(); const csv = fs.readFileSync(p, "utf8"); if (!/Corrective action/.test(csv) || csv.split("\n").length < 3) throw new Error("csv content");
