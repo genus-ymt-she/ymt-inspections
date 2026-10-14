@@ -532,3 +532,29 @@ test("SHEQ alerts: a failed or over-limit email is recorded, and the SHE Manager
   assert.match(e.alerts[0].emailed, /Not sent[\s\S]*\n.*emailed 2 of 2$/);
   assert.equal(r.post({ key: r.key, action: "emailAlert", id: a.id, pin: "2468", notify: [] }).ok, false);
 });
+
+/* ---------- High-or-above fire danger day emails ---------- */
+const fireRelay = (today, tomorrow) => createRelay({ fetch: url => /fdr\.json/.test(url) ? { body: JSON.stringify({ districts: { Lesueur: [{ date: perthYmd(0), rating: today }, { date: perthYmd(1), rating: tomorrow }] } }) } : null });
+test("fire danger: High today → 5 am email to the SHE team, supervisors and Construction Manager, one each, once a day", () => {
+  const r = fireRelay("High", "Extreme"); const b = r.mail.length; r.ctx.remindersRun();
+  const M = r.mail.slice(b).filter(x => /FIRE DANGER HIGH TODAY – Inspection 25 before work/.test(x.subject));
+  assert.deepEqual(M.map(x => x.to).sort(), ["anphin.thomas@genus.com.au", "corey.shotter@genus.com.au", "darren.frizzell@genus.com.au", "gary.armitage@genus.com.au",
+    "matt.smith@genus.com.au", "nicola.rucci@genus.com.au", "paul.delaney@genus.com.au", "steven.pugh@genus.com.au", "zane.patten@genus.com.au"]);
+  assert.ok(M.every(x => !x.bcc)); assert.match(M[0].htmlBody, /Inspection 25 – Fire Danger Day[\s\S]*Midday re-check[\s\S]*Nominate a lookout[\s\S]*Tomorrow: <b>Extreme/);
+  assert.doesNotMatch(M[0].htmlBody, /No hot work in the open air/, "Extreme controls only on Extreme days");
+  const b2 = r.mail.length; r.ctx.remindersRun(); assert.ok(!r.mail.slice(b2).some(x => /FIRE DANGER/.test(x.subject)), "once a day");
+});
+test("fire danger: nothing on Moderate days; manual Extreme rating wins; recipients can be changed in Script properties", () => {
+  const r = fireRelay("Moderate", "Moderate"); let b = r.mail.length; r.ctx.remindersRun(); assert.ok(!r.mail.slice(b).some(x => /FIRE DANGER/.test(x.subject)));
+  const r2 = fireRelay("Moderate", "High");
+  r2.props.set("FDR_MANUAL", JSON.stringify({ date: perthYmd(0), rating: "Extreme", by: "Darren Frizzell" })); r2.props.set("FIRE_DAY_TO", "darren.frizzell@genus.com.au, gary.armitage@genus.com.au, x@gmail.com");
+  b = r2.mail.length; r2.ctx.remindersRun(); const M = r2.mail.slice(b).filter(x => /FIRE DANGER EXTREME TODAY/.test(x.subject));
+  assert.deepEqual(M.map(x => x.to).sort(), ["darren.frizzell@genus.com.au", "gary.armitage@genus.com.au"]);
+  assert.match(M[0].htmlBody, /No hot work in the open air[\s\S]*Set by Darren Frizzell/);
+});
+test("fire danger: evening before an Extreme or Catastrophic day → plan-ahead email (Project Director decision on Catastrophic); not for High", () => {
+  const r = fireRelay("High", "Catastrophic"); const b = r.mail.length; r.ctx.dailyDigest();
+  const M = r.mail.slice(b).filter(x => /^Tomorrow: FIRE DANGER CATASTROPHIC – plan today \(Project Director decision\)/.test(x.subject));
+  assert.equal(M.length, 9); assert.match(M[0].htmlBody, /Project Director decides today/);
+  const r2 = fireRelay("Moderate", "High"); const b2 = r2.mail.length; r2.ctx.dailyDigest(); assert.ok(!r2.mail.slice(b2).some(x => /FIRE DANGER/.test(x.subject)));
+});

@@ -787,7 +787,7 @@ nav.tabs a.em-tab.on .ic{stroke:var(--ua)}
 .st-ns b{display:block;font-size:22px;color:var(--ink)}.st-ns span{display:block;font-weight:700;color:var(--ink-2);margin-top:2px}
 .st-upd{margin-top:10px}
 .st-box h3{margin:0 0 6px;font-size:16px}.st-box ul{margin:0;padding-left:20px}.st-box li{margin:6px 0;line-height:1.45}
-.st-box.hv{border-left:6px solid #C62828}.st-box.tfb{border-left:6px solid #C62828}.st-box.fdr{border-left:6px solid var(--accent)}
+.st-box.hv{border-left:6px solid #C62828}.st-box.tfb{border-left:6px solid #C62828}.st-box.fdrbox{border-left:6px solid var(--accent)}
 .st-lead{font-weight:800;color:#C62828;margin-bottom:4px}
 .st-links{display:grid;gap:4px}.st-links a,.st-links span{display:flex;gap:8px;align-items:center;min-height:44px;font-weight:700}
 .st-hist{padding:8px 0}.st-hist+.st-hist{border-top:1px solid var(--line)}.st-hist small{display:block;color:var(--muted)}

@@ -24,7 +24,9 @@ function alertBannerHTML(){const u=alUnread();if(!u.length)return "";const a=u[0
   return `<button class="al-banner ${AL_PRI[a.priority]||"info"}" onclick="go('#alerts/${encodeURIComponent(a.id)}')"><span class="al-bi">${ic("bell","l")}</span>
     <span class="al-bt"><small>${esc(a.priority)} · ${esc(a.type)}${u.length>1?` · ${u.length} to read`:""}</small><b>${esc(a.title)}</b><em>Read and acknowledge ${ic("chev","s")}</em></span></button>`}
 /* a Critical alert also pops up once each time the app is opened, until it is acknowledged */
-function alertPopup(){const a=alUnread().find(x=>x.priority==="Critical"&&!AL_SEEN.has(x.id));if(!a||document.getElementById("sheet"))return;AL_SEEN.add(a.id);
+function alertPopup(){const a=alUnread().find(x=>x.priority==="Critical"&&!AL_SEEN.has(x.id));if(!a)return;
+  if(document.querySelector(".fd-pop")){lsDel("fdPop_"+todayISO());closeSheet()}   // a Critical alert comes first; the fire danger pop-up shows again next time
+  if(document.getElementById("sheet"))return;AL_SEEN.add(a.id);
   const s=sheet(`<div class="al-pop">${alPill(a)}<h3>${esc(a.title)}</h3><p class="muted">${esc(a.type)} · published ${esc(fmtDT(a.at))}. Please read it and acknowledge before starting work.</p>
     <button class="btn o w" id="alRead">${ic("bell","s")} Read now</button><button class="btn g w" id="alLater">Later</button></div>`);
   s.querySelector("#alRead").onclick=()=>{closeSheet();go("#alerts/"+encodeURIComponent(a.id))};s.querySelector("#alLater").onclick=closeSheet}

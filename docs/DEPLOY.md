@@ -243,4 +243,10 @@ HVMB & Fire Status set on site, whichever is higher – Home shows a banner at t
 
 Supervisors, the SHE team, managers and Manager mode also get a pop-up once a day until Inspection 25 is sent.
 When tomorrow's rating is High or above, Home shows a plan-ahead note (Catastrophic: Project Director decides today).
-No relay update needed.
+**Fire danger emails (relay v3.12):** on a High, Extreme or Catastrophic day an email goes between 5 and 6 am to the
+SHE Manager, Senior SHE Advisor, SHE Advisor, Senior Civil and Electrical Supervisors, Civil and Electrical Supervisors and
+the Construction Manager – Inspection 25 before work, pre-start brief, TFB/HVMB check, midday re-check and the day's
+controls. The evening before an Extreme or Catastrophic day (6–7 pm) they get a plan-ahead email (Catastrophic: Project
+Director decides that day). One email each, once a day. The rating is your manual rating for the day if set, otherwise
+the official BoM ratings feed. Change the recipients without editing code: Script property `FIRE_DAY_TO` =
+comma-separated Genus addresses. Relay update required (paste, deploy a new version).

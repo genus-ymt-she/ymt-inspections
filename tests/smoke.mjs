@@ -487,6 +487,9 @@ await step("Today on site: not set → wrong PIN rejected → Morning High / TFB
   await page.evaluate(() => window.scrollTo(0, 0)); await settle(page); await shot(page, "41-status-home");
   await page.click("#stp .st-panel"); await page.waitForSelector(".st-box");
   const boxes = await page.$$eval(".st-box", e => e.map(x => x.className)); if (!/hv/.test(boxes[0]) || boxes.length !== 2) throw new Error("boxes: " + boxes);
+  // the restrictions text must be readable in light mode (it once inherited the white fire-danger badge style)
+  const ink = await page.$eval(".st-box.fdrbox li", e => [getComputedStyle(e).color, getComputedStyle(e.closest(".st-box")).backgroundColor]);
+  if (ink[0] === ink[1] || /rgb\(255, 255, 255\)/.test(ink[0])) throw new Error("restrictions text unreadable: " + ink);
   const d = await page.textContent("#app"); for (const w of ["An HVMB overrides TFB conditions and exemptions", "Lookout nominated at pre-start; regular monitoring of warnings; midday re-check.", "DFES TFB Hotline 1800 709 355", "New declarations are broadcast on UHF 24 and override this screen."]) if (!d.includes(w)) throw new Error("detail missing: " + w);
   await settle(page); await shot(page, "42-status-detail");
 });
@@ -719,6 +722,8 @@ await step("High-or-above fire danger day: Home banner with today's controls, po
   const f = await newPage({ name: "Matthew Smith", hash: "#home", firePopup: true });
   await f.waitForSelector("#fdb .fd-banner"); const b = await f.textContent("#fdb");
   for (const w of ["FIRE DANGER TODAY", "HIGH", "High-day controls apply (BFMP Table 13)", "Inspection 25 – Fire Danger Day", "Midday re-check", "Nominate a lookout"]) if (!b.includes(w)) throw new Error("banner missing " + w);
+  // a Critical SHEQ Alert pop-up takes priority; the fire pop-up then shows at the next chance
+  await f.waitForFunction(() => FD.date === todayISO(), null, { timeout: 10000 }); await f.evaluate(() => { if (!document.querySelector(".fd-pop")) { closeSheet(); fdPopup(); } });
   await f.waitForSelector(".fd-pop", { timeout: 10000 }); if (!/Inspection 25 is required today/.test(await f.textContent(".fd-pop"))) throw new Error("pop-up");
   await settle(f); await shot(f, "68-fire-day-popup");
   await f.click("#fdGo"); await f.waitForFunction(() => location.hash.startsWith("#insp/") && CUR && CUR.tab === 25);

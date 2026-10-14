@@ -92,6 +92,7 @@ function setup() {
     '\nThis day in history: prepared every day between 4 and 5 am (Perth time)' + (PropertiesService.getScriptProperties().getProperty('HISTORY_EMAIL') ? ' and emailed to ' + PropertiesService.getScriptProperties().getProperty('HISTORY_EMAIL') : '') + '.' +
     '\nMy SHEQ Planner: your obligations register (SHEQ Register sheet). Reminder emails are ' + ({ off: 'OFF – nobody is emailed', me: 'on – to you only', all: 'on – to you and each owner' })[plannerEmails_()] + ' (change it on the planner screen).' +
     '\nInspection forms you add in the app are kept in the Custom Forms sheet.' +
+    '\nFire danger days: on High-or-above days an email goes between 5 and 6 am to ' + fireTo_().length + ' people (SHE team, supervisors, Construction Manager) – Inspection 25 before work; the evening before an Extreme or Catastrophic day they get a plan-ahead email.' +
     '\nSHEQ Alerts: published from the app in Manager mode – tick who must acknowledge; the register is in the Alert Acks sheet.' +
     '\nToday on site status PIN: ' + (PropertiesService.getScriptProperties().getProperty('STATUS_PIN') ? 'set' : 'NOT SET – add STATUS_PIN under Script properties so the site status can be updated.') +
     '\nFire Danger Rating: ' + (fdrFetch_(true).today ? 'reading from the Bureau of Meteorology' : 'could not be read automatically – set it in the app (Manager mode) or choose the district') +
@@ -457,6 +458,7 @@ function dailyDigest() {
     try { MailApp.sendEmail({ to: e, replyTo: TO, name: 'PARRON Site Inspections', subject: late ? `Reminder: ${late} PARRON action${late > 1 ? 's' : ''} overdue` : `Reminder: PARRON action due tomorrow`,
       htmlBody: mailWrap_(late ? `${late} action${late > 1 ? 's are' : ' is'} overdue` : 'Action due tomorrow', 'REMINDER', L.map(actionCard_).join('')),
       body: L.map(f => `${f.action} – due ${f.due} – ${APP_URL}#actions/${encodeURIComponent(f.fid)}`).join('\n') }); } catch (err) {} });
+  try { fireDayEmail_(now, true); } catch (e) { console.error(e); }
   MailApp.sendEmail({ to: TO, subject: `PARRON daily summary ${Utilities.formatDate(now, TZ, 'dd/MM/yyyy')} – ${open.length} not sent, ${sentToday.length} sent, ${overdue.length} actions overdue`, htmlBody: html, body: 'Open in an HTML email client.', name: 'PARRON Site Inspections' });
 }
 
@@ -495,6 +497,7 @@ function remindersRun() {
       sh.getRange(i + 2, H['Last sent'] + 1).setValue("'" + today);
     } catch (e) {}
   });
+  try { fireDayEmail_(now, false); } catch (e) { console.error(e); }
   try { plannerDigest_(now); } catch (e) { console.error(e); }
 }
 
@@ -936,6 +939,80 @@ function reportPdf_(d) {
   if (!known) return out_({ ok: false, error: 'Not found' });
   const bytes = DriveApp.getFileById(id).getBlob().getBytes(); if (bytes.length > 25 * 1024 * 1024) return out_({ ok: false, error: 'Too large' });
   return out_({ ok: true, type: 'application/pdf', data: Utilities.base64Encode(bytes) });
+}
+
+/* ---------- High-or-above fire danger day email (BFMP Rev 1 §10, Table 13, Appendix D) ----------
+   5–6 am on a High, Extreme or Catastrophic day: the people who run the fire controls on site are told Inspection 25 is
+   needed before work, with the day's controls. 6–7 pm the day before an Extreme or Catastrophic day: a plan-ahead note.
+   Ratings: the SHE Manager's manual rating for today, else the official BoM ratings feed the app uses, else BoM direct.
+   Recipients: FIRE_DAY_TO below, or Script property FIRE_DAY_TO (comma-separated) to change them without editing code. */
+const FDR_FEED_URL = 'https://raw.githubusercontent.com/genus-ymt-she/ymt-inspections/fdr-data/fdr.json';
+const FIRE_DAY_TO = [
+  'darren.frizzell@genus.com.au',   // SHE Manager
+  'nicola.rucci@genus.com.au',      // Senior SHE Advisor
+  'anphin.thomas@genus.com.au',     // SHE Advisor
+  'matt.smith@genus.com.au',        // Senior Civil Supervisor
+  'corey.shotter@genus.com.au',     // Senior Electrical Supervisor
+  'paul.delaney@genus.com.au',      // Civil Supervisor
+  'zane.patten@genus.com.au',       // Electrical Supervisor
+  'steven.pugh@genus.com.au',       // Supervisor (Electrical)
+  'gary.armitage@genus.com.au'      // Construction Manager
+];
+const FIRE_LEVELS = ['High', 'Extreme', 'Catastrophic'];
+const FIRE_DO = {
+  High: [['Check FDR, TFB (DFES) and HVMB (Shire) before shift – brief at pre-start, broadcast on UHF 24, update HVMB & Fire Status in PARRON', 'BFMP §10.1'],
+    ['Nominate a lookout; monitor Emergency WA and ABC Local Radio', 'BFMP §10.1; App D 7'], ['Hot work only under permit – appliance, fire watch and 15 m clearance confirmed first', 'BFMP Table 13; §8.2'],
+    ['Firefighting appliance at least 50% full, operator within UHF range', 'BFMP Table 13'], ['Mid-shift plant clean-outs; no plant parked or idling on dry grass', 'BFMP §8.4'],
+    ['Slashing only with the appliance in attendance', 'BFMP Table 13'], ['Midday re-check of FDR / TFB / HVMB at 12:00, broadcast any change', 'BFMP §10.1']],
+  Extreme: [['No hot work in the open air (enclosed building only, Construction Manager approval, never in a TFB)', 'BFMP App D 2'], ['Appliances full, staged at each active work area and function-checked', 'BFMP App D 4'],
+    ['Stop slashing, mowing and grading of vegetation – crews on formed tracks and cleared pads', 'BFMP App D 5'], ['Confirm evacuation routes, vehicles fuelled, headcount ready', 'BFMP App D 6'],
+    ['Advise the Project Director and the Principal of today\'s restrictions', 'BFMP App D 8']],
+  Catastrophic: [['Project Director\'s mobilisation decision recorded – PD-approved essential attendance only', 'BFMP Table 13; BERP Table 5'],
+    ['All construction work in bushfire risk areas stopped; plant on hardstand, appliances staged at the compound', 'BFMP Table 13']]
+};
+const fireNorm_ = r => { r = String(r || '').trim().toLowerCase(); return ['No Rating', 'Moderate'].concat(FIRE_LEVELS).find(x => x.toLowerCase() === r) || ''; };
+function fireRatings_(now) {
+  const P = PropertiesService.getScriptProperties(); const today = Utilities.formatDate(now, TZ, 'yyyy-MM-dd');
+  const tomorrow = Utilities.formatDate(new Date(now.getTime() + 864e5), TZ, 'yyyy-MM-dd');
+  let t = '', tm = '', src = '';
+  try {
+    const r = UrlFetchApp.fetch(FDR_FEED_URL, { muteHttpExceptions: true });
+    if (r.getResponseCode() === 200) { const D = (JSON.parse(r.getContentText()) || {}).districts || {}; const want = P.getProperty('FDR_AREA');
+      const name = D[want] ? want : D.Lesueur ? 'Lesueur' : '';
+      if (name) { const on = iso => ((D[name] || []).find(x => x.date === iso) || {}).rating || ''; t = on(today); tm = on(tomorrow); src = 'Bureau of Meteorology – ' + name; } }
+  } catch (e) {}
+  if (!t) { try { const f = fdrFetch_(false); t = f.today; tm = tm || f.tomorrow; src = f.source; } catch (e) {} }
+  let manual = null; try { manual = JSON.parse(P.getProperty('FDR_MANUAL') || 'null'); } catch (e) {}
+  if (manual && manual.date === today && manual.rating) { t = manual.rating; src = 'Set by ' + (manual.by || 'SHE Manager'); }
+  return { today: fireNorm_(t), tomorrow: fireNorm_(tm), src };
+}
+function fireTo_() { const p = PropertiesService.getScriptProperties().getProperty('FIRE_DAY_TO'); return p ? alertTo_(p).concat(p.toLowerCase().indexOf(TO.toLowerCase()) >= 0 ? [TO.toLowerCase()] : []) : FIRE_DAY_TO.slice(); }
+function fireDayEmail_(now, evening) {
+  const day = Utilities.formatDate(now, TZ, 'yyyy-MM-dd'); const cache = CacheService.getScriptCache(); const key = 'fire_' + (evening ? 'eve_' : 'am_') + day;
+  if (cache.get(key)) return null;
+  const R = fireRatings_(now); const rating = evening ? R.tomorrow : R.today; const lv = FIRE_LEVELS.indexOf(rating);
+  if (lv < 0 || (evening && lv < 1)) return null;   // morning: High or above today; evening: Extreme or Catastrophic tomorrow
+  cache.put(key, '1', 21600);
+  const col = { High: ['#FEDD3A', '#3A2E00'], Extreme: ['#F78100', '#2B1300'], Catastrophic: ['#AD0909', '#FFFFFF'] }[rating];
+  const list = FIRE_LEVELS.slice(0, lv + 1).reduce((a, k) => a.concat(FIRE_DO[k]), []);
+  const when = evening ? 'TOMORROW' : 'TODAY';
+  const subject = evening ? `Tomorrow: FIRE DANGER ${rating.toUpperCase()} – plan today${lv === 2 ? ' (Project Director decision)' : ''}`
+    : `FIRE DANGER ${rating.toUpperCase()} TODAY – Inspection 25 before work`;
+  const lead = evening ? (lv === 2 ? 'Catastrophic fire danger is forecast for tomorrow. The Project Director decides today, on the DFES forecast, whether the workforce mobilises (BFMP Table 13).'
+      : 'Extreme fire danger is forecast for tomorrow. Plan today: no open-air hot work tomorrow, appliances staged at each work area, slashing and grading stopped, Project Director and Principal advised (BFMP Appendix D).')
+    : (lv === 2 ? 'For your survival, leave bush fire risk areas. Only Project Director-approved essential work.' : lv === 1 ? 'Extreme-day controls apply (BFMP Appendix D) as well as the High-day controls.' : 'High-day controls apply (BFMP Table 13).');
+  const steps = evening ? '' : `<ol style="font-size:14px;padding-left:20px"><li><b>Inspection 25 – Fire Danger Day</b> in PARRON before work (Chief Warden or delegate).</li><li>Brief crews at pre-start and broadcast on UHF 24.</li><li>Confirm TFB (DFES) and HVMB (Shire) and update <b>HVMB &amp; Fire Status</b> in PARRON.</li><li><b>Midday re-check</b> at 12:00 – update HVMB &amp; Fire Status.</li></ol>`;
+  const html = `<div style="font-family:Arial,sans-serif;color:#1B2430;max-width:640px"><div style="background:#112B4E;color:#fff;padding:12px 14px;border-bottom:4px solid #EC7723"><div style="font-size:12px;color:#EC7723;font-weight:700">PARRON | FIRE DANGER ${when} · ${Utilities.formatDate(evening ? new Date(now.getTime() + 864e5) : now, TZ, 'EEEE d MMMM')}</div>
+      <div style="display:inline-block;margin-top:6px;background:${col[0]};color:${col[1]};font-size:22px;font-weight:900;padding:6px 14px;border-radius:8px">${rating.toUpperCase()}</div></div>
+    <p style="font-size:15px;font-weight:700">${esc_(lead)}</p>${steps}
+    <h3 style="color:#112B4E;margin-bottom:4px">${evening ? 'Controls for tomorrow' : 'What must be done today'}</h3><ul style="font-size:14px;padding-left:20px">${list.map(x => `<li>${esc_(x[0])} <span style="color:#5B6675">(${esc_(x[1])})</span></li>`).join('')}</ul>
+    ${!evening && R.tomorrow ? `<p style="font-size:13px">Tomorrow: <b>${esc_(R.tomorrow)}</b></p>` : ''}
+    <p><a href="${APP_URL}" style="background:#EC7723;color:#1B1206;padding:10px 16px;border-radius:8px;font-weight:700;text-decoration:none">Open PARRON</a></p>
+    <p style="font-size:12px;color:#5B6675">Rating: ${esc_(R.src || 'Bureau of Meteorology')}. Always confirm the official rating, Total Fire Bans (DFES) and Harvest &amp; Vehicle Movement Bans (Shire of Dandaragan) before work.</p></div>`;
+  const body = `${subject}\n\n${lead}\n\n${list.map(x => '- ' + x[0] + ' (' + x[1] + ')').join('\n')}\n\n${APP_URL}`;
+  let sent = 0;
+  fireTo_().forEach(e => { if (MailApp.getRemainingDailyQuota() < 1) return; try { MailApp.sendEmail({ to: e, replyTo: TO, name: 'PARRON Site Inspections', subject, htmlBody: html, body }); sent++; } catch (err) {} });
+  return { rating, sent };
 }
 
 /* hazard reports and positive observations for the in-app list (last 13 months, newest first) */
