@@ -54,8 +54,9 @@ async function fdStart(){if(FD.draft){go("#insp/"+FD.draft.id);return}
 /* once a day for supervisors, the SHE team and managers (or Manager mode) until Inspection 25 is sent */
 function fdPopup(){const T=fdToday();if(!T.high||FD.done.length||FD.date!==todayISO()||document.getElementById("sheet"))return;
   const me=teamBy(ls("inspector")||"");const g=me?alGroup(me):"";if(!(isManager()||g==="she"||g==="sup"))return;
-  const k="fdPop_"+todayISO();if(ls(k))return;ls(k,"1");
+  const k="fdPop_"+todayISO();if(ls(k))return;const seen=()=>ls(k,"1");   // counts as seen only when the person responds – a screen refresh doesn't use it up
   const s=sheet(`<div class="fd-pop" style="${FDR_COL[T.rating]?`--fb:${FDR_COL[T.rating][0]};--fi:${FDR_COL[T.rating][1]}`:""}"><span class="fd-r"><small>FIRE DANGER TODAY</small><b>${esc(T.rating.toUpperCase())}</b></span>
     <h3>Inspection 25 is required today</h3><p class="muted">BFMP Table 13: complete the Fire Danger Day inspection before work, brief crews at pre-start, and re-check FDR / TFB / HVMB at midday.</p>
     <button class="btn o w" id="fdGo">${ic("clipboard","s")} Start Inspection 25</button><button class="btn g w" id="fdLater">Later</button></div>`);
-  s.querySelector("#fdGo").onclick=()=>{closeSheet();fdStart()};s.querySelector("#fdLater").onclick=closeSheet}
+  s.querySelector("#fdGo").onclick=()=>{seen();closeSheet();fdStart()};s.querySelector("#fdLater").onclick=()=>{seen();closeSheet()};
+  s.querySelector(".sheet-x").addEventListener("click",seen);const bg=document.getElementById("sheet");bg.addEventListener("click",e=>{if(e.target===bg)seen()})}

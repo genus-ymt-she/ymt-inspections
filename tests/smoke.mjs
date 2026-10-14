@@ -725,6 +725,8 @@ await step("High-or-above fire danger day: Home banner with today's controls, po
   for (const w of ["FIRE DANGER TODAY", "HIGH", "High-day controls apply (BFMP Table 13)", "Inspection 25 – Fire Danger Day", "Midday re-check", "Nominate a lookout"]) if (!b.includes(w)) throw new Error("banner missing " + w);
   await f.waitForSelector(".fd-pop", { timeout: 10000 }); if (!/Inspection 25 is required today/.test(await f.textContent(".fd-pop"))) throw new Error("pop-up");
   await settle(f); await shot(f, "68-fire-day-popup");
+  // a screen refresh (e.g. the first-open reload when the relay settings arrive) closes it without using up today's pop-up
+  await f.evaluate(() => route()); await f.waitForSelector(".fd-pop", { timeout: 10000 });
   await f.click("#fdGo"); await f.waitForFunction(() => location.hash.startsWith("#insp/") && CUR && CUR.tab === 25);
   if (await f.evaluate(() => CUR.details.extra["Fire Danger Rating today (High / Extreme / Catastrophic):"]) !== "High") throw new Error("rating not pre-filled");
   await f.evaluate(() => go("#home")); await f.waitForSelector("#fdb .fd-banner"); if (!/Continue/.test(await f.textContent("#fdb"))) throw new Error("draft should show Continue");
