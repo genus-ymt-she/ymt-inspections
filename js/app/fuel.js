@@ -135,12 +135,7 @@ function viewFuelReview(d){const t=tabByNum(d.tab);const F=FU(d);setHeader("Revi
 /* the completed-by signature is required before the register is sent */
 function fuelSend(share){if(!CUR.signature){toast("Sign the register first (Completed by)",4000);const c=$("#sig");if(c)c.scrollIntoView({behavior:"smooth",block:"center"});return}share?sendShare():sendDirect()}
 function fuelPrep(d){clearTimeout(fuelPrep._t);fuelPrep._t=setTimeout(()=>{if(!problems(d).length)prepPDF(d)},500)}
-function fuelInitSig2(d){const c=$("#sig2");if(!c)return;const r=c.getBoundingClientRect();const k=window.devicePixelRatio||1;c.width=r.width*k;c.height=r.height*k;const g=c.getContext("2d");g.scale(k,k);g.lineWidth=2.2;g.lineCap="round";g.strokeStyle="#112B4E";
-  if(FU(d).vSig){const im=new Image();im.onload=()=>g.drawImage(im,0,0,r.width,r.height);im.src=FU(d).vSig}
-  let dn=false,lx=0,ly=0;const pos=e=>{const b=c.getBoundingClientRect();return[e.clientX-b.left,e.clientY-b.top]};
-  c.onpointerdown=e=>{dn=true;[lx,ly]=pos(e);c.setPointerCapture(e.pointerId)};
-  c.onpointermove=e=>{if(!dn)return;const[x,y]=pos(e);g.beginPath();g.moveTo(lx,ly);g.lineTo(x,y);g.stroke();lx=x;ly=y};
-  c.onpointerup=()=>{dn=false;FU(d).vSig=c.toDataURL("image/png");save(d);fuelPrep(d)}}
+function fuelInitSig2(d){sigPad($("#sig2"),FU(d).vSig,u=>{FU(d).vSig=u;save(d);fuelPrep(d)})}
 function fuelClearSig2(){const c=$("#sig2");c.getContext("2d").clearRect(0,0,c.width,c.height);FU(CUR).vSig="";save(CUR);fuelPrep(CUR)}
 
 /* ---------- outputs ---------- */
