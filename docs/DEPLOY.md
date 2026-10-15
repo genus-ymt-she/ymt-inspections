@@ -277,3 +277,17 @@ the Trade Assistants tab.
 
 ## Signature pad fix (v3.15)
 Signing no longer scrolls the screen on phones (reported by Paul). The pad stops the page moving while a finger is on it, keeps the stroke if the phone interrupts it, and is slightly taller. It is the same pad for the inspection sign-off and both Fuel / Hours / Pre-Start register signatures. No relay change.
+
+## Email budget (relay v3.16)
+The free Gmail account behind the relay can email about **100 people a day**. Once it reaches that, every email fails
+until the limit resets, including inspection reports and the SHE Manager's own copies. One SHEQ Alert to the whole
+site, the 9 fire-danger emails and a few "Email again" re-sends can use all 100 in one go.
+
+From v3.16, team emails stop when only the last **25** of the day are left. These are SHEQ Alerts to the team, fire-day
+emails, action and planner reminders, My Day reminders and the "This day in history" email. That keeps the last 25
+for inspection reports, hazard reports, UA / Critical alerts, action-assigned emails and the SHE Manager's own copies.
+Anyone held back is listed in the alert's *Email record* as "held back". The daily summary shows how many emails are
+left. Reports that cannot send stay on the phone and send automatically once the limit resets.
+
+- To change the reserve, set the Script Property `EMAIL_RESERVE` (for example 15).
+- To check the budget at any time, go to PARRON › Settings › **Test relay**, which shows "N emails left today".

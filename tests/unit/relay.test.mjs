@@ -520,7 +520,7 @@ test("planner reminder emails are OFF until the SHE Manager turns them on; 'me' 
 });
 
 test("SHEQ alerts: a failed or over-limit email is recorded, and the SHE Manager can email it again to people not yet acknowledged", () => {
-  const r = createRelay(); let left = 2; r.ctx.MailApp.getRemainingDailyQuota = () => left;
+  const r = createRelay(); let left = 2; r.ctx.MailApp.getRemainingDailyQuota = () => left; r.props.set("EMAIL_RESERVE", "0");
   const send = r.ctx.MailApp.sendEmail; r.ctx.MailApp.sendEmail = o => { left--; return send(o); };
   const a = r.post(alertPayload({ required: ["Lee Allen", "Matthew Smith", "Paul Delaney"], notify: ["lee.allen@genus.com.au", "matt.smith@genus.com.au", "paul.delaney@genus.com.au"] }));
   assert.equal(a.ok, true, "the alert is still published");
@@ -531,6 +531,23 @@ test("SHEQ alerts: a failed or over-limit email is recorded, and the SHE Manager
   assert.equal(e.ok, true); assert.deepEqual(r.mail.slice(b).map(x => x.to), ["matt.smith@genus.com.au", "paul.delaney@genus.com.au"]);
   assert.match(e.alerts[0].emailed, /Not sent[\s\S]*\n.*emailed 2 of 2$/);
   assert.equal(r.post({ key: r.key, action: "emailAlert", id: a.id, pin: "2468", notify: [] }).ok, false);
+});
+
+test("email budget: team emails stop at the reserve so inspection reports and the SHE Manager's copy still send; reports wait on the phone at the limit", () => {
+  const plain = u => { const o = report({ uid: u, reportId: "YMT-" + u }); delete o.findings; delete o.report; return o; };
+  const r = createRelay(); let left = 27; r.ctx.MailApp.getRemainingDailyQuota = () => left;
+  const send = r.ctx.MailApp.sendEmail; r.ctx.MailApp.sendEmail = o => { left--; return send(o); };
+  const a = r.post(alertPayload({ required: ["Lee Allen", "Matthew Smith", "Paul Delaney"], notify: ["lee.allen@genus.com.au", "matt.smith@genus.com.au", "paul.delaney@genus.com.au"] }));
+  assert.equal(a.ok, true);
+  assert.match(a.emailed, /emailed 2 of 4\. Not sent: matt\.smith@genus\.com\.au \(held back – the last 25 emails today are kept for reports\)/);
+  assert.equal(r.mail[r.mail.length - 2].to, "darren.frizzell@genus.com.au", "the SHE Manager's copy goes first");
+  const rep = r.post(plain("u-budget-1"));
+  assert.equal(rep.ok, true, "an inspection report still sends inside the reserve");
+  left = 0; const b = r.mail.length;
+  const no = r.post(plain("u-budget-2"));
+  assert.equal(no.ok, false); assert.match(no.error, /daily email limit reached – the report stays on the phone/);
+  assert.equal(r.mail.length, b, "nothing sent at the limit");
+  r.props.set("EMAIL_RESERVE", "5"); left = 50; assert.equal(r.get({}).emailReserve, 5); assert.equal(r.get({}).emailsLeftToday, 50);
 });
 
 /* ---------- High-or-above fire danger day emails ---------- */
