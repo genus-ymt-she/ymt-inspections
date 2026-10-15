@@ -162,6 +162,16 @@ function doPost(e) {
   } finally { try { lock.releaseLock(); } catch (e) {} }
 }
 
+/* ---------- daily email budget ----------
+   A free Gmail account can email about 100 people a day from Apps Script; after that every email fails until the
+   next day – including inspection reports. Bulk emails (alerts to the team, fire-day emails, reminders) therefore
+   stop while the last EMAIL_RESERVE (Script Property, default 25) are left, so reports, hazard reports, UA alerts
+   and the SHE Manager's own copies still go out. */
+function mailLeft_() { try { return MailApp.getRemainingDailyQuota(); } catch (e) { return 0; } }
+function mailReserve_() { const v = PropertiesService.getScriptProperties().getProperty('EMAIL_RESERVE'); return v !== null && v !== '' && !isNaN(v) ? Math.max(0, Number(v)) : 25; }
+function bulkOK_(e) { return mailLeft_() > (String(e || '').toLowerCase() === TO.toLowerCase() ? 0 : mailReserve_()); }
+const heldWhy_ = () => mailLeft_() < 1 ? 'daily email limit reached' : `held back – the last ${mailReserve_()} emails today are kept for reports`;
+
 function send_(d) {
   const cache = CacheService.getScriptCache();
   const uid = String(d.uid || d.reportId || '');
@@ -175,6 +185,7 @@ function send_(d) {
   let blob = null;
   if (d.html) opts.htmlBody = String(d.html);
   if (d.pdf) { blob = Utilities.newBlob(Utilities.base64Decode(d.pdf), 'application/pdf', str_(d.filename || 'inspection.pdf', 180)); opts.attachments = [blob]; }
+  if (mailLeft_() < 1) return out_({ ok: false, error: 'Google daily email limit reached – the report stays on the phone and sends automatically after the limit resets' });
   MailApp.sendEmail(opts);
   if (uid) cache.put('sent_' + uid, '1', 21600);
   let link = '';
@@ -388,7 +399,7 @@ function doGet(e) {
   if (p.action === 'alertFile') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return alertFile_(p.id); }
   if (p.action === 'reports') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_({ ok: true, reports: reports_() }); }
   if (p.action === 'photo') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return photo_(p.id); }
-  if (p.action !== 'dashboard') return out_({ ok: true, service: 'PARRON relay', v: 3, emailsLeftToday: MailApp.getRemainingDailyQuota() });
+  if (p.action !== 'dashboard') return out_({ ok: true, service: 'PARRON relay', v: 3, emailsLeftToday: mailLeft_(), emailReserve: mailReserve_() });
   if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' });
   const ss = book_(); const month = /^\d{4}-\d\d$/.test(p.month || '') ? p.month : Utilities.formatDate(new Date(), TZ, 'yyyy-MM');
   const S = idx_(SENT_HEAD); const mk = v => Utilities.formatDate(new Date(v), TZ, 'yyyy-MM');
@@ -450,11 +461,11 @@ function dailyDigest() {
     <h3 style="color:#C62828">Still not sent – from earlier days (${openOlder.length})</h3>${t(openOlder.map(r => [r[1], `${no_(r[2])} ${r[3]}`, r[4], fmt(r[5]), st(r[7])]), ['Name', 'Inspection', 'Location', 'Started', 'Status'])}
     <h3 style="color:#C62828">Corrective actions overdue (${overdue.length})</h3>${t(overdue.map(f => [f.reportId + ' / ' + f.item, f.level || f.rating, f.action, f.owner || 'TBC', dmy(f.due)]), ['Finding', 'Risk', 'Corrective action', 'Owner', 'Due'])}
     <h3 style="color:#2E7D32">Sent today (${sentToday.length})</h3>${t(Object.keys(byName).sort().map(k => [k, byName[k].length, byName[k].join(', ')]), ['Name', 'Count', 'Inspections'])}
-    <p style="font-size:12px;color:#5B6675">Full log: <a href="${ss.getUrl()}">PARRON – Inspection Log</a></p></div>`;
+    <p style="font-size:12px;color:#5B6675">Emails left today: ${mailLeft_()} (Google allows about 100 a day; team emails stop at ${mailReserve_()} so reports still send). Full log: <a href="${ss.getUrl()}">PARRON – Inspection Log</a></p></div>`;
   // reminders to each person with overdue actions (or actions due tomorrow)
   const tomorrow = Utilities.formatDate(new Date(now.getTime() + 864e5), TZ, 'yyyy-MM-dd'); const rem = {};
   F.filter(f => f.status === ST.open && f.ownerEmail && f.due && f.due <= tomorrow).forEach(f => { (rem[f.ownerEmail] = rem[f.ownerEmail] || []).push(f); });
-  Object.keys(rem).forEach(e => { const L = rem[e].sort((a, b) => a.due.localeCompare(b.due)); const late = L.filter(f => f.due < today).length;
+  Object.keys(rem).forEach(e => { if (!bulkOK_(e)) return; const L = rem[e].sort((a, b) => a.due.localeCompare(b.due)); const late = L.filter(f => f.due < today).length;
     try { MailApp.sendEmail({ to: e, replyTo: TO, name: 'PARRON Site Inspections', subject: late ? `Reminder: ${late} PARRON action${late > 1 ? 's' : ''} overdue` : `Reminder: PARRON action due tomorrow`,
       htmlBody: mailWrap_(late ? `${late} action${late > 1 ? 's are' : ' is'} overdue` : 'Action due tomorrow', 'REMINDER', L.map(actionCard_).join('')),
       body: L.map(f => `${f.action} – due ${f.due} – ${APP_URL}#actions/${encodeURIComponent(f.fid)}`).join('\n') }); } catch (err) {} });
@@ -488,7 +499,7 @@ function remindersRun() {
   rows_(sh).forEach((r, i) => {
     if (r[H.Active] !== 'Yes' || !r[H.Email]) return;
     let rule = {}; try { rule = JSON.parse(r[H.Repeat] || '{}'); } catch (e) { return; }
-    if (!occurs_(rule, now) || dstr_(r[H['Last sent']]).slice(0, 10) === today) return;
+    if (!occurs_(rule, now) || dstr_(r[H['Last sent']]).slice(0, 10) === today || !bulkOK_(r[H.Email])) return;
     try {
       MailApp.sendEmail({ to: r[H.Email], name: 'PARRON Site Inspections', subject: `Reminder: ${str_(r[H.Reminder], 120)}`,
         htmlBody: `<div style="font-family:Arial,sans-serif;color:#1B2430;max-width:560px"><div style="background:#112B4E;color:#fff;padding:12px 14px;border-bottom:4px solid #EC7723"><div style="font-size:12px;color:#EC7723;font-weight:700">PARRON | REMINDER${r[H.Time] ? ' – ' + esc_(r[H.Time]) : ''}</div><div style="font-size:18px;font-weight:700">${esc_(r[H.Reminder])}</div></div>
@@ -652,7 +663,7 @@ function history_(fresh) {
 /* time-driven, 4–5 am Perth: get today's facts ready for the 6 am pre-start (and email them if HISTORY_EMAIL is set) */
 function prepareHistory() {
   const h = history_(true); const to = PropertiesService.getScriptProperties().getProperty('HISTORY_EMAIL');
-  if (!h.ok || !to) return h;
+  if (!h.ok || !to || !bulkOK_(to)) return h;
   const date = Utilities.formatDate(new Date(), TZ, 'EEEE d MMMM yyyy');
   MailApp.sendEmail({ to, name: 'PARRON Site Inspections', subject: `Pre-start – This day in history ${Utilities.formatDate(new Date(), TZ, 'dd/MM/yyyy')}`,
     htmlBody: mailWrap_('This day in history', date.toUpperCase(), h.facts.map((f, i) => `<p style="font-size:16px;line-height:1.5"><b>${i + 1}. ${esc_(String(f.year))}</b> – ${esc_(f.text)}<br><a href="${f.link}">Read more</a></p>`).join('') + '<p style="font-size:12px;color:#5B6675">Source: Wikipedia – On this day (CC BY-SA). Check facts before reading if unsure.</p>'),
@@ -718,7 +729,7 @@ function alertSend_(a, to) {
   const body = `${a.type} (${a.pri}) ${a.id}: ${a.title}\n\nWhat happened:\n${a.what}\n\nWhat you must do:\n${a.must || '-'}\n\nRead and acknowledge in PARRON: ${APP_URL}#alerts/${a.id}`;
   const sent = [], failed = [];
   to.forEach(e => {
-    if (MailApp.getRemainingDailyQuota() < 1) { failed.push(e + ' (daily email limit reached)'); return; }
+    if (!bulkOK_(e)) { failed.push(e + ' (' + heldWhy_() + ')'); return; }
     try { MailApp.sendEmail({ to: e, replyTo: TO, name: 'PARRON Site Inspections', subject, htmlBody, body }); sent.push(e); }
     catch (err) { failed.push(e + ' (' + String((err && err.message) || err).slice(0, 80) + ')'); }
   });
@@ -887,7 +898,7 @@ function plannerDigest_(now) {
   if (mode !== 'all') return;
   // owners: on the day the reminder period starts, the day before, on the day, and every day while overdue
   const mine = {}; L.filter(o => o.ownerEmail && o.ownerEmail.toLowerCase() !== TO.toLowerCase() && (o.n < 0 || o.n <= 1 || o.n === o.lead)).forEach(o => { (mine[o.ownerEmail] = mine[o.ownerEmail] || []).push(o); });
-  Object.keys(mine).forEach(e => { const M = mine[e]; const late = M.filter(o => o.n < 0).length;
+  Object.keys(mine).forEach(e => { if (!bulkOK_(e)) return; const M = mine[e]; const late = M.filter(o => o.n < 0).length;
     try { MailApp.sendEmail({ to: e, replyTo: TO, name: 'PARRON Site Inspections', subject: late ? `PARRON: ${late} SHEQ item${late > 1 ? 's' : ''} overdue` : `PARRON: ${M.length} SHEQ item${M.length > 1 ? 's' : ''} coming up`,
       htmlBody: plannerMail_(`Your SHEQ items – ${Utilities.formatDate(now, TZ, 'EEE d MMM')}`, 'SHEQ REMINDER', sec('Overdue', '#C62828', M.filter(o => o.n < 0), false) + sec('Coming up', '#112B4E', M.filter(o => o.n >= 0), false) +
         '<p style="font-size:12px;color:#5B6675">From the SHE Manager\'s SHEQ register. Where a PARRON form is named, sending it in PARRON ticks the item off – otherwise reply to this email when it is done.</p>'),
@@ -1011,7 +1022,7 @@ function fireDayEmail_(now, evening) {
     <p style="font-size:12px;color:#5B6675">Rating: ${esc_(R.src || 'Bureau of Meteorology')}. Always confirm the official rating, Total Fire Bans (DFES) and Harvest &amp; Vehicle Movement Bans (Shire of Dandaragan) before work.</p></div>`;
   const body = `${subject}\n\n${lead}\n\n${list.map(x => '- ' + x[0] + ' (' + x[1] + ')').join('\n')}\n\n${APP_URL}`;
   let sent = 0;
-  fireTo_().forEach(e => { if (MailApp.getRemainingDailyQuota() < 1) return; try { MailApp.sendEmail({ to: e, replyTo: TO, name: 'PARRON Site Inspections', subject, htmlBody: html, body }); sent++; } catch (err) {} });
+  fireTo_().forEach(e => { if (!bulkOK_(e)) return; try { MailApp.sendEmail({ to: e, replyTo: TO, name: 'PARRON Site Inspections', subject, htmlBody: html, body }); sent++; } catch (err) {} });
   return { rating, sent };
 }
 
