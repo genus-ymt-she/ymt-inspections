@@ -179,6 +179,10 @@ await step("review screen, signature and PDF", async () => {
   await page.mouse.move(box.x + 30, box.y + 100); await page.mouse.down(); await page.mouse.move(box.x + 120, box.y + 40, { steps: 8 }); await page.mouse.move(box.x + 220, box.y + 110, { steps: 8 }); await page.mouse.up();
   await page.waitForFunction(() => typeof PDFFILE !== "undefined" && PDFFILE && PDFFILE.size > 20000, null, { timeout: 30000 });
   const size = await page.evaluate(() => PDFFILE.size); console.log("      pdf bytes", size);
+  // a finger on the pad must not scroll the page (Paul: the screen moved up and down instead of signing)
+  const held = await page.evaluate(() => ["touchstart", "touchmove"].map(t => { const e = new Event(t, { bubbles: true, cancelable: true }); $("#sig").dispatchEvent(e); return e.defaultPrevented; }));
+  if (held.includes(false)) throw new Error("signature pad lets the page scroll: " + held);
+  const css = await page.evaluate(() => getComputedStyle($("#sig")).touchAction); if (css !== "none") throw new Error("touch-action " + css);
   await settle(page); await shot(page, "03-review");
 });
 await step("send directly through the relay (findings reach the log)", async () => {

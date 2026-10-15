@@ -211,10 +211,14 @@ function viewReview(d){const t=tabByNum(d.tab);if(t.kind==="fuel")return viewFue
    <button class="btn w" ${p.length?"disabled":""} onclick="markSent()">I've sent it – close this inspection</button>`}</div>`;
   render(h);initSig(d);if(!p.length)prepPDF(d)}
 async function previewPDF(){try{const blob=PDFFILE||await buildPDF(CUR);const u=URL.createObjectURL(blob);window.open(u,"_blank")||downloadBlob(blob,fileName(CUR))}catch(e){console.error(e);toast("Could not create the PDF")}}
-function initSig(d){const c=$("#sig");const r=c.getBoundingClientRect();const k=window.devicePixelRatio||1;c.width=r.width*k;c.height=r.height*k;const g=c.getContext("2d");g.scale(k,k);g.lineWidth=2.2;g.lineCap="round";g.strokeStyle="#112B4E";
-  if(d.signature){const im=new Image();im.onload=()=>g.drawImage(im,0,0,r.width,r.height);im.src=d.signature}
+function initSig(d){sigPad($("#sig"),d.signature,u=>{d.signature=u;save(d);if(!problems(d).length)prepPDF(d)})}
+/* finger signature pad. Touch events are cancelled on the pad itself so the page does not scroll while
+   signing (touch-action alone is not honoured by every phone browser); a cancelled stroke is still kept. */
+function sigPad(c,src,done){if(!c)return;const r=c.getBoundingClientRect();const k=window.devicePixelRatio||1;c.width=r.width*k;c.height=r.height*k;const g=c.getContext("2d");g.scale(k,k);g.lineWidth=2.2;g.lineCap="round";g.lineJoin="round";g.strokeStyle="#112B4E";
+  if(src){const im=new Image();im.onload=()=>g.drawImage(im,0,0,r.width,r.height);im.src=src}
   let dn=false,lx=0,ly=0;const pos=e=>{const b=c.getBoundingClientRect();return[e.clientX-b.left,e.clientY-b.top]};
-  c.onpointerdown=e=>{dn=true;[lx,ly]=pos(e);c.setPointerCapture(e.pointerId)};
-  c.onpointermove=e=>{if(!dn)return;const[x,y]=pos(e);g.beginPath();g.moveTo(lx,ly);g.lineTo(x,y);g.stroke();lx=x;ly=y};
-  c.onpointerup=()=>{dn=false;d.signature=c.toDataURL("image/png");save(d);if(!problems(d).length)prepPDF(d)}}
+  const stop=e=>{if(e.cancelable)e.preventDefault()};["touchstart","touchmove","touchend"].forEach(t=>c.addEventListener(t,stop,{passive:false}));
+  c.onpointerdown=e=>{e.preventDefault();dn=true;[lx,ly]=pos(e);try{c.setPointerCapture(e.pointerId)}catch(_){}g.beginPath();g.arc(lx,ly,1.1,0,7);g.fillStyle=g.strokeStyle;g.fill()};
+  c.onpointermove=e=>{if(!dn)return;e.preventDefault();const L=e.getCoalescedEvents?e.getCoalescedEvents():[];for(const p of L.length?L:[e]){const[x,y]=pos(p);g.beginPath();g.moveTo(lx,ly);g.lineTo(x,y);g.stroke();lx=x;ly=y}};
+  c.onpointerup=c.onpointercancel=()=>{if(!dn)return;dn=false;done(c.toDataURL("image/png"))}}
 function clearSig(){const c=$("#sig");c.getContext("2d").clearRect(0,0,c.width,c.height);CUR.signature="";save(CUR);if(!problems(CUR).length)prepPDF(CUR)}

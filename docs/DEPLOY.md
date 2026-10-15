@@ -274,3 +274,6 @@ the Trade Assistants tab.
 - **Email me a copy:** on *Review & send*, the person completing the form can tick *Email me a copy too*. Their Genus
   address (from the team list) is added to the report email; the choice is remembered on the phone. People without a
   Genus email are told to pick their name in Settings. Each copy is one more recipient on the relay's daily email limit.
+
+## Signature pad fix (v3.15)
+Signing no longer scrolls the screen on phones (reported by Paul). The pad stops the page moving while a finger is on it, keeps the stroke if the phone interrupts it, and is slightly taller. It is the same pad for the inspection sign-off and both Fuel / Hours / Pre-Start register signatures. No relay change.
