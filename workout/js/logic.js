@@ -2,15 +2,19 @@
 
 export const DAY = 86400000;
 
-/** Sets to show for an exercise in the current mode. */
-export function setCount(ex, onBlock) {
+export const DELOAD_SETS = 2;
+export const DELOAD_FACTOR = 0.6;
+
+/** Sets to show for an exercise in the current mode. Deload overrides everything: 2 sets. */
+export function setCount(ex, onBlock, deload = false) {
+  if (deload) return DELOAD_SETS;
   if (onBlock && Number.isInteger(ex.onBlockSets) && ex.onBlockSets > 0) return ex.onBlockSets;
   return ex.sets;
 }
 
-/** Exercises visible for a session in the current mode, in programme order. */
-export function visibleExercises(session, onBlock) {
-  return session.exercises.filter(ex => !(onBlock && ex.onBlockSkip));
+/** Exercises visible for a session in the current mode, in programme order. Deload hides drop sets. */
+export function visibleExercises(session, onBlock, deload = false) {
+  return session.exercises.filter(ex => !(onBlock && ex.onBlockSkip) && !(deload && ex.type === "dropset"));
 }
 
 /** A session is unavailable when on-block and flagged off-block only. */
@@ -96,8 +100,8 @@ export function fmtDuration(sec) {
 }
 
 /** Target text, e.g. "4 x 8–10 · RIR 1-2", "3 rounds x 3 drops", "2 x 30–45 sec". */
-export function targetText(ex, onBlock) {
-  const n = setCount(ex, onBlock);
+export function targetText(ex, onBlock, deload = false) {
+  const n = setCount(ex, onBlock, deload);
   if (ex.type === "dropset") return `${n} rounds x ${drops(ex)} drops`;
   const range = ex.repMin == null ? "" : ex.repMax != null && ex.repMax !== ex.repMin ? `${ex.repMin}–${ex.repMax}` : `${ex.repMin}`;
   const unit = ex.type === "timed" ? " sec" : ex.perSide ? " per side" : "";
@@ -150,6 +154,8 @@ export function validateProgramme(p) {
       eids.add(e.id);
       if (!Number.isInteger(e.sets) || e.sets < 1 || e.sets > 20) errs.push(`"${e.id}": sets must be a whole number 1–20`);
       if (!["standard", "dropset", "superset", "timed"].includes(e.type || "standard")) errs.push(`"${e.id}": unknown type "${e.type}"`);
+      if (e.alternatives != null && (!Array.isArray(e.alternatives) || e.alternatives.some(x => !(typeof x === "string" ? x.trim() : x && x.name))))
+        errs.push(`"${e.id}": alternatives must be a list of names or { "id", "name" } objects`);
     }
   }
   return errs;
@@ -170,4 +176,93 @@ export function validateBackup(b) {
     if (typeof s.id !== "string" || !ids.has(s.sessionLogId) || !s.exerciseId || typeof s.setNumber !== "number") { errs.push("a set log is malformed or points to a missing session"); break; }
   }
   return errs;
+}
+
+// ---------------------------------------------------------------- Phase 2
+
+export const slug = s => String(s).toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+/**
+ * Alternatives for a programme slot as full exercise definitions. Each inherits the slot's
+ * sets / reps / RIR / type / rest / increment and logs under its own id.
+ * programme.json may list alternatives as names ("Pendulum Squat") or objects ({ id, name, notes, ... }).
+ */
+export function alternativesOf(slot) {
+  return (slot.alternatives || []).map(a => {
+    const o = typeof a === "string" ? { name: a } : a;
+    const { alternatives, ...base } = slot;
+    return { ...base, notes: "", ...o, id: o.id || slug(o.name), subFor: slot.id };
+  });
+}
+
+/** Map of every exercise id (programme exercises and their alternatives) to its definition. */
+export function exerciseIndex(programme) {
+  const m = new Map();
+  for (const s of programme.sessions) for (const e of s.exercises) {
+    if (!m.has(e.id)) m.set(e.id, { ...e, region: e.region || (s.id === "legs" ? "lower" : "upper") });
+    for (const a of alternativesOf(e)) if (!m.has(a.id)) m.set(a.id, { ...a, region: a.region || (s.id === "legs" ? "lower" : "upper") });
+  }
+  return m;
+}
+
+/** Default load jump for a successful progression: 5 kg lower body, 2.5 kg upper body. */
+export const defaultIncrement = ex => (typeof ex.increment === "number" ? ex.increment : ex.region === "lower" ? 5 : 2.5);
+
+const round2 = n => Math.round(n * 100) / 100;
+const roundHalf = n => Math.round(n * 2) / 2;
+
+/** Logged working sets (drop 0) with data, in set order. */
+const working = sets => sets.filter(s => hasData(s) && !s.drop).sort((a, b) => a.setNumber - b.setNumber);
+
+/**
+ * Double progression. base = { log, sets } from the last NON-deload session with data for this exercise.
+ * Ready when every programmed working set of that session was logged at or above the top of the rep range.
+ * Returns null when no suggestion applies (no history, drop sets, timed holds).
+ *   { ready, perSet: [{ weight, reps }], text }
+ */
+export function progression(ex, base, { increment, deload = false, sets: nSets } = {}) {
+  if (!base || ex.type === "dropset" || ex.type === "timed") return null;
+  const w = working(base.sets);
+  if (!w.length) return null;
+  const top = ex.repMax ?? ex.repMin;
+  const needed = setCount(ex, !!base.log.onBlock, false);
+  const ready = !deload && top != null && w.length >= needed && w.every(s => s.reps != null && s.reps >= top);
+  const inc = increment ?? defaultIncrement(ex);
+  const n = nSets ?? w.length;
+  const perSet = [];
+  for (let i = 0; i < n; i++) {
+    const b = w[Math.min(i, w.length - 1)];
+    let weight = b.weight;
+    if (weight != null) weight = deload ? roundHalf(weight * DELOAD_FACTOR) : ready ? round2(weight + inc) : weight;
+    perSet.push({ weight, reps: deload ? b.reps : ready ? ex.repMin ?? b.reps : b.reps });
+  }
+  const topW = w[0].weight;
+  const text = deload
+    ? `Deload: ${fmtKg(perSet[0].weight)} (60% of ${fmtKg(topW)})`
+    : ready
+      ? `Go up: ${fmtKg(perSet[0].weight)} (+${inc}kg), aim for ${ex.repMin ?? top}+ reps`
+      : `Same weight ${fmtKg(topW)} – beat last time's reps${top != null ? ` (target ${top})` : ""}`;
+  return { ready, perSet, text };
+}
+
+/** Which rest default applies to an exercise in a session. */
+export function restKind(ex, { slotIndex = 99, firstInSuperset = false } = {}) {
+  if (ex.type === "dropset") return "dropset";
+  if (firstInSuperset) return "superset";
+  if (slotIndex < 2) return "compound";
+  return "standard";
+}
+export const REST_DEFAULTS = { standard: 90, superset: 45, dropset: 15, compound: 120 };
+
+/** Exercises in the visible list with nothing logged (by the id actually used in the slot). */
+export function unloggedSlots(slots, sets, logId) {
+  const logged = new Set(sets.filter(s => s.sessionLogId === logId && hasData(s)).map(s => s.exerciseId));
+  return slots.filter(e => !logged.has(e.id));
+}
+
+/** History search: matches session name, notes and tags (case-insensitive). */
+export function matchesSearch(log, q, sessionName = "") {
+  if (!q) return true;
+  const hay = [sessionName, log.notes || "", ...(log.tags || []), log.deload ? "deload" : "", log.partial ? "partial" : ""].join(" ").toLowerCase();
+  return q.toLowerCase().split(/\s+/).filter(Boolean).every(w => hay.includes(w));
 }

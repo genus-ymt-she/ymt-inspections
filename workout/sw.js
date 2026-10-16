@@ -1,7 +1,7 @@
 /* Workout Tracker service worker – scoped to this folder only.
    App shell: cache-first, refreshed in the background (fast and reliable with poor signal).
    programme.json: network-first with a short timeout, so edits show on the next open. */
-const C = "workout-v1";
+const C = "workout-v2";
 const SHELL = ["./", "./index.html", "./app.css", "./manifest.webmanifest", "./programme.json",
   "./js/app.js", "./js/db.js", "./js/logic.js",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png"];
