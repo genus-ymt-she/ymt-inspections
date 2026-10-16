@@ -67,3 +67,80 @@ test("backup validation", () => {
   assert.ok(L.validateBackup({ app: "other" }).length);
   assert.ok(L.validateBackup({ app: "workout-tracker", sessionLogs: [], setLogs: [{ id: "x", sessionLogId: 9, exerciseId: "a", setNumber: 1 }] }).length);
 });
+
+// ---------------------------------------------------------------- Phase 2
+const IDX = L.exerciseIndex(prog);
+const ex = id => IDX.get(id);
+const mk = (log, exId, rows) => rows.map(([w, r], i) => ({ id: L.setKey(log, exId, i + 1), sessionLogId: log, exerciseId: exId, setNumber: i + 1, drop: 0, weight: w, reps: r, rir: 1 }));
+
+test("double progression: top of range on all sets → +2.5kg upper / +5kg lower", () => {
+  const smith = ex("incline-smith"); // 4 x 8-10, upper
+  const up = L.progression(smith, { log: { onBlock: false }, sets: mk(1, smith.id, [[60, 10], [60, 10], [60, 10], [57.5, 10]]) }, { sets: 4 });
+  assert.equal(up.ready, true);
+  assert.deepEqual(up.perSet.map(p => p.weight), [62.5, 62.5, 62.5, 60]);
+  assert.equal(up.perSet[0].reps, 8);
+  const legPress = ex("leg-press-high"); // lower
+  assert.equal(legPress.region, "lower");
+  const lp = L.progression(legPress, { log: {}, sets: mk(1, legPress.id, [[200, 12], [200, 12], [200, 12], [200, 12]]) }, { sets: 4 });
+  assert.equal(lp.perSet[0].weight, 205);
+});
+
+test("double progression: any set short of the top → same weight, not ready", () => {
+  const smith = ex("incline-smith");
+  const p = L.progression(smith, { log: {}, sets: mk(1, smith.id, [[60, 10], [60, 10], [60, 9], [57.5, 8]]) }, { sets: 4 });
+  assert.equal(p.ready, false);
+  assert.deepEqual(p.perSet.map(x => x.weight), [60, 60, 60, 57.5]);
+  assert.match(p.text, /beat last time/);
+});
+
+test("progression needs every programmed set logged; on-block counts its own set number", () => {
+  const smith = ex("incline-smith");
+  const two = mk(1, smith.id, [[60, 10], [60, 10]]);
+  assert.equal(L.progression(smith, { log: { onBlock: false }, sets: two }, {}).ready, false);
+  const three = mk(1, smith.id, [[60, 10], [60, 10], [60, 10]]);
+  assert.equal(L.progression(smith, { log: { onBlock: true }, sets: three }, {}).ready, true);
+});
+
+test("custom increment and deload 60%", () => {
+  const smith = ex("incline-smith");
+  const base = { log: {}, sets: mk(1, smith.id, [[60, 10], [60, 10], [60, 10], [60, 10]]) };
+  assert.equal(L.progression(smith, base, { increment: 5 }).perSet[0].weight, 65);
+  const d = L.progression(smith, base, { deload: true, sets: 2 });
+  assert.equal(d.ready, false);
+  assert.deepEqual(d.perSet.map(x => x.weight), [36, 36]);
+  assert.equal(L.progression(smith, { log: {}, sets: mk(1, smith.id, [[57.5, 10]]) }, { deload: true }).perSet[0].weight, 34.5);
+});
+
+test("deload: 2 sets, drop sets hidden", () => {
+  const chest = sess("chest");
+  const v = L.visibleExercises(chest, false, true);
+  assert.ok(!v.some(e => e.type === "dropset"));
+  assert.equal(L.setCount(chest.exercises[0], false, true), 2);
+  assert.equal(L.setCount(chest.exercises[0], true, true), 2);
+});
+
+test("rest kinds", () => {
+  assert.equal(L.restKind(ex("incline-smith"), { slotIndex: 0 }), "compound");
+  assert.equal(L.restKind(ex("incline-db-fly"), { slotIndex: 2, firstInSuperset: true }), "superset");
+  assert.equal(L.restKind(ex("cable-crossover-lth"), { slotIndex: 3 }), "standard");
+  assert.equal(L.restKind(ex("machine-chest-press-drop"), { slotIndex: 4 }), "dropset");
+});
+
+test("alternatives inherit the slot and log under their own id", () => {
+  const alts = L.alternativesOf(ex("hack-pendulum-squat"));
+  assert.deepEqual(alts.map(a => a.id), ["pendulum-squat", "leg-press-narrow"]);
+  assert.equal(alts[0].sets, 3); assert.equal(alts[0].subFor, "hack-pendulum-squat");
+  assert.equal(ex("pendulum-squat").region, "lower");
+  assert.equal(ex("incline-machine-press").name, "Incline Machine Press");
+  assert.equal(L.alternativesOf({ id: "x", sets: 3, alternatives: ["Seal Row"] })[0].id, "seal-row");
+});
+
+test("unlogged slots and history search", () => {
+  const slots = [ex("incline-smith"), ex("pec-deck")];
+  const sets = mk(5, "incline-smith", [[60, 10]]);
+  assert.deepEqual(L.unloggedSlots(slots, sets, 5).map(e => e.id), ["pec-deck"]);
+  const log = { notes: "felt flat", tags: ["Right shoulder"], deload: true };
+  assert.ok(L.matchesSearch(log, "shoulder"));
+  assert.ok(L.matchesSearch(log, "deload flat"));
+  assert.ok(!L.matchesSearch(log, "lower back"));
+});

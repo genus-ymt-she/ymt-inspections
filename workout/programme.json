@@ -18,7 +18,17 @@
           "supersetWith": null,
           "notes": "Scapula retracted, 3 sec eccentric",
           "onBlockSets": 3,
-          "onBlockSkip": false
+          "onBlockSkip": false,
+          "alternatives": [
+            {
+              "id": "incline-db-press",
+              "name": "Incline DB Press"
+            },
+            {
+              "id": "incline-machine-press",
+              "name": "Incline Machine Press"
+            }
+          ]
         },
         {
           "id": "flat-db-press-neutral",
@@ -152,7 +162,17 @@
           "supersetWith": null,
           "notes": "",
           "onBlockSets": 3,
-          "onBlockSkip": false
+          "onBlockSkip": false,
+          "alternatives": [
+            {
+              "id": "seal-row",
+              "name": "Seal Row"
+            },
+            {
+              "id": "cs-machine-row",
+              "name": "Chest-Supported Machine Row"
+            }
+          ]
         },
         {
           "id": "single-arm-cable-row",
@@ -259,7 +279,8 @@
           "supersetWith": null,
           "notes": "",
           "onBlockSets": 4,
-          "onBlockSkip": false
+          "onBlockSkip": false,
+          "region": "lower"
         },
         {
           "id": "lying-leg-curl",
@@ -273,7 +294,8 @@
           "supersetWith": null,
           "notes": "",
           "onBlockSets": 4,
-          "onBlockSkip": false
+          "onBlockSkip": false,
+          "region": "lower"
         },
         {
           "id": "hack-pendulum-squat",
@@ -287,7 +309,18 @@
           "supersetWith": null,
           "notes": "",
           "onBlockSets": 3,
-          "onBlockSkip": false
+          "onBlockSkip": false,
+          "region": "lower",
+          "alternatives": [
+            {
+              "id": "pendulum-squat",
+              "name": "Pendulum Squat"
+            },
+            {
+              "id": "leg-press-narrow",
+              "name": "Leg Press (narrow stance)"
+            }
+          ]
         },
         {
           "id": "machine-hip-thrust",
@@ -301,7 +334,8 @@
           "supersetWith": "seated-leg-curl",
           "notes": "",
           "onBlockSets": 3,
-          "onBlockSkip": false
+          "onBlockSkip": false,
+          "region": "lower"
         },
         {
           "id": "seated-leg-curl",
@@ -315,7 +349,8 @@
           "supersetWith": "machine-hip-thrust",
           "notes": "",
           "onBlockSets": 3,
-          "onBlockSkip": false
+          "onBlockSkip": false,
+          "region": "lower"
         },
         {
           "id": "leg-extension-drop",
@@ -330,7 +365,8 @@
           "notes": "",
           "onBlockSets": 2,
           "onBlockSkip": false,
-          "drops": 3
+          "drops": 3,
+          "region": "lower"
         },
         {
           "id": "seated-calf-raise",
@@ -344,7 +380,8 @@
           "supersetWith": null,
           "notes": "",
           "onBlockSets": 4,
-          "onBlockSkip": false
+          "onBlockSkip": false,
+          "region": "lower"
         },
         {
           "id": "standing-calf-raise",
@@ -358,7 +395,8 @@
           "supersetWith": null,
           "notes": "",
           "onBlockSets": 3,
-          "onBlockSkip": false
+          "onBlockSkip": false,
+          "region": "lower"
         }
       ]
     },
@@ -394,7 +432,13 @@
           "supersetWith": null,
           "notes": "",
           "onBlockSets": 3,
-          "onBlockSkip": false
+          "onBlockSkip": false,
+          "alternatives": [
+            {
+              "id": "machine-shoulder-press",
+              "name": "Machine Shoulder Press"
+            }
+          ]
         },
         {
           "id": "machine-reverse-fly",
@@ -604,5 +648,10 @@
         }
       ]
     }
+  ],
+  "noteTags": [
+    "Right shoulder",
+    "Lower back",
+    "Low energy"
   ]
 }
