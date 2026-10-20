@@ -446,16 +446,23 @@ await step("motion: entrance, count-up and success tick run (and are skipped for
   await m.waitForTimeout(900); await shot(m, "32-success-tick");
   if (await page.$(".tile.rise")) throw new Error("reduced-motion page should not animate");
 });
-await step("Emergency tab: call 000, site location, 20 situation cards (ERP Rev 1) (verbatim), contacts without Genus names, TARP", async () => {
+await step("Emergency tab: call 000, site location, 21 situation cards (ERP Rev 1 + Unwell Worker card 20) (verbatim), contacts without Genus names, TARP", async () => {
   await page.evaluate(() => go("#home")); await page.click("nav.tabs >> text=Emergency"); await page.waitForSelector(".em-hero");
   if (await page.getAttribute(".em-000", "href") !== "tel:000") throw new Error("000 link");
   const t = await page.textContent("#app"); for (const w of ["M83P+PRV", "30.3456° S, 115.3370° E", "UHF Channel 24", "Primary – Site Office Muster Point"]) if (!t.includes(w)) throw new Error("emergency page missing " + w);
-  if ((await page.$$(".em-tile")).length !== 20) throw new Error("cards: " + (await page.$$(".em-tile")).length);
+  if ((await page.$$(".em-tile")).length !== 21) throw new Error("cards: " + (await page.$$(".em-tile")).length);
+  // alignment: a tile left alone in the last row spans the row, so the grid keeps straight edges
+  const g = await page.evaluate(() => { const G = $(".em-grid").getBoundingClientRect(), L = [...document.querySelectorAll(".em-tile")].pop().getBoundingClientRect(); return [Math.round(G.left), Math.round(G.right), Math.round(L.left), Math.round(L.right)]; });
+  if (g[0] !== g[2] || g[1] !== g[3]) throw new Error("last tile not aligned to the grid: " + g);
   await page.evaluate(() => window.scrollTo(0, 0)); await settle(page); await shot(page, "35-emergency");
   await page.click(".em-tile.em-snake"); await page.waitForSelector(".em-step .eb");
   const c = await page.textContent("#app"); if (!/elasticated roller bandage \(10-15cm wide\)/.test(c) || !/Appendix B Rev 1 \| 25\/09\/2026/.test(c)) throw new Error("snake card wording: " + c.slice(0, 200));
   await settle(page); await shot(page, "36-emergency-card");
   await page.evaluate(() => go("#emergency/card/drsabcd")); await page.waitForSelector(".em-evac");
+  await page.evaluate(() => go("#emergency/card/unwell")); await page.waitForSelector(".em-step .eb"); await page.waitForFunction(() => document.querySelector("img.em-evac") && document.querySelector("img.em-evac").naturalWidth > 1000);
+  { const u = await page.textContent("#app"); for (const w of ["UNWELL WORKER (FITNESS FOR WORK)", "healthdirect 1800 022 222", "Support and observe only", "Scenario Card 20"]) if (!u.includes(w)) throw new Error("unwell worker card missing " + w);
+    if (/Gary|Armitage|Frizzell|0477|0484/.test(u)) throw new Error("Genus names on the unwell worker card"); }
+  await settle(page); await shot(page, "36b-unwell-worker");
   await page.evaluate(() => go("#emergency/card/heat")); await page.waitForSelector(".em-step .eb"); if (!/Signs of heat stroke/.test(await page.textContent("#app"))) throw new Error("heat illness card");
   await page.evaluate(() => go("#emergency")); await page.waitForSelector("img.em-evac"); await page.waitForFunction(() => document.querySelector("img.em-evac").naturalWidth > 0);
   await page.evaluate(() => go("#emergency/contacts")); await page.waitForSelector(".callrow");

@@ -2694,6 +2694,190 @@ const EMERG={
    "icon": "alert"
   },
   {
+   "title": "UNWELL WORKER (FITNESS FOR WORK)",
+   "sub": "",
+   "tables": [
+    {
+     "head": [
+      "ACTION",
+      "RESPONSIBLE"
+     ],
+     "rows": [
+      [
+       [
+        [
+         0,
+         "Immediate response"
+        ],
+        [
+         1,
+         "Report feeling unwell to the Supervisor straight away. Anyone who sees a worker who appears unwell stops the task and makes it safe."
+        ],
+        [
+         1,
+         "Stay with the worker and call a first aider (UHF Ch 24 / ERT board)."
+        ],
+        [
+         1,
+         "Any red flag below: call Triple Zero (000), follow DRSABCD and the Medical Emergency card."
+        ]
+       ],
+       [
+        [
+         0,
+         "Worker / First Responder / Supervisor"
+        ]
+       ]
+      ],
+      [
+       [
+        [
+         0,
+         "Red flags – call 000 immediately"
+        ],
+        [
+         1,
+         "Chest pain or pressure · shortness of breath · fainting, collapse or unresponsive · stroke signs (FAST) · sudden severe headache · confusion or seizure · hot, dry skin with confusion (also follow the Heat Illness card) · getting worse at any point."
+        ]
+       ],
+       [
+        [
+         0,
+         "First Responder / First Aider"
+        ]
+       ]
+      ],
+      [
+       [
+        [
+         0,
+         "Assess and support"
+        ],
+        [
+         1,
+         "Move to the first aid room; seat or lie the worker down in a cool area. Small sips of water only if fully alert."
+        ],
+        [
+         1,
+         "Follow the First Aider Assessment Guide: SAMPLE history and observations every 10–15 minutes."
+        ],
+        [
+         1,
+         "Support and observe only – do not diagnose or clear the worker for work."
+        ]
+       ],
+       [
+        [
+         0,
+         "First Aider"
+        ]
+       ]
+      ],
+      [
+       [
+        [
+         0,
+         "Clinical advice"
+        ],
+        [
+         1,
+         "Cause unclear, not settling or any doubt: call healthdirect 1800 022 222 (24/7 registered nurses), with the worker's consent and the worker on the call."
+        ],
+        [
+         1,
+         "Follow the advice: ambulance → 000; GP or hospital → release from shift; manage on site → fit-for-work decision."
+        ],
+        [
+         1,
+         "healthdirect is not an emergency service – red flags are always 000."
+        ]
+       ],
+       [
+        [
+         0,
+         "First Aider / SHE Manager"
+        ]
+       ]
+      ],
+      [
+       [
+        [
+         0,
+         "Fit-for-work decision"
+        ],
+        [
+         1,
+         "Decide using the observations and any clinical advice. If in doubt, release from shift."
+        ],
+        [
+         1,
+         "Return to work only when fully recovered; consider restricted duties for the rest of the shift (no plant, heights, driving or isolated work)."
+        ]
+       ],
+       [
+        [
+         0,
+         "Supervisor / SHE Manager / Worker's employer"
+        ]
+       ]
+      ],
+      [
+       [
+        [
+         0,
+         "Release from shift and welfare"
+        ],
+        [
+         1,
+         "No driving – the employer's nominated driver transports the worker to accommodation or medical review."
+        ],
+        [
+         1,
+         "Welfare checks at agreed times; accommodation manager informed; escalate to healthdirect or 000 if worse; update the SHE Manager."
+        ],
+        [
+         1,
+         "Fit-for-work confirmation before the next shift; GP review if symptoms persist or recur."
+        ]
+       ],
+       [
+        [
+         0,
+         "Worker's employer / Supervisor"
+        ]
+       ]
+      ],
+      [
+       [
+        [
+         0,
+         "Notify and record"
+        ],
+        [
+         1,
+         "Supervisor → SHE Manager → Construction Manager / PM. Record in MYOSH within 24 hours, classify per WHSMP Table 14 and notify the Principal in accordance with Section 12."
+        ],
+        [
+         1,
+         "Health details are confidential – need-to-know only."
+        ]
+       ],
+       [
+        [
+         0,
+         "Supervisor / SHE Manager"
+        ]
+       ]
+      ]
+     ]
+    }
+   ],
+   "source": "J1084-HSE-PLN-YMT-0002 – Emergency Response Plan, Appendix B – Scenario Card 20 (proposed) Rev 2 (Draft) | 20/10/2026. Flowchart: Unwell Worker Response – initial response (Genus names and numbers left out – public link).",
+   "id": "unwell",
+   "icon": "user",
+   "image": "assets/emergency/unwell-worker.jpg"
+  },
+  {
    "title": "DRSABCD",
    "sub": "Action plan",
    "tables": [],
