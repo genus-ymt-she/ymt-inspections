@@ -291,3 +291,10 @@ left. Reports that cannot send stay on the phone and send automatically once the
 
 - To change the reserve, set the Script Property `EMAIL_RESERVE` (for example 15).
 - To check the budget at any time, go to PARRON › Settings › **Test relay**, which shows "N emails left today".
+
+## Unwell Worker card (v3.16)
+Emergency › situation cards now include **Unwell Worker (Fitness for Work)**. It is ERP Appendix B Scenario Card 20 (proposed), Rev 2 (Draft) 20/10/2026, and opens with the *Unwell Worker Response* flowchart (tap to enlarge).
+
+The flowchart's Key Contacts box lists the SHE Manager and Construction Manager by name and mobile number. On the app those lines read "Genus contacts – see the Emergency Response Board and the Project Communication Matrix", because PARRON is a public link. Update the card text in `js/data/emergency.js` and the image `assets/emergency/unwell-worker.jpg` when the ERP revision is approved.
+
+The situation-card grid now fits the screen on every phone. Before this change it was wider than most phones, so the right-hand column ran off the edge. On narrow screens the icon now sits above the title. A card left on its own in the last row spans the full row, so the edges stay lined up.
