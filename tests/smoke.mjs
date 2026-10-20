@@ -348,34 +348,33 @@ await step("My Day repeating reminder: monthly, emailed on the day, banner on ho
   await page.evaluate(() => go("#home")); await page.waitForSelector(".remind"); if (!/Re-print the SWMS/.test(await page.textContent(".remind"))) throw new Error("home banner missing");
   await settle(page); await shot(page, "20-home-reminder");
 });
-await step("Trade Assistants: fuel register – start of day, end of day, sign and send to the Project Admin", async () => {
+await step("Trade Assistants: fuel register – one sheet a day (pre-starts, hour meters, fuel), sign and send to the Project Admin", async () => {
   await page.evaluate(() => go("#inspections")); await page.waitForSelector("#lib .card");
   if (/Firefighting Water Trailer|Fuel, Hours/.test(await page.textContent("#lib"))) throw new Error("TA forms should not be in the inspection list");
   await page.evaluate(() => go("#inspect")); await page.click(".tile >> text=Trade Assistants"); await page.waitForSelector(".tacard");
   if (!/Firefighting Water Trailer/.test(await page.textContent("#app"))) throw new Error("fire trailer missing from TA page");
+  if (!/One entry a day/.test(await page.textContent(".tacard")) || /Start of day/.test(await page.textContent(".tacard"))) throw new Error("TA page should show a single daily register");
   await settle(page); await shot(page, "21-ta-page");
   await page.click(".tacard button.btn.o"); await page.waitForSelector(".fa");
+  if (await page.$(".fstage") || /Save start of day/.test(await page.textContent("#app"))) throw new Error("start / end of day split should be gone");
   await page.click(".tachips >> text=Jayden Mullan"); await page.waitForSelector(".tachips .chip.on");
   if (await page.inputValue('[data-d="inspector"]') !== "Jayden Mullan" || await page.inputValue("#fuPos") !== "Trade Assistant") throw new Error("TA quick pick did not fill name / position"); await page.evaluate(() => window.scrollTo(0, 0)); await settle(page); await shot(page, "21b-fuel-who");
   const fixed = await page.textContent(".fixed"); if (!/PWF – 1084/.test(fixed) || !/Day/.test(fixed)) throw new Error("fixed details: " + fixed);
-  // saving with nothing filled in lists what is missing
-  await page.click("text=Save start of day"); await page.waitForSelector(".sheet"); if (!/WL46/.test(await page.textContent(".sheet"))) throw new Error("missing list"); await page.evaluate(() => closeSheet());
+  // review with nothing filled in lists what is missing
+  if (!(await page.evaluate(() => problems(CUR))).some(x => /WL46/.test(x))) throw new Error("missing list");
   const n = await page.$$eval(".fa", e => e.length); if (n !== 9) throw new Error("assets: " + n);
-  // WL46 + GEN02 used; GEN01 pre-start not done (needs a reason); the rest N/A
+  // WL46 + GEN02 used; GEN01 pre-start not done (needs a reason); the rest N/A – all on the one sheet
   for (let i = 0; i < 9; i++) await page.click(`#fa-${i} .seg >> nth=0 >> button:has-text("${i === 0 || i === 2 ? "Yes" : i === 1 ? "No" : "N/A"}")`);
+  for (const f of ["0|hs", "0|he", "0|flow", "0|fuel", "0|cmt"]) if (!await page.$(`#fa-0 [data-fu="${f}"]`)) throw new Error("one sheet should have " + f);
+  if (await page.$('#fa-3 [data-fu="3|fuel"]')) throw new Error("N/A asset should hide its fields");
   await page.fill('#fa-0 [data-fu="0|hs"]', "8567.3"); await page.fill('#fa-2 [data-fu="2|hs"]', "9780.7");
   await page.fill('#fa-1 [data-fu="1|cmt"]', "Genset fault – reported to Supervisor");
   await page.setInputFiles('#fa-0 input[type=file] >> nth=1', path.join(root, "icon-192.png")); await page.waitForSelector("#fa-0 .photos img");
-  await settle(page); await shot(page, "22-fuel-start");
-  await page.click("text=Save start of day"); await page.waitForSelector(".tacard .tstep.done");
-  if (!/Saved at/.test(await page.textContent(".tacard"))) throw new Error("start of day not shown as saved");
-  await page.click(".tacard button.btn.o"); await page.waitForSelector('[data-fu="0|fuel"]');
-  await page.click(".tachips >> text=Benjamin Herbert"); await page.waitForSelector('[data-fu="0|fuel"]');
   await page.fill('[data-fu="0|he"]', "8575.1"); await page.fill('[data-fu="0|fuel"]', "40"); await page.fill('[data-fu="0|cmt"]', "Fuelled pod (Badgingarra Roadhouse)");
   await page.fill('[data-fu="2|fuel"]', "90"); await page.fill('[data-fu="1|fuel"]', "12.5");
   if ((await page.textContent("#ftot")).trim() !== "142.5") throw new Error("total: " + await page.textContent("#ftot"));
   if (!/7.8 hrs/.test(await page.textContent("#fhr-0"))) throw new Error("hours run not shown");
-  await settle(page); await shot(page, "23-fuel-end");
+  await settle(page); await shot(page, "22-fuel-day");
   await page.click("#fstage >> text=Review & sign"); await page.waitForSelector("#sig");
   const sig = await page.$("#sig"); await sig.scrollIntoViewIfNeeded(); const b = await sig.boundingBox();
   await page.mouse.move(b.x + 20, b.y + 30); await page.mouse.down(); await page.mouse.move(b.x + 120, b.y + 60); await page.mouse.move(b.x + 200, b.y + 25); await page.mouse.up();
@@ -389,7 +388,7 @@ await step("Trade Assistants: fuel register – start of day, end of day, sign a
   const before = relay.mail.length; await page.click("#bShare"); await page.waitForFunction(() => location.hash === "#inspect", null, { timeout: 15000 });
   const m = relay.mail.slice(before).find(x => /Fuel, Hours/.test(x.subject || ""));
   if (!m || m.to !== "amie.smith@genus.com.au,darren.frizzell@genus.com.au") throw new Error("register email: " + (m && m.to));
-  if (!/Start of day: [0-9:]+ \(Jayden Mullan\)/.test(m.body) || !/\(Benjamin Herbert\)/.test(m.body)) throw new Error("who did each half: " + m.body.slice(0, 400));
+  if (!/Recorded by: Jayden Mullan/.test(m.body) || !/Completed: [0-9:]+ \(end of day\)/.test(m.body) || /Start of day:/.test(m.body)) throw new Error("register body: " + m.body.slice(0, 400));
   if (!/142.5 L/.test(m.subject) || !/PRE-START NOT DONE/.test(m.subject)) throw new Error("subject: " + m.subject);
   const rows = relay.sheet("Fuel").getLastRow() - 1; if (rows !== 9) throw new Error("fuel rows logged: " + rows);
   await page.evaluate(() => go("#ta")); await page.waitForSelector(".tacard"); if (!/register has been sent/.test(await page.textContent("#app"))) throw new Error("TA page should show today's register as sent");
