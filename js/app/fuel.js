@@ -1,9 +1,7 @@
 "use strict";
-/* ---------- 28 Daily Fuel Usage / Hours / Pre-Start Register (TAs – start and end of each day) ----------
-   Start of day: pre-start done (Y/N/N/A), hours basis and the hour meter for each asset.
-   End of day: hour meter at finish (optional), flow meter reading, fuel issued and comments, then sign and send.
-   The draft stays on the phone between the two, like the twice-daily traffic management check. */
-let FSTAGE={};
+/* ---------- 28 Daily Fuel Usage / Hours / Pre-Start Register (TAs – one entry a day, sent at the end of the day) ----------
+   One sheet per day: for each asset the pre-start (Y/N/N/A), hours basis, hour meter start and end, the standpipe flow meter,
+   fuel issued and comments, then sign and send. The draft stays on the phone until it is sent. */
 const FUEL_POS="Trade Assistant";
 function FU(d){if(!d.fuel){const t=tabByNum(d.tab);d.fuel={rows:t.assets.map(a=>({id:a.id,desc:a.desc,hours:!!a.hours,pre:"",basis:"Daily",hs:"",he:"",flow:"",fuel:"",cmt:"",ph:[]})),
   amAt:"",pmAt:"",position:FUEL_POS,vName:"",vPos:"",vSig:""}}return d.fuel}
@@ -11,10 +9,10 @@ const fuelNum=v=>{const n=parseFloat(String(v==null?"":v).replace(/,/g,""));retu
 const fuelUsed=r=>r.pre&&r.pre!=="NA";
 const fuelLabel=r=>[r.id,r.desc].filter(x=>String(x||"").trim()).join(" · ")||"New asset";
 function fuelHrs(r){const s=fuelNum(r.hs),e=fuelNum(r.he);return s!==null&&e!==null&&e>=s?Math.round((e-s)*10)/10:null}
+const fuelDone=d=>FU(d).rows.filter(r=>r.pre).length;
 function fuelTotal(d){return Math.round(FU(d).rows.filter(fuelUsed).reduce((a,r)=>a+(fuelNum(r.fuel)||0),0)*10)/10}
 const hhmm=()=>{const n=new Date();return `${pad(n.getHours())}:${pad(n.getMinutes())}`};
 function fuelDate(d){return String(d.details.datetime||nowLocal()).slice(0,10)}
-function fuelStage(d){return FSTAGE[d.id]||(FU(d).amAt?"pm":"am")}
 
 /* one-tap "who is doing this" for shared TA phones */
 const TA_TEAM=()=>TEAM.filter(p=>p.ta);
@@ -28,8 +26,7 @@ function viewFuel(d){const t=tabByNum(d.tab);const F=FU(d);const D=d.details;
     <div><label class="f">Date</label><input class="t" type="date" id="fuDate" value="${esc(fuelDate(d))}"></div>
     <div><label class="f">Recorded by <span class="req">*</span></label>${taChips(d)}<input class="t" data-d="inspector" value="${esc(D.inspector)}" autocomplete="name" placeholder="Or type a name"></div>
     <div><label class="f">Position</label><input class="t" id="fuPos" value="${esc(F.position||"")}"></div></div></div>
-   <div class="seg fstage" role="tablist">${["am","pm"].map(s=>`<button class="${fuelStage(d)===s?"on":""}" role="tab" onclick="fuelSetStage('${s}')">${s==="am"?"Start of day":"End of day"}<small>${s==="am"?(F.amAt?`✓ Saved ${esc(F.amAt)}`:"Pre-start &amp; hours"):(F.pmAt?`✓ ${esc(F.pmAt)}`:"Fuel issued")}</small></button>`).join("")}</div>
-   <div id="fstage">${fuelStageHTML(d)}</div>`;
+   <div id="fstage">${fuelSheetHTML(d)}</div>`;
   render(h);
   document.querySelectorAll("[data-d]").forEach(el=>el.addEventListener("input",()=>{d.details[el.dataset.d]=el.value;if(el.dataset.d==="inspector"&&!ls("inspector"))ls("inspector",el.value.trim());save(d);renderBar(d)}));
   $("#fuDate").addEventListener("input",e=>{if(!e.target.value)return;d.details.datetime=`${e.target.value}T${String(d.details.datetime||nowLocal()).slice(11,16)||"06:00"}`;d.reportId="";save(d)});
@@ -37,75 +34,60 @@ function viewFuel(d){const t=tabByNum(d.tab);const F=FU(d);const D=d.details;
   $("#fstage").addEventListener("input",e=>{const k=e.target.dataset.fu;if(!k)return;const [i,f]=k.split("|");FU(d).rows[+i][f]=e.target.value;save(d);
     if(f==="fuel"){const x=$("#ftot");if(x)x.textContent=fuelTotal(d)}if(f==="he"||f==="hs"){const x=$("#fhr-"+i);if(x)x.innerHTML=fuelHrsNote(FU(d).rows[+i])}renderBar(d)});
   renderBar(d)}
-function fuelSetStage(s){FSTAGE[CUR.id]=s;viewFuel(CUR);window.scrollTo(0,0)}
-function fuelStageHTML(d){const F=FU(d);const st=fuelStage(d);
-  if(st==="am")return `<div class="muted fhelp">${ic("info","s")} Complete at the start of the day. Tick whether each pre-start was done and record the hour meter. A photo of the meter is optional.</div>
-    ${F.rows.map((r,i)=>`<div class="card fa ${r.pre==="NA"?"na":""}" id="fa-${i}">${fuelAmCard(d,i)}</div>`).join("")}
+/* the whole day on one sheet – completed and sent at the end of the day */
+function fuelSheetHTML(d){const F=FU(d);
+  return `<div class="muted fhelp">${ic("info","s")} Complete once a day, at the end of the day. For each asset: was the pre-start done, the hour meter at the start and end of the day, the standpipe flow meter and fuel issued. Leave fuel blank if none was issued. Photos are optional.</div>
+    ${F.rows.map((r,i)=>`<div class="card fa ${r.pre==="NA"?"na":""}" id="fa-${i}">${fuelAssetCard(d,i)}</div>`).join("")}
     <button class="addph" style="width:100%" onclick="fuelAddRow()">${ic("plus","s")} Add another asset</button>
-    <button class="btn o w" style="margin-top:14px" onclick="fuelAmDone()">${ic("check","s")} ${F.amAt?"Update start of day":"Save start of day"}</button>
-    <div class="muted" style="text-align:center;margin-top:6px">Then come back at the end of the day to record fuel issued.</div>`;
-  const used=F.rows.map((r,i)=>[r,i]).filter(([r])=>fuelUsed(r)),off=F.rows.filter(r=>!fuelUsed(r));
-  return `${F.amAt?"":`<div class="alert org">${ic("clock")}<div><b>Start of day not saved yet.</b> Complete the start-of-day check first. <button class="btn s" style="margin-top:8px" onclick="fuelSetStage('am')">Go to start of day</button></div></div>`}
-   <div class="muted fhelp">${ic("info","s")} Complete at the end of the day: fuel issued, the standpipe flow meter and any issues. Leave fuel blank if none was issued.</div>
-   ${used.map(([r,i])=>`<div class="card fa" id="fa-${i}">${fuelPmCard(d,i)}</div>`).join("")||`<div class="card empty">${ic("info")}<b>No assets in use today</b>Mark pre-starts in the start-of-day check.</div>`}
-   ${off.length?`<div class="muted" style="margin:4px 4px 12px">Not in use today: ${off.map(r=>esc(fuelLabel(r))).join(", ")}</div>`:""}
-   <div class="card ftotal"><span>Total fuel used</span><b><span id="ftot">${fuelTotal(d)}</span> L</b></div>
-   <button class="btn o w" onclick="toReview()">Review &amp; sign ${ic("arrow","s")}</button>`}
+    <div class="card ftotal"><span>Total fuel used</span><b><span id="ftot">${fuelTotal(d)}</span> L</b></div>
+    <button class="btn o w" onclick="toReview()">Review &amp; sign ${ic("arrow","s")}</button>`}
 function fuelHead(r,i,edit){return edit?`<div class="grid2 fnew"><div><label class="f">Asset ID</label><input class="t" data-fu="${i}|id" value="${esc(r.id)}" placeholder="e.g. GEN03"></div><div><label class="f">Description <span class="req">*</span></label><input class="t" data-fu="${i}|desc" value="${esc(r.desc)}" placeholder="e.g. Lighting tower"></div></div>`
   :`<div class="fh"><span class="fid">${esc(r.id||"–")}</span><b>${esc(r.desc)}</b></div>`}
 function fuelSeg(i,f,v,opts){return `<div class="seg">${opts.map(([val,lab])=>`<button class="${v===val?"on":""}" onclick="fuelPick(${i},'${f}','${val}')">${lab}</button>`).join("")}</div>`}
-function fuelAmCard(d,i){const r=FU(d).rows[i];
+function fuelAssetCard(d,i){const r=FU(d).rows[i];const N=r.pre==="N";
   return `${fuelHead(r,i,r.custom)}
    <label class="f">Pre-start completed? <span class="req">*</span></label>${fuelSeg(i,"pre",r.pre,[["Y","Yes"],["N","No"],["NA","N/A"]])}
-   ${r.pre==="N"?`<div class="alert red" style="margin:10px 0 0">${ic("alert")}<div><b>Pre-start not done.</b> The plant must not be operated until the pre-start is completed. Say why below and tell your Supervisor.</div></div>
-     <label class="f">Reason / issue <span class="req">*</span></label><textarea class="t" rows="2" data-fu="${i}|cmt">${esc(r.cmt)}</textarea>`:""}
+   ${N?`<div class="alert red" style="margin:10px 0 0">${ic("alert")}<div><b>Pre-start not done.</b> The plant must not be operated until the pre-start is completed. Say why below and tell your Supervisor.</div></div>`:""}
    ${fuelUsed(r)?`<div class="grid2"><div><label class="f">Hours basis</label>${fuelSeg(i,"basis",r.basis,[["Daily","Daily"],["Once-off","Once-off"]])}</div>
-     <div><label class="f">Hour meter reading${r.hours&&r.pre==="Y"?' <span class="req">*</span>':""}</label><input class="t" inputmode="decimal" data-fu="${i}|hs" value="${esc(r.hs)}" placeholder="e.g. 8567.3"></div></div>
-     ${fuelPhotos(d,i,"am")}`:""}
+     <div><label class="f">Hour meter – start of day${r.hours&&r.pre==="Y"?' <span class="req">*</span>':""}</label><input class="t" inputmode="decimal" data-fu="${i}|hs" value="${esc(r.hs)}" placeholder="e.g. 8567.3"></div>
+     <div><label class="f">Hour meter – end of day</label><input class="t" inputmode="decimal" data-fu="${i}|he" value="${esc(r.he)}" placeholder="Optional"><div class="muted" id="fhr-${i}" style="margin-top:4px">${fuelHrsNote(r)}</div></div>
+     <div><label class="f">Flow meter reading (standpipe)</label><input class="t" inputmode="decimal" data-fu="${i}|flow" value="${esc(r.flow)}"></div>
+     <div><label class="f">Fuel issued (L)</label><input class="t" inputmode="decimal" data-fu="${i}|fuel" value="${esc(r.fuel)}" placeholder="0"></div></div>
+     <label class="f">${N?'Reason / issue <span class="req">*</span>':"Comments / issues"}</label><textarea class="t" rows="2" data-fu="${i}|cmt" placeholder="${N?"":"e.g. Fuelled pod (Badgingarra Roadhouse)"}">${esc(r.cmt)}</textarea>
+     ${fuelPhotos(d,i)}`:""}
    ${r.custom?`<button class="linkbtn" onclick="fuelDelRow(${i})">${ic("trash","s")} Remove this asset</button>`:""}`}
-function fuelHrsNote(r){const s=fuelNum(r.hs),e=fuelNum(r.he);if(e===null)return s!==null?`Start of day: <b>${esc(r.hs)}</b>`:"";
-  if(s!==null&&e<s)return `<span style="color:var(--ua);font-weight:800">Lower than the start reading (${esc(r.hs)})</span>`;const h=fuelHrs(r);return h!==null?`Start ${esc(r.hs)} → <b>${h} hrs</b> today`:""}
-function fuelPmCard(d,i){const r=FU(d).rows[i];
-  return `${fuelHead(r,i,false)}<div class="libmeta" style="margin:0 0 6px"><span class="tag ${r.pre==="Y"?"g":"r"}">Pre-start ${r.pre==="Y"?"done":"NOT done"}</span><span class="tag">${esc(r.basis)}</span></div>
-   <div class="grid2"><div><label class="f">Hour meter at end of day</label><input class="t" inputmode="decimal" data-fu="${i}|he" value="${esc(r.he)}" placeholder="Optional"><div class="muted" id="fhr-${i}" style="margin-top:4px">${fuelHrsNote(r)}</div></div>
-    <div><label class="f">Flow meter reading (standpipe)</label><input class="t" inputmode="decimal" data-fu="${i}|flow" value="${esc(r.flow)}"></div>
-    <div><label class="f">Fuel issued (L)</label><input class="t" inputmode="decimal" data-fu="${i}|fuel" value="${esc(r.fuel)}" placeholder="0"></div></div>
-   <label class="f">Comments / issues</label><textarea class="t" rows="2" data-fu="${i}|cmt" placeholder="e.g. Fuelled pod (Badgingarra Roadhouse)">${esc(r.cmt)}</textarea>
-   ${fuelPhotos(d,i,"pm")}`}
-function fuelPhotos(d,i,stage){const r=FU(d).rows[i];const list=r.ph.map((p,k)=>[p,k]).filter(([p])=>p.s===stage);
-  return `<div class="fph">${list.length?`<div class="photos">${list.map(([p,k])=>`<div class="ph"><img src="${p.img}" onclick="zoomImg(this.src)" alt="Photo"><button onclick="fuelDelPh(${i},${k})" aria-label="Remove photo">${ic("x")}</button></div>`).join("")}</div>`:""}
-   <div class="pbtns"><label class="addph">${ic("camera","s")} ${stage==="am"?"Photo of meter":"Photo"}<input type="file" accept="image/*" capture="environment" class="hide" onchange="fuelAddPh(${i},'${stage}',this,'camera')"></label><label class="addph">${ic("image","s")} Upload<input type="file" accept="image/*" class="hide" onchange="fuelAddPh(${i},'${stage}',this,'upload')"></label></div></div>`}
-function fuelCard(i){const el=$("#fa-"+i);if(!el)return;const am=fuelStage(CUR)==="am";const r=FU(CUR).rows[i];el.className=`card fa ${am&&r.pre==="NA"?"na":""}`;el.innerHTML=am?fuelAmCard(CUR,i):fuelPmCard(CUR,i);renderBar(CUR)}
+function fuelHrsNote(r){const s=fuelNum(r.hs),e=fuelNum(r.he);if(e===null||s===null)return "";
+  if(e<s)return `<span style="color:var(--ua);font-weight:800">Lower than the start reading (${esc(r.hs)})</span>`;const h=fuelHrs(r);return h!==null?`<b>${h} hrs</b> today`:""}
+function fuelPhotos(d,i){const r=FU(d).rows[i];
+  return `<div class="fph">${r.ph.length?`<div class="photos">${r.ph.map((p,k)=>`<div class="ph"><img src="${p.img}" onclick="zoomImg(this.src)" alt="Photo"><button onclick="fuelDelPh(${i},${k})" aria-label="Remove photo">${ic("x")}</button></div>`).join("")}</div>`:""}
+   <div class="pbtns"><label class="addph">${ic("camera","s")} Photo of meter<input type="file" accept="image/*" capture="environment" class="hide" onchange="fuelAddPh(${i},this,'camera')"></label><label class="addph">${ic("image","s")} Upload<input type="file" accept="image/*" class="hide" onchange="fuelAddPh(${i},this,'upload')"></label></div></div>`}
+function fuelCard(i){const el=$("#fa-"+i);if(!el)return;const r=FU(CUR).rows[i];el.className=`card fa ${r.pre==="NA"?"na":""}`;el.innerHTML=fuelAssetCard(CUR,i);const x=$("#ftot");if(x)x.textContent=fuelTotal(CUR);renderBar(CUR)}
 function fuelPick(i,f,v){const r=FU(CUR).rows[i];r[f]=r[f]===v&&f==="pre"?"":v;save(CUR);fuelCard(i)}
-function fuelAddRow(){FU(CUR).rows.push({id:"",desc:"",hours:true,custom:true,pre:"",basis:"Daily",hs:"",he:"",flow:"",fuel:"",cmt:"",ph:[]});save(CUR);$("#fstage").innerHTML=fuelStageHTML(CUR);renderBar(CUR)}
-async function fuelDelRow(i){if(!await ask2("Remove this asset?","It is removed from today's register.","Remove",true))return;FU(CUR).rows.splice(i,1);save(CUR);$("#fstage").innerHTML=fuelStageHTML(CUR);renderBar(CUR)}
-async function fuelAddPh(i,stage,inp,src){const f=inp.files&&inp.files[0];if(!f)return;const d=CUR;const r=FU(d).rows[i];
-  try{toast("Stamping photo…",1500);const ph=await stampPhoto(f,[[stage==="am"?"Start of day":"End of day",fuelLabel(r),d.details.inspector].filter(Boolean).join("  ·  "),`Fuel, Hours & Pre-Start Register  ·  ${fmtD(fuelDate(d))}`],{source:src,max:1280});
-    r.ph.push({s:stage,img:ph.img});save(d,true);fuelCard(i)}catch(e){console.error(e);toast("Could not read that photo")}}
+function fuelAddRow(){FU(CUR).rows.push({id:"",desc:"",hours:true,custom:true,pre:"",basis:"Daily",hs:"",he:"",flow:"",fuel:"",cmt:"",ph:[]});save(CUR);$("#fstage").innerHTML=fuelSheetHTML(CUR);renderBar(CUR)}
+async function fuelDelRow(i){if(!await ask2("Remove this asset?","It is removed from today's register.","Remove",true))return;FU(CUR).rows.splice(i,1);save(CUR);$("#fstage").innerHTML=fuelSheetHTML(CUR);renderBar(CUR)}
+async function fuelAddPh(i,inp,src){const f=inp.files&&inp.files[0];if(!f)return;const d=CUR;const r=FU(d).rows[i];
+  try{toast("Stamping photo…",1500);const ph=await stampPhoto(f,[[fuelLabel(r),d.details.inspector].filter(Boolean).join("  ·  "),`Fuel, Hours & Pre-Start Register  ·  ${fmtD(fuelDate(d))}`],{source:src,max:1280});
+    r.ph.push({s:"day",img:ph.img});save(d,true);fuelCard(i)}catch(e){console.error(e);toast("Could not read that photo")}}
 async function fuelDelPh(i,k){if(!await ask2("Remove this photo?","It is removed from the register.","Remove",true))return;FU(CUR).rows[i].ph.splice(k,1);save(CUR);fuelCard(i)}
-function fuelAmProblems(d){const F=FU(d);const p=[];if(!d.details.inspector.trim())p.push("Recorded by");
+function fuelProblems(d){const F=FU(d);const p=[];if(!d.details.inspector.trim())p.push("Recorded by");
   F.rows.forEach(r=>{const L=fuelLabel(r);if(r.custom&&!String(r.desc||"").trim())p.push("A new asset needs a description");
     if(!r.pre)p.push(`${L}: pre-start completed? (Yes / No / N/A)`);else if(r.pre==="N"&&!String(r.cmt||"").trim())p.push(`${L}: reason the pre-start was not done`);
-    if(r.pre==="Y"&&r.hours&&fuelNum(r.hs)===null)p.push(`${L}: hour meter reading`)});return p}
-function fuelProblems(d){const F=FU(d);const p=fuelAmProblems(d);if(!F.amAt)p.push("Save the start-of-day check");
+    if(r.pre==="Y"&&r.hours&&fuelNum(r.hs)===null)p.push(`${L}: hour meter at the start of the day`)});
   F.rows.filter(fuelUsed).forEach(r=>{const L=fuelLabel(r);const s=fuelNum(r.hs),e=fuelNum(r.he);
     if(String(r.he||"").trim()&&e===null)p.push(`${L}: end-of-day hour meter is not a number`);else if(s!==null&&e!==null&&e<s)p.push(`${L}: end-of-day hour meter is lower than the start`);
     if(String(r.fuel||"").trim()&&fuelNum(r.fuel)===null)p.push(`${L}: fuel issued is not a number`)});
   return p}
-async function fuelAmDone(){const d=CUR;const p=fuelAmProblems(d);
-  if(p.length){sheet(`<h3>Start of day not complete</h3><ul>${p.map(x=>`<li>${esc(x)}</li>`).join("")}</ul><button class="btn o w" onclick="closeSheet()">OK</button>`);return}
-  const F=FU(d);F.amAt=F.amAt||hhmm();F.amBy=F.amBy||d.details.inspector.trim();await save(d,true);queuePing(d,"draft");FSTAGE[d.id]="pm";toast(`✓ Start of day saved at ${F.amAt} – open it again at the end of the day`,5000);go("#ta")}
-function fuelBarHTML(d){const F=FU(d);const am=fuelStage(d)==="am";const n=(am?fuelAmProblems(d):fuelProblems(d)).length;
-  return `<div class="in"><div class="stats">${n?`<b>${n}</b> item(s) to complete`:`<b style="color:var(--c)">${ic("circlecheck","s")} ${am?"Start of day ready":"Ready to review"}</b>`} · ${fuelTotal(d)} L</div>
-   ${am?`<button class="btn o" onclick="fuelAmDone()">${F.amAt?"Update":"Save start"} ${ic("check","s")}</button>`:`<button class="btn o" onclick="toReview()">Review ${ic("arrow","s")}</button>`}</div>`}
+function fuelBarHTML(d){const n=fuelProblems(d).length;
+  return `<div class="in"><div class="stats">${n?`<b>${n}</b> item(s) to complete`:`<b style="color:var(--c)">${ic("circlecheck","s")} Ready to review</b>`} · ${fuelTotal(d)} L</div>
+   <button class="btn o" onclick="toReview()">Review ${ic("arrow","s")}</button></div>`}
 
 /* ---------- review, sign and send ---------- */
 function fuelRecipients(d){const t=tabByNum(d.tab);return [...new Set([...(t.to||[]),recipient()].filter(e=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)).map(e=>e.toLowerCase()))]}
 function viewFuelReview(d){const t=tabByNum(d.tab);const F=FU(d);setHeader("Review & send",`${pad(t.num)} · ${t.short}`,{icon:"back",aria:"Back to register",fn:()=>go("#insp/"+d.id)});
-  const bar=document.getElementById("bar");if(bar)bar.remove();PDFBLOB=null;if(F.amAt&&!F.pmAt){F.pmAt=hhmm();save(d)}
+  const bar=document.getElementById("bar");if(bar)bar.remove();PDFBLOB=null;F.pmAt=hhmm();save(d)
   const p=fuelProblems(d);const used=F.rows.filter(fuelUsed);
   let h=`<div class="stepper"><div class="done">1 · Record</div><div class="on">2 · Review & sign</div><div>3 · Send</div></div>
-   <div class="card"><b style="font-size:16px">${esc(t.title)}</b><div class="muted" style="margin-top:3px">${ic("cal","s")} ${fmtD(fuelDate(d))} · ${ic("user","s")} ${esc(d.details.inspector)}${F.position?` (${esc(F.position)})`:""}<br>${ic("clock","s")} Start of day ${esc(F.amAt||"–")} · End of day ${esc(F.pmAt||"–")}</div>
+   <div class="card"><b style="font-size:16px">${esc(t.title)}</b><div class="muted" style="margin-top:3px">${ic("cal","s")} ${fmtD(fuelDate(d))} · ${ic("user","s")} ${esc(d.details.inspector)}${F.position?` (${esc(F.position)})`:""}<br>${ic("clock","s")} Completed ${esc(F.pmAt||"–")}</div>
     <div class="libmeta" style="margin-top:8px"><span class="pill c">${used.filter(r=>r.pre==="Y").length} pre-starts done</span>${used.some(r=>r.pre==="N")?`<span class="pill ua">${used.filter(r=>r.pre==="N").length} not done</span>`:""}<span class="pill na">${F.rows.length-used.length} not in use</span><span class="pill ni">${fuelTotal(d)} L fuel</span></div></div>`;
   if(p.length)h+=`<div class="alert red">${ic("alert")}<div><b>Not ready to send</b><ul>${p.map(x=>`<li>${esc(x)}</li>`).join("")}</ul><button class="btn s" style="margin-top:10px" onclick="go('#insp/${d.id}')">${ic("back","s")} Back to register</button></div></div>`;
   h+=`<h2>Register</h2><div class="card" style="overflow-x:auto"><table class="reftbl ftbl"><tr><th>Asset</th><th>Pre-start</th><th>Hours</th><th>Fuel (L)</th></tr>
@@ -146,7 +128,7 @@ function fuelPayload(d){const F=FU(d);return {date:fuelDate(d),by:d.details.insp
 function fuelSubject(d){return `YMT Fuel, Hours & Pre-Start Register | ${fmtD(fuelDate(d))} | ${fuelTotal(d)} L | by ${d.details.inspector}${FU(d).rows.some(r=>r.pre==="N")?" | ⚠ PRE-START NOT DONE":""}`}
 function fuelBodyText(d){const t=tabByNum(d.tab);const F=FU(d);const L=[];const HR="━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
   L.push("PARRON | DAILY FUEL USAGE / HOURS / PRE-START REGISTER");L.push(t.subtitle);L.push(HR);
-  L.push(`• Date: ${fmtD(fuelDate(d))}`);L.push(`• Recorded by: ${d.details.inspector}${F.position?` (${F.position})`:""}`);L.push(`• Start of day: ${F.amAt||"-"}${F.amBy?` (${F.amBy})`:""}  ·  End of day: ${F.pmAt||"-"} (${d.details.inspector})`);L.push("");
+  L.push(`• Date: ${fmtD(fuelDate(d))}`);L.push(`• Recorded by: ${d.details.inspector}${F.position?` (${F.position})`:""}`);L.push(`• Completed: ${F.pmAt||"-"} (end of day)`);L.push("");
   fuelRows(d).forEach(r=>L.push(`${r.id||"-"} ${r.desc}: pre-start ${r.pre||"-"}${r.basis?` | ${r.basis}`:""}${r.hs!==""?` | hours ${r.hs}${r.he?` → ${r.he}`:""}`:""}${r.flow?` | flow ${r.flow}`:""}${r.fuel!==""?` | fuel ${r.fuel} L`:""}${r.cmt?` | ${r.cmt}`:""}`));
   L.push("");L.push(`TOTAL FUEL USED: ${fuelTotal(d)} L`);L.push(`Verified by: ${F.vName?`${F.vName}${F.vPos?` (${F.vPos})`:""}`:"not verified on the day"}`);L.push("");
   L.push("Completed register attached (PDF).");L.push(`Sent from PARRON v${CONFIG.appVersion}`);return L.join("\n")}
@@ -154,7 +136,7 @@ function fuelHtml(d){const t=tabByNum(d.tab);const F=FU(d);const e=esc;
   const td='style="border:1px solid #D0D5DD;padding:5px 7px;font-size:13px;vertical-align:top"',th='style="border:1px solid #112B4E;background:#112B4E;color:#fff;padding:5px 7px;font-size:12px;text-align:left"';
   return `<div style="font-family:Arial,Helvetica,sans-serif;color:#1B2430;max-width:960px">
   <div style="background:#112B4E;color:#fff;padding:12px 14px;border-bottom:4px solid #EC7723"><div style="font-size:12px;color:#EC7723;font-weight:700;letter-spacing:.06em">PARRON | ${e(t.docNo)}</div><div style="font-size:18px;font-weight:700">Daily Fuel Usage / Hours / Pre-Start Register</div><div style="font-size:12px">${e(t.subtitle)}</div></div>
-  <p style="font-size:13px"><b>Date:</b> ${fmtD(fuelDate(d))} &nbsp; <b>Recorded by:</b> ${e(d.details.inspector)}${F.position?` (${e(F.position)})`:""} &nbsp; <b>Start of day:</b> ${e(F.amAt||"-")}${F.amBy?` (${e(F.amBy)})`:""} &nbsp; <b>End of day:</b> ${e(F.pmAt||"-")} (${e(d.details.inspector)})</p>
+  <p style="font-size:13px"><b>Date:</b> ${fmtD(fuelDate(d))} &nbsp; <b>Recorded by:</b> ${e(d.details.inspector)}${F.position?` (${e(F.position)})`:""} &nbsp; <b>Completed:</b> ${e(F.pmAt||"-")} (end of day)</p>
   <table style="border-collapse:collapse;width:100%"><tr>${["Asset ID","Description","Pre-start","Hours basis","Hour meter start","Hour meter end","Hours","Flow meter (standpipe)","Fuel issued (L)","Comments / issues"].map(x=>`<th ${th}>${x}</th>`).join("")}</tr>
   ${fuelRows(d).map(r=>`<tr>${[r.id,r.desc,r.pre,r.basis,r.hs,r.he,r.hrs,r.flow,r.fuel,r.cmt].map((v,i)=>`<td ${td}>${i===2&&v==="N"?'<b style="color:#C62828">N</b>':e(v)}</td>`).join("")}</tr>`).join("")}
   <tr><td ${td} colspan="8" style="border:1px solid #D0D5DD;padding:5px 7px;text-align:right;font-weight:700">TOTAL FUEL USED (L)</td><td ${td}><b>${fuelTotal(d)}</b></td><td ${td}></td></tr></table>
@@ -190,8 +172,8 @@ async function buildFuelPDF(d){const {jsPDF}=window.jspdf;const doc=new jsPDF({u
     didParseCell:c=>{if(c.section==="body")c.cell.styles.minCellHeight=16},
     didDrawCell:c=>{if(c.section!=="body")return;const img=c.column.index===2?d.signature:c.column.index===6?F.vSig:"";if(!img)return;const h=Math.min(c.cell.height-2,14);try{doc.addImage(img,"PNG",c.cell.x+1,c.cell.y+1,Math.min(h*2.6,c.cell.width-2),h)}catch(e){}}});
   y=doc.lastAutoTable.finalY+4;doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(80);
-  doc.text(PDFSAFE(`Start-of-day check saved ${F.amAt||"-"}${F.amBy?` by ${F.amBy}`:""}  ·  End-of-day check ${F.pmAt||"-"} by ${d.details.inspector}  ·  Recorded in PARRON`),M,y);
-  const ph=[];F.rows.forEach(r=>r.ph.forEach(p=>ph.push({img:p.img,cap:`${fuelLabel(r)} – ${p.s==="am"?"start of day":"end of day"}`})));
+  doc.text(PDFSAFE(`Daily register completed ${F.pmAt||"-"} by ${d.details.inspector}  ·  Recorded in PARRON`),M,y);
+  const ph=[];F.rows.forEach(r=>r.ph.forEach(p=>ph.push({img:p.img,cap:fuelLabel(r)})));
   if(ph.length){doc.addPage();y=14;doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(...NAVY);doc.text("PHOTOS",M,y);y+=4;
     const cols=4,gap=5,pw=(W-2*M-gap*(cols-1))/cols;let rh=0;
     ph.forEach((p,i)=>{const ip=doc.getImageProperties(p.img);const h=Math.min(pw*ip.height/ip.width,80);const c=i%cols;if(c===0&&i>0){y+=rh+9;rh=0}
@@ -208,11 +190,10 @@ async function viewTA(){const seq=ROUTE_SEQ;setHeader("Trade Assistants","Take 5
   const fSent=sent.filter(s=>s.no==="28"&&new Date(s.sentAt).toDateString()===new Date().toDateString()).sort((a,b)=>b.sentAt-a.sentAt)[0];
   const tr=drafts.filter(x=>x.tab===22).sort((a,b)=>b.updated-a.updated)[0];const trSent=sent.filter(s=>s.no==="22").sort((a,b)=>b.sentAt-a.sentAt)[0];
   const F=fToday?FU(fToday):null;
-  const step=(on,done,lab,sub)=>`<div class="tstep ${done?"done":on?"on":""}"><i>${done?ic("check","s"):""}</i><div><b>${lab}</b><span>${sub}</span></div></div>`;
   let h=`<div class="card tacard"><div class="tah"><span class="ti t-accent">${ic("fuel","l")}</span><div><b>Fuel, Hours &amp; Pre-Start Register</b><span>Today · ${new Date().toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long"})}</span></div></div>
-   <div class="tsteps">${step(!F||!F.amAt,F&&F.amAt,"Start of day",F&&F.amAt?`Saved at ${esc(F.amAt)}`:"Pre-starts &amp; hour meters")}${step(F&&F.amAt,!!fSent,"End of day",fSent?`Sent at ${new Date(fSent.sentAt).toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit"})}`:"Fuel issued, sign &amp; send")}</div>
-   ${fSent&&!fToday?`<div class="alert green" style="margin:10px 0 0">${ic("circlecheck")}<div><b>Today's register has been sent.</b></div></div><button class="btn g w" onclick="startFuel(true)">Start another register</button>`
-    :`<button class="btn o w" onclick="startFuel()">${!F?`${ic("plus","s")} Start of day`:!F.amAt?"Continue start of day":`End of day ${ic("arrow","s")}`}</button>`}
+   <div class="muted" style="margin:8px 0 0">One entry a day – complete it at the end of the day (pre-starts, hour meters and fuel issued), then sign and send.</div>
+   ${fSent&&!fToday?`<div class="alert green" style="margin:10px 0 0">${ic("circlecheck")}<div><b>Today's register has been sent</b> at ${new Date(fSent.sentAt).toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit"})}.</div></div><button class="btn g w" onclick="startFuel(true)">Start another register</button>`
+    :`<button class="btn o w" onclick="startFuel()">${F?`Continue today's register ${ic("arrow","s")}`:`${ic("plus","s")} Start today's register`}</button>`}
    ${fd.filter(x=>x!==fToday).length?`<div class="muted" style="margin-top:10px">${ic("alert","s")} ${fd.filter(x=>x!==fToday).length} unsent register(s) from an earlier day – <a href="#insp/${fd.filter(x=>x!==fToday)[0].id}">open</a></div>`:""}</div>
    <div class="card tap tacard" onclick="startInsp(T5_NUM)"><div class="tah"><span class="ti t-green">${ic("circlecheck","l")}</span><div><b>Take 5 – before you start a task</b><span>${(()=>{const n=sent.filter(s=>s.no===String(T5_NUM)&&new Date(s.sentAt).toDateString()===new Date().toDateString()).length;const dr=drafts.filter(x=>x.tab===T5_NUM).length;return `${n?`${n} sent today`:"None sent today"}${dr?` · ${dr} in progress`:""}`})()} · do a new one when the task or conditions change</span></div>${ic("chev")}</div></div>
    <div class="card tap tacard" onclick="startTrailer()"><div class="tah"><span class="ti t-red">${ic("flame","l")}</span><div><b>Firefighting Water Trailer – Weekly Pre-Start</b><span>${tr?`In progress · updated ${ago(new Date(tr.updated).toISOString())}`:trSent?`Last sent ${new Date(trSent.sentAt).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}`:"Weekly checks + daily fire danger log"}</span></div>${ic("chev")}</div></div>
@@ -220,6 +201,6 @@ async function viewTA(){const seq=ROUTE_SEQ;setHeader("Trade Assistants","Take 5
   render(h)}
 async function startFuel(another){if(!(ls("inspector")||"").trim()){const n=await askName();if(!n)return}
   const today=todayISO();const d0=(await dbAll("drafts")).filter(x=>x.tab===28&&fuelDate(x)===today).sort((a,b)=>b.updated-a.updated)[0];
-  if(d0&&!another){FSTAGE[d0.id]=FU(d0).amAt?"pm":"am";return go("#insp/"+d0.id)}
+  if(d0&&!another)return go("#insp/"+d0.id);
   const d=newDraft(28);d.details.location="PWF";FU(d);await save(d,true);queuePing(d,"draft");go("#insp/"+d.id)}
 async function startTrailer(){const d0=(await dbAll("drafts")).filter(x=>x.tab===22).sort((a,b)=>b.updated-a.updated)[0];if(d0)return go("#insp/"+d0.id);startInsp(22)}

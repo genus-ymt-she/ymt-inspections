@@ -78,8 +78,9 @@ A GitHub Action (`.github/workflows/fdr.yml`) downloads it every 30 minutes and 
 
 ## Trade Assistants – Fuel, Hours & Pre-Start Register (form 28)
 
-- Home → **Trade Assistants**. The TA completes the **Start of day** (pre-start Y/N/N/A, hours basis, hour meter, optional photo)
-  and saves it; at the end of the day they open it again, add fuel issued / flow meter / comments, sign and send.
+- Home → **Trade Assistants**. **One entry a day, completed at the end of the day (v3.17).** On one sheet, the TA records the
+  following for each asset: pre-start (Y/N/N/A), hours basis, hour meter start and end, standpipe flow meter, fuel issued, comments
+  and an optional photo. They then sign and send. Drafts saved on the phone by the earlier two-step version still open and send as normal.
 - The register (PDF in the paper GEN-PWF-1084-SHEQ-F021 layout, plus a table in the email) goes to **Amie Smith (Project Admin)**
   and the SHE Manager. Recipients are set in `js/data/templates.js` (form 28, `"to"`); assets are listed in the same place.
 - **Weekly fuel summary (optional – needs the latest relay code):** after pasting the current `PARRON_Relay_Code.gs` and deploying a

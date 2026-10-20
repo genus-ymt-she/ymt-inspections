@@ -560,9 +560,6 @@ body.voiceon main{padding-bottom:380px}
 .remind>.ic:last-child{color:var(--faint)}
 
 /* ---------- Fuel, Hours & Pre-Start Register (28) ---------- */
-.fstage{margin:4px 0 12px}
-.fstage button{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;padding:6px 4px}
-.fstage button small{font-weight:600;font-size:12px;opacity:.85;margin-top:2px}
 .fhelp{display:flex;gap:6px;align-items:flex-start;margin:2px 4px 10px}
 .fa .fh{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 .fa .fh b{font-size:15.5px}
@@ -579,12 +576,6 @@ body.voiceon main{padding-bottom:380px}
 .tacard .tah b{display:block;font-size:15.5px}
 .tacard .tah span:not(.ti){color:var(--muted);font-size:13px}
 .tacard .ti{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;flex:none}
-.tsteps{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 12px}
-.tstep{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:9px}
-.tstep i{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;flex:none;color:#fff}
-.tstep b{display:block;font-size:13.5px}.tstep span{display:block;font-size:12px;line-height:1.3;color:var(--muted)}
-.tstep.on{border-color:var(--accent)}.tstep.on i{border-color:var(--accent)}
-.tstep.done i{background:var(--c);border-color:var(--c)}
 /* ---------- PARRON Radio ---------- */
 .rdock{position:fixed;z-index:34;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));display:flex;gap:10px;align-items:center;background:var(--brand);color:#fff;border-radius:16px;padding:8px;box-shadow:var(--shadow-2,0 8px 24px rgba(0,0,0,.25));max-width:640px;margin:0 auto}
 body.task .rdock:not(.full){bottom:calc(88px + env(safe-area-inset-bottom))}

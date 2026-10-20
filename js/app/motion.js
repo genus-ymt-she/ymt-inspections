@@ -4,7 +4,7 @@
 const calm=()=>{try{return matchMedia("(prefers-reduced-motion: reduce)").matches}catch(e){return false}};
 /* stagger cards and tiles in as a screen opens */
 function motionIn(root){if(calm()||!root)return;
-  root.querySelectorAll(".tiles,.kpis,.lib,.attn,.tsteps,.rlist,#drafts~.card").forEach(box=>{[...box.children].forEach((el,i)=>{el.style.setProperty("--i",Math.min(i,14));el.classList.add("rise")})});
+  root.querySelectorAll(".tiles,.kpis,.lib,.attn,.rlist,#drafts~.card").forEach(box=>{[...box.children].forEach((el,i)=>{el.style.setProperty("--i",Math.min(i,14));el.classList.add("rise")})});
   root.querySelectorAll(".kpi .v,.hero .kp b,.ach b,.ftotal b span").forEach(countUp)}
 /* numbers count up from zero (only plain whole numbers; "90%" style values keep their suffix element) */
 function countUp(el){const node=[...el.childNodes].find(n=>n.nodeType===3&&/^\s*\d+\s*$/.test(n.textContent));if(!node)return;const to=+node.textContent.trim();if(!to||to>100000)return;
