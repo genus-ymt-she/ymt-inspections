@@ -8,7 +8,7 @@ const CONFIG = {
   project: "J1084 – Parron Wind Farm Connection Assets – Yerramullah Terminal (YMT)",
   projectShort: "YMT – Yerramullah Terminal",
   jobNo: "J1084",
-  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "3.17"
+  docPrefix: "J1084-HSE-FRM-YMT-TBA", rev: "0", appVersion: "3.18"
 };
 
 /* Site location for the home-screen weather (forecast for this point) and the Bureau of Meteorology
@@ -81,7 +81,7 @@ const TEAM = [
 const OBS_CATEGORIES = ["Above-standard practice", "Speaking up / stop work", "Effective controls in place", "Good housekeeping", "Environmental care", "Leadership / mentoring", "Innovation / improvement"];
 
 /* Forms opened from their own tile on the home screen instead of the inspection list */
-const HOME_TILE_FORMS = [24, 23, 22, 28, 50];   // 22 + 28 sit under the Trade Assistants tile; 50 Take 5 has its own tile (Inspect and Trade Assistants)
+const HOME_TILE_FORMS = [24, 23, 22, 28, 50, 51];   // 22, 28 + 51 sit under the Trade Assistants tile; 50 Take 5 has its own tile (Inspect and Trade Assistants)
 
 /* Inspection library groups (template numbers). Anything not listed shows under "Other". */
 const CATEGORIES = [

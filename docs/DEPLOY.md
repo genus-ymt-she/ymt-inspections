@@ -299,3 +299,19 @@ Emergency › situation cards now include **Unwell Worker (Fitness for Work)**. 
 The flowchart's Key Contacts box lists the SHE Manager and Construction Manager by name and mobile number. On the app those lines read "Genus contacts – see the Emergency Response Board and the Project Communication Matrix", because PARRON is a public link. Update the card text in `js/data/emergency.js` and the image `assets/emergency/unwell-worker.jpg` when the ERP revision is approved.
 
 The situation-card grid now fits the screen on every phone. Before this change it was wider than most phones, so the right-hand column ran off the edge. On narrow screens the icon now sits above the title. A card left on its own in the last row spans the full row, so the edges stay lined up.
+
+## Load and Unloading Truck Site Inspection Checklist (form 51, v3.18)
+- Open it from Home › **Trade Assistants** › *Load & Unloading Truck Checklist*. It is the Genus FRM-SHEQ-GNP-0036 Rev 3 form.
+- Changes from the paper form:
+  - The **Supervisor and Truck Driver signature boxes are removed**. Their names stay on the form.
+  - Only the operator signs.
+- Choose **Loading**, **Unloading** or **Both**. Only the checks for that job are shown:
+  - Loading and Unloading checks are answered Yes / No / N/A.
+  - Off-loading general freight checks are answered Yes / No.
+  - Special equipment / staff request is optional.
+- **Any No means DO NOT PROCEED.** The checklist can still be sent, so the stop is recorded, but *Actions* (what the Manager or Supervisor decided) becomes required.
+- **Photos:**
+  - A dedicated **Delivery docket** slot. The review screen reminds the user if it is empty.
+  - Up to 10 other photos, each with a caption.
+  - All photos appear in the PDF, with the docket first and full width.
+- The checklist is emailed to the SHE Manager like other reports and counts as an inspection in Monthly figures. A DO NOT PROCEED is recorded as a stop.
