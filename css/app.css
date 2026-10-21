@@ -1022,3 +1022,8 @@ nav.tabs a.em-tab.on .ic{stroke:var(--ua)}
   .sheet-bg{padding-left:var(--side)}
   body.task .sheet-bg{padding-left:0}
 }
+/* 51 Load & Unloading checklist */
+.t5-yn .x.on{background:var(--ink-2);border-color:var(--ink-2);color:var(--surface)}
+.lu-stop{margin:-4px 4px 12px;font-size:12px;font-weight:800;color:var(--ua)}
+.cph .slot.lu-docket:not(.ok){border-style:solid}
+.slot.lu-docket .cx-item span{font-size:12px}

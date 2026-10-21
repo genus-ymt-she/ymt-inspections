@@ -184,7 +184,7 @@ async function buildFuelPDF(d){const {jsPDF}=window.jspdf;const doc=new jsPDF({u
   PDFBLOB=doc.output("blob");return PDFBLOB}
 
 /* ---------- Trade Assistants page ---------- */
-async function viewTA(){const seq=ROUTE_SEQ;setHeader("Trade Assistants","Take 5 · daily register · fire trailer pre-start",{icon:"back",aria:"Back",fn:()=>go("#inspect")});
+async function viewTA(){const seq=ROUTE_SEQ;setHeader("Trade Assistants","Take 5 · daily register · loads · fire trailer",{icon:"back",aria:"Back",fn:()=>go("#inspect")});
   const drafts=await dbAll("drafts"),sent=await dbAll("sent");if(stale(seq))return;const today=todayISO();
   const fd=drafts.filter(x=>x.tab===28).sort((a,b)=>b.updated-a.updated);const fToday=fd.find(x=>fuelDate(x)===today);
   const fSent=sent.filter(s=>s.no==="28"&&new Date(s.sentAt).toDateString()===new Date().toDateString()).sort((a,b)=>b.sentAt-a.sentAt)[0];
@@ -196,6 +196,7 @@ async function viewTA(){const seq=ROUTE_SEQ;setHeader("Trade Assistants","Take 5
     :`<button class="btn o w" onclick="startFuel()">${F?`Continue today's register ${ic("arrow","s")}`:`${ic("plus","s")} Start today's register`}</button>`}
    ${fd.filter(x=>x!==fToday).length?`<div class="muted" style="margin-top:10px">${ic("alert","s")} ${fd.filter(x=>x!==fToday).length} unsent register(s) from an earlier day – <a href="#insp/${fd.filter(x=>x!==fToday)[0].id}">open</a></div>`:""}</div>
    <div class="card tap tacard" onclick="startInsp(T5_NUM)"><div class="tah"><span class="ti t-green">${ic("circlecheck","l")}</span><div><b>Take 5 – before you start a task</b><span>${(()=>{const n=sent.filter(s=>s.no===String(T5_NUM)&&new Date(s.sentAt).toDateString()===new Date().toDateString()).length;const dr=drafts.filter(x=>x.tab===T5_NUM).length;return `${n?`${n} sent today`:"None sent today"}${dr?` · ${dr} in progress`:""}`})()} · do a new one when the task or conditions change</span></div>${ic("chev")}</div></div>
+   <div class="card tap tacard" onclick="startLoad()"><div class="tah"><span class="ti t-blue">${ic("truck","l")}</span><div><b>Load &amp; Unloading Truck Checklist</b><span>${(()=>{const n=sent.filter(s=>s.no===String(LU_NUM)&&new Date(s.sentAt).toDateString()===new Date().toDateString()).length;const dr=drafts.filter(x=>x.tab===LU_NUM).length;return `${n?`${n} sent today`:"None sent today"}${dr?` · ${dr} in progress`:""}`})()} · before each load or delivery – with a photo of the docket</span></div>${ic("chev")}</div></div>
    <div class="card tap tacard" onclick="startTrailer()"><div class="tah"><span class="ti t-red">${ic("flame","l")}</span><div><b>Firefighting Water Trailer – Weekly Pre-Start</b><span>${tr?`In progress · updated ${ago(new Date(tr.updated).toISOString())}`:trSent?`Last sent ${new Date(trSent.sentAt).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}`:"Weekly checks + daily fire danger log"}</span></div>${ic("chev")}</div></div>
    <div class="muted" style="margin:6px 4px">The register is emailed to Amie Smith (Project Admin) for the weekly client report. Photos are optional.</div>`;
   render(h)}

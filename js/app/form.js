@@ -1,7 +1,7 @@
 "use strict";
 /* ---------- inspection form ---------- */
 function backHome(d){return {icon:"back",label:"Save",aria:"Save and go home",fn:()=>{save(d,true);queuePing(d,"draft");toast("Saved on this phone");go("#inspect")}}}
-function viewInsp(d){const t=tabByNum(d.tab);if(t.kind==="record")return viewRecord(d);if(t.kind==="take5")return viewTake5(d);if(t.kind==="fuel")return viewFuel(d);setHeader(`${pad(t.num)} · ${t.short}`,"Site inspection",backHome(d));
+function viewInsp(d){const t=tabByNum(d.tab);if(t.kind==="record")return viewRecord(d);if(t.kind==="take5")return viewTake5(d);if(t.kind==="load")return viewLoad(d);if(t.kind==="fuel")return viewFuel(d);setHeader(`${pad(t.num)} · ${t.short}`,"Site inspection",backHome(d));
   const D=d.details;const hide=t.hideStd||[];let h=`<div class="band"><b>${esc(t.title)}</b>${esc(t.scope)}</div>`+voiceCardHTML("insp")+keyHTML();
   if(t.fixed)h+=`<div class="card"><div class="lock">${ic("lock","s")} Inspection details (fixed)</div><div class="fixed">${t.fixed.map(f=>`<div><small>${esc(f[0])}</small><span>${esc(f[1])}</span></div>`).join("")}</div></div>`;
   if(t.lockLocation&&D.location!==t.lockLocation){D.location=t.lockLocation;save(d)}
@@ -86,6 +86,7 @@ function renderBar(d){let b=document.getElementById("bar");if(!b){b=document.cre
   if(!location.hash.startsWith("#insp")){b.remove();return}
   if(tabByNum(d.tab).kind==="fuel"){b.innerHTML=fuelBarHTML(d);return}
   if(tabByNum(d.tab).kind==="take5"){b.innerHTML=t5BarHTML(d);return}
+  if(tabByNum(d.tab).kind==="load"){b.innerHTML=luBarHTML(d);return}
   if(tabByNum(d.tab).kind==="record"){const n=recProblems(d).length;b.innerHTML=`<div class="in"><div class="stats">${n?`<b>${n}</b> item(s) still to complete`:`<b style="color:var(--c)">${ic("circlecheck","s")} Ready to review</b>`}<div class="prog"><i style="width:${Math.round((8-Math.min(8,n))/8*100)}%"></i></div></div><button class="btn o" onclick="toReview()">Review ${ic("arrow","s")}</button></div>`;return}
   const s=stats(d);b.innerHTML=`<div class="in"><div class="stats"><b>${s.rated}/${s.total}</b> rated · <span style="color:var(--ua);font-weight:800">${s.UA} UA</span> · <span style="color:var(--ni-ink);font-weight:800">${s.NI} NI</span>${s.snnN?` · <span style="color:var(--accent);font-weight:800">${s.snnN} SNN</span>`:""}<div class="prog"><i style="width:${Math.round(s.rated/s.total*100)}%"></i></div></div>
   ${s.rated<s.total?`<button class="btn g s" onclick="nextUnrated()" aria-label="Next unrated item"><span class="t">Next</span> ${ic("down","s")}</button>`:""}<button class="btn o" onclick="toReview()">Review ${ic("arrow","s")}</button></div>`}
@@ -174,9 +175,9 @@ function gauge(pct){const r=40,c=Math.PI*r;const p=pct===null?0:pct/100;const co
   return `<svg viewBox="0 0 100 58" width="120" aria-label="${pct===null?"No rated items":pct+"% compliant"}"><path d="M10 50a40 40 0 0 1 80 0" fill="none" stroke="var(--surface-3)" stroke-width="10" stroke-linecap="round"/><path d="M10 50a40 40 0 0 1 80 0" fill="none" stroke="${col}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(c*p).toFixed(1)} ${c.toFixed(1)}"/><text x="50" y="47" text-anchor="middle" font-size="19" font-weight="800" fill="var(--ink)">${pct===null?"–":pct+"%"}</text></svg>`}
 function viewReview(d){const t=tabByNum(d.tab);if(t.kind==="fuel")return viewFuelReview(d);setHeader("Review & send",`${pad(t.num)} · ${t.short}`,{icon:"back",aria:"Back to form",fn:()=>go("#insp/"+d.id)});
   const bar=document.getElementById("bar");if(bar)bar.remove();PDFBLOB=null;
-  const s=stats(d);const p=problems(d);const REC=t.kind==="record"||t.kind==="take5";
+  const s=stats(d);const p=problems(d);const REC=t.kind==="record"||t.kind==="take5"||t.kind==="load";
   let h=`<div class="stepper"><div class="done">1 · Inspect</div><div class="on">2 · Review & sign</div><div>3 · Send</div></div>`;
-  h+=t.kind==="take5"?t5ReviewHTML(d):REC?`<div class="card"><b>${esc(t.title)}</b><div class="muted">With ${esc(R(d).with||"-")} · ${fmtDT(d.details.datetime)} · recorded by ${esc(d.details.inspector)}</div><div class="muted" style="margin-top:6px">${esc(R(d).type.join(", "))}${R(d).topics.length?" · "+esc(R(d).topics.join(", ")):""} · ${recActions(d).length} action(s)${R(d).raise==="Yes"?' · <b style="color:var(--ua)">Raise with Sponsor / Manager</b>':""}</div></div>`
+  h+=t.kind==="take5"?t5ReviewHTML(d):t.kind==="load"?luReviewHTML(d):REC?`<div class="card"><b>${esc(t.title)}</b><div class="muted">With ${esc(R(d).with||"-")} · ${fmtDT(d.details.datetime)} · recorded by ${esc(d.details.inspector)}</div><div class="muted" style="margin-top:6px">${esc(R(d).type.join(", "))}${R(d).topics.length?" · "+esc(R(d).topics.join(", ")):""} · ${recActions(d).length} action(s)${R(d).raise==="Yes"?' · <b style="color:var(--ua)">Raise with Sponsor / Manager</b>':""}</div></div>`
    :`<div class="card"><div style="display:flex;gap:14px;align-items:center"><div style="flex:1;min-width:0"><b style="font-size:16px">${esc(t.title)}</b><div class="muted" style="margin-top:3px">${ic("pin","s")} ${esc(d.details.location)} · ${fmtDT(d.details.datetime)}<br>${ic("user","s")} ${esc(d.details.inspector)}</div>
    <div class="libmeta" style="margin-top:8px"><span class="pill c">${s.C} C</span><span class="pill ua">${s.UA} UA</span><span class="pill ni">${s.NI} NI</span><span class="pill na">${s.NA} N/A</span></div></div><div style="text-align:center">${gauge(s.pct)}<div class="muted" style="font-size:12px;font-weight:700">COMPLIANCE</div></div></div></div>`;
   if(!REC){

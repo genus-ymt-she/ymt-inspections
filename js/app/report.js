@@ -5,9 +5,10 @@ function fileName(d){const t=tabByNum(d.tab);return `${reportId(d)}_${t.short.re
 function subject(d){const t=tabByNum(d.tab);const s=stats(d);
   if(t.kind==="fuel")return fuelSubject(d);
   if(t.kind==="take5")return t5Subject(d);
+  if(t.kind==="load")return luSubject(d);
   if(t.kind==="record"){const r=R(d);return `YMT Discussion Record | ${t.short} | ${fmtDT(d.details.datetime).slice(0,10)} | with ${r.with||"-"} | by ${d.details.inspector}${r.raise==="Yes"?" | RAISE WITH SPONSOR":""}`}
   return `YMT Inspection | ${pad(t.num)} ${t.short} | ${fmtDT(d.details.datetime).slice(0,10)} | ${d.details.location} | ${s.UA} UA / ${s.NI} NI${s.snnN?` | ⚠ ${s.snnN} SNN`:""}`}
-function bodyText(d,limit){const K=tabByNum(d.tab).kind;if(K==="record"||K==="fuel"||K==="take5"){let x=K==="fuel"?fuelBodyText(d):K==="take5"?t5BodyText(d):recBodyText(d);if(limit&&x.length>limit)x=x.slice(0,limit-60)+"\n…\n(Shortened – full record in the attached PDF.)";return x}const t=tabByNum(d.tab);const s=stats(d);const D=d.details;const L=[];
+function bodyText(d,limit){const K=tabByNum(d.tab).kind;if(K==="record"||K==="fuel"||K==="take5"||K==="load"){let x=K==="fuel"?fuelBodyText(d):K==="take5"?t5BodyText(d):K==="load"?luBodyText(d):recBodyText(d);if(limit&&x.length>limit)x=x.slice(0,limit-60)+"\n…\n(Shortened – full record in the attached PDF.)";return x}const t=tabByNum(d.tab);const s=stats(d);const D=d.details;const L=[];
   const HR="━━━━━━━━━━━━━━━━━━━━━━━━━━━━",hr="──────────────────────────────";
   const st=n=>n.closed?"CLOSED":"OPEN";const rkT=n=>riskText(riskOf(n.cons,n.like));
   L.push(`PARRON | SITE INSPECTION REPORT`);
@@ -54,7 +55,7 @@ function bodyText(d,limit){const K=tabByNum(d.tab).kind;if(K==="record"||K==="fu
   let txt=L.join("\n");if(limit&&txt.length>limit)txt=txt.slice(0,limit-80)+"\n…\n(Summary shortened – full detail in the attached PDF.)";return txt}
 
 function visualPhotos(d){const t=tabByNum(d.tab);const out=[];allQ(t).forEach(q=>{const a=d.answers[q.id];if(a&&(a.r==="C"||a.r==="NA")&&(a.photos||[]).length)a.photos.forEach(p=>out.push({p,id:q.id}))});return out}
-function htmlBody(d){if(tabByNum(d.tab).kind==="record")return recHtml(d);if(tabByNum(d.tab).kind==="take5")return t5Html(d);if(tabByNum(d.tab).kind==="fuel")return fuelHtml(d);const t=tabByNum(d.tab);const s=stats(d);const D=d.details;const e=esc;
+function htmlBody(d){if(tabByNum(d.tab).kind==="record")return recHtml(d);if(tabByNum(d.tab).kind==="take5")return t5Html(d);if(tabByNum(d.tab).kind==="load")return luHtml(d);if(tabByNum(d.tab).kind==="fuel")return fuelHtml(d);const t=tabByNum(d.tab);const s=stats(d);const D=d.details;const e=esc;
   const td='style="border:1px solid #D0D5DD;padding:6px 8px;vertical-align:top;font-size:13px"';const th='style="border:1px solid #112B4E;background:#112B4E;color:#fff;padding:6px 8px;text-align:left;font-size:12px"';
   const pill=(txt,bg)=>`<span style="display:inline-block;background:${bg};color:#fff;font-weight:700;border-radius:4px;padding:2px 8px;font-size:12px">${e(txt)}</span>`;
   const rows=[["Report ID",reportId(d)],["Date / time",fmtDT(D.datetime)],["Location",D.location],["Inspector",D.inspector]];
