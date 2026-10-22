@@ -339,7 +339,7 @@ test("getHistory fetches on demand when the trigger has not run; tops up from bi
 
 test("setup creates the 4–5 am history trigger alongside the others", () => {
   const r = createRelay(); r.ctx.setup();
-  assert.deepEqual(r.triggers.sort(), ["dailyDigest", "prepareHistory", "remindersRun", "weeklyDigest"]);
+  assert.deepEqual(r.triggers.sort(), ["dailyDigest", "lightningRun", "prepareHistory", "remindersRun", "weeklyDigest"]);
 });
 
 const perthYmd = (n = 0) => new Date(Date.now() + 8 * 3600e3 + n * 864e5).toISOString().slice(0, 10);
@@ -574,4 +574,65 @@ test("fire danger: evening before an Extreme or Catastrophic day → plan-ahead 
   const M = r.mail.slice(b).filter(x => /^Tomorrow: FIRE DANGER CATASTROPHIC – plan today \(Project Director decision\)/.test(x.subject));
   assert.equal(M.length, 9); assert.match(M[0].htmlBody, /Project Director decides today/);
   const r2 = fireRelay("Moderate", "High"); const b2 = r2.mail.length; r2.ctx.dailyDigest(); assert.ok(!r2.mail.slice(b2).some(x => /FIRE DANGER/.test(x.subject)));
+});
+
+/* ---------- Lightning tracker (ERP §10.2.1 – 30/30 rule) ---------- */
+const SITE = { lat: -30.3456, lon: 115.3370 };
+// a point d km from site on bearing b degrees
+const at = (km, b) => { const R = 6371, r = x => x * Math.PI / 180, dg = x => x * 180 / Math.PI; const la1 = r(SITE.lat), lo1 = r(SITE.lon), dd = km / R, br = r(b);
+  const la2 = Math.asin(Math.sin(la1) * Math.cos(dd) + Math.cos(la1) * Math.sin(dd) * Math.cos(br)); const lo2 = lo1 + Math.atan2(Math.sin(br) * Math.sin(dd) * Math.cos(la1), Math.cos(dd) - Math.sin(la1) * Math.sin(la2)); return { lat: dg(la2), long: dg(lo2) }; };
+function ltnRelay() {
+  const st = { strikes: [], fail: false, push: [], urls: [] };
+  const r = createRelay({ fetch: (url, o) => {
+    if (/ntfy\.sh/.test(url)) { st.push.push({ url, title: o.headers.Title, prio: o.headers.Priority, body: o.payload }); return { body: "{}" }; }
+    if (/data\.api\.xweather\.com\/lightning/.test(url)) { st.urls.push(url); if (st.fail) return { code: 500, body: "" };
+      return { body: JSON.stringify({ success: true, response: st.strikes.map(([km, b, minAgo]) => ({ loc: at(km, b), ob: { timestamp: Math.round((Date.now() - minAgo * 60000) / 1000), pulse: { type: "cg" } } })) }) }; }
+    return null; } });
+  r.props.set("LIGHTNING_HOURS", "00-24"); return { r, st };
+}
+test("lightning: off until the Xweather keys are set; setup makes a private push topic", () => {
+  const { r, st } = ltnRelay(); assert.equal(r.ctx.lightningRun(true), null); assert.equal(st.urls.length, 0);
+  const g = r.get({ action: "lightning", key: r.key }); assert.equal(g.ok, true); assert.equal(g.configured, false); assert.match(g.topic, /^parron-ymt-ltn-[a-z2-9]{18}$/);
+  r.ctx.setup(); assert.ok(r.triggers.includes("lightningRun")); assert.equal(r.get({ action: "lightning", key: r.key }).topic, g.topic, "topic is kept");
+  assert.match(r.mail.at(-1).body, /Lightning tracker: NOT SET/);
+});
+test("lightning: 10–30 km → WATCH, within 10 km → STOP (urgent push, all clear 30 min after the last close strike), then ALL CLEAR – one push per change, logged", () => {
+  const { r, st } = ltnRelay(); r.props.set("XWEATHER_ID", "id1"); r.props.set("XWEATHER_SECRET", "sec1");
+  st.strikes = [[42, 270, 3], [24, 300, 2]]; r.ctx.lightningRun(true);
+  assert.match(st.urls[0], /lightning\/-30\.3456,115\.337\?format=json&radius=50km&limit=1000&from=-1hour&client_id=id1&client_secret=sec1/);
+  assert.equal(st.push.length, 1); assert.match(st.push[0].title, /WATCH – lightning 24 km from YMT/); assert.match(st.push[0].body, /24 km NW of YMT/);
+  r.ctx.lightningRun(true); assert.equal(st.push.length, 1, "no repeat while the level holds");
+  st.strikes = [[24, 300, 6], [6.8, 270, 1], [8, 280, 4]]; r.ctx.lightningRun(true);
+  assert.equal(st.push.length, 2); const p = st.push[1]; assert.equal(p.prio, "5"); assert.match(p.title, /STOP – lightning within 10 km of YMT/);
+  assert.match(p.body, /6.8 km W of YMT/); assert.match(p.body, /All clear not before/); assert.match(p.url, /^https:\/\/ntfy\.sh\/parron-ymt-ltn-/);
+  let g = r.get({ action: "lightning", key: r.key }); assert.equal(g.level, "stop"); assert.equal(g.closest.km, 6.8); assert.equal(g.closest.dir, "W");
+  assert.ok(Math.abs(new Date(g.allClearAt) - (Date.now() + 29 * 60000)) < 90000, "30 min after the last strike within 10 km"); assert.equal(g.strikes.length, 3);
+  // shelter, restart refused while stopped
+  assert.equal(r.post({ key: r.key, action: "ltnShelter", name: "Jayden Mullan" }).sheltered[0], "Jayden Mullan");
+  assert.match(r.post({ key: r.key, action: "ltnRestart", name: "Paul Delaney" }).error, /cannot restart/);
+  // 31 minutes on, the close strikes are older than 30 min, lightning still 10–30 km → ALL CLEAR (stay alert)
+  st.strikes = [[6.8, 270, 31], [22, 60, 5]]; r.ctx.lightningRun(true);
+  assert.equal(st.push.length, 3); assert.match(st.push[2].title, /ALL CLEAR – YMT/); assert.match(st.push[2].body, /Supervisors may restart work\. Lightning is still 22 km NE of YMT – stay alert\./);
+  g = r.post({ key: r.key, action: "ltnRestart", name: "Paul Delaney" }); assert.equal(g.ok, true); assert.match(g.restartBy, /^Paul Delaney · /); assert.equal(g.level, "watch");
+  st.strikes = []; r.ctx.lightningRun(true); assert.equal(st.push.length, 4); assert.match(st.push[3].title, /moved away/); assert.equal(st.push[3].prio, "2");
+  const ev = r.sheet("Lightning").data.slice(1).map(x => x[1]); assert.deepEqual(ev, ["WATCH", "STOP", "SHELTERED", "ALL CLEAR", "RESTART CONFIRMED", "CLEAR"]);
+  g = r.get({ action: "lightning", key: r.key }); const m = Object.values(g.months)[0]; assert.equal(m.stops, 1);
+});
+test("lightning: 'I heard thunder' starts a STOP with no detected strike; alerts stay quiet outside the set hours; test alert needs the Manager PIN", () => {
+  const { r, st } = ltnRelay(); r.props.set("XWEATHER_KEY", "AbC123xyz_s3cretPart_with_underscore");
+  r.ctx.lightningRun(true); assert.match(st.urls[0], /client_id=AbC123xyz&client_secret=s3cretPart_with_underscore$/, "portal API key = client ID _ secret");
+  const g = r.post({ key: r.key, action: "ltnThunder", name: "Matthew Smith" }); assert.equal(g.level, "stop");
+  assert.match(st.push[0].body, /Thunder reported at YMT by Matthew Smith/);
+  assert.equal(r.post({ key: r.key, action: "ltnTest", pin: "1" }).badPin, true);
+  r.post({ key: r.key, action: "ltnTest", pin: "2468", name: "Darren Frizzell" }); assert.match(st.push.at(-1).title, /^TEST/);
+  const n = st.push.length; r.props.set("LIGHTNING_HOURS", "00-00"); st.strikes = []; r.props.set("LTN_STATE", JSON.stringify({ level: "stop", stopStart: Date.now() - 40 * 60000, thunderAt: Date.now() - 31 * 60000 }));
+  r.ctx.lightningRun(true); assert.equal(r.get({ action: "lightning", key: r.key }).level, "clear"); assert.equal(st.push.length, n, "outside hours: logged, not pushed");
+});
+test("lightning: feed down for 10 min → one 'use the 30/30 rule' alert, and DATA BACK when it returns", () => {
+  const { r, st } = ltnRelay(); r.props.set("XWEATHER_ID", "a"); r.props.set("XWEATHER_SECRET", "b");
+  r.props.set("LTN_STATE", JSON.stringify({ level: "clear", lastOK: Date.now() - 11 * 60000 })); st.fail = true;
+  r.ctx.lightningRun(true); r.ctx.lightningRun(true); assert.equal(st.push.length, 1); assert.match(st.push[0].body, /30\/30 rule/);
+  assert.equal(r.get({ action: "lightning", key: r.key }).down, true);
+  st.fail = false; r.ctx.lightningRun(true); assert.equal(r.get({ action: "lightning", key: r.key }).down, false);
+  assert.deepEqual(r.sheet("Lightning").data.slice(1).map(x => x[1]), ["DATA DOWN", "DATA BACK"]);
 });

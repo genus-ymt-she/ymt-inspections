@@ -315,3 +315,20 @@ The situation-card grid now fits the screen on every phone. Before this change i
   - Up to 10 other photos, each with a caption.
   - All photos appear in the PDF, with the docket first and full width.
 - The checklist is emailed to the SHE Manager like other reports and counts as an inspection in Monthly figures. A DO NOT PROCEED is recorded as a stop.
+
+## Lightning tracker (v3.19 – needs relay v3.19)
+The tracker follows ERP §10.2.1 (the 30/30 rule):
+- **STOP:** a strike within 10 km, or thunder reported in the app.
+- **WATCH:** a strike 10–30 km away.
+- **ALL CLEAR:** 30 minutes after the last strike within 10 km.
+
+Strikes come from Xweather (Vaisala) and are measured from the fixed YMT site point; phone location is not used. The relay checks every 5 minutes when it is calm, and every minute once lightning is within 30 km. Checks run in `LIGHTNING_HOURS` (default `05-19` Perth), starting 30 minutes before.
+
+Push alerts go through the free **ntfy** app and are sent only when the level changes. Every change is logged in the *Lightning* sheet, and the stops are counted in Monthly figures.
+
+**Switching it on:**
+1. **Xweather account:** sign up at xweather.com (30-day free trial). The dashboard shows **Your API key**; copy it with the copy button. Before the trial ends, choose a paid plan that includes the Lightning API.
+2. **Apps Script › Project Settings › Script properties:** add `XWEATHER_KEY` with the API key as its value. Optionally add `LIGHTNING_HOURS`, for example `05-19`. The older `XWEATHER_ID` + `XWEATHER_SECRET` pair still works.
+3. **Install the new relay code:** paste the new `PARRON_Relay_Code.gs`, save, then run **setup** once. setup adds the 1-minute check and creates `NTFY_TOPIC`; it also emails you a summary. Then go to **Deploy › Manage deployments › Edit › New version**.
+4. **Set up phones:** each person opens PARRON › Lightning › *Alerts on this phone*, installs ntfy, taps **Open in ntfy**, and allows notifications (on iPhone, including *Time Sensitive*).
+5. **Test:** in Manager mode, go to Lightning › **Send a test alert to everyone**.

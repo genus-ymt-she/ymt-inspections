@@ -22,7 +22,12 @@ const srv = http.createServer((req, res) => {
 }).listen(0);
 const port = srv.address().port;
 // Google's servers are refused by the BoM, so the relay finds nothing; the app reads the GitHub feed instead
-const relay = createRelay({ pin: "2468", fetch: url => /onthisday\/events/.test(url) ? { body: JSON.stringify(EVENTS) } : /onthisday\/births/.test(url) ? { body: JSON.stringify(BIRTHS) } : null });
+const LTN = { strikes: [], push: [] };   // simulated Xweather strikes [km, bearing, minutes ago] and the ntfy pushes sent
+const ltnAt = (km, b) => { const R = 6371, r = x => x * Math.PI / 180, dg = x => x * 180 / Math.PI; const la1 = r(-30.3456), lo1 = r(115.337), dd = km / R, br = r(b);
+  const la2 = Math.asin(Math.sin(la1) * Math.cos(dd) + Math.cos(la1) * Math.sin(dd) * Math.cos(br)); return { lat: dg(la2), long: dg(lo1 + Math.atan2(Math.sin(br) * Math.sin(dd) * Math.cos(la1), Math.cos(dd) - Math.sin(la1) * Math.sin(la2))) }; };
+const relay = createRelay({ pin: "2468", fetch: (url, o) => /onthisday\/events/.test(url) ? { body: JSON.stringify(EVENTS) } : /onthisday\/births/.test(url) ? { body: JSON.stringify(BIRTHS) }
+  : /ntfy\.sh/.test(url) ? (LTN.push.push({ title: o.headers.Title, body: o.payload, prio: o.headers.Priority }), { body: "{}" })
+  : /data\.api\.xweather\.com/.test(url) ? { body: JSON.stringify({ success: true, response: LTN.strikes.map(([km, b, m]) => ({ loc: ltnAt(km, b), ob: { timestamp: Math.round((Date.now() - m * 60000) / 1000) } })) }) } : null });
 relay.props.set("STATUS_PIN", "4321");
 const perth = n => new Date(Date.now() + 8 * 3600e3 + n * 864e5).toISOString().slice(0, 10);
 const FEED = { source: "Bureau of Meteorology", issued: perth(0) + "T04:35:00+08:00", districts: {
@@ -74,7 +79,7 @@ await step("Home opens first: HVMB & Fire Status, history, welcome, My Day, Insp
   if (order.some(x => x < 0) || order.some((x, i) => i && x <= order[i - 1])) throw new Error("home order: " + order);
   if (!/HVMB & Fire Status/.test(await page.textContent("#stp"))) throw new Error("status panel title");
   if (!/Shire of Dandaragan HVMB text message/.test(await page.textContent("#stp"))) throw new Error("Shire SMS note missing");
-  const labels = await page.$$eval(".tiles .tile b", e => e.map(x => x.textContent.trim()).join("|")); if (labels !== "My Day|Inspect & report|PARRON Radio") throw new Error("home tiles: " + labels);
+  const labels = await page.$$eval(".tiles .tile b", e => e.map(x => x.textContent.trim()).join("|")); if (labels !== "My Day|Inspect & report|Lightning|PARRON Radio") throw new Error("home tiles: " + labels);
   await settle(page); await shot(page, "01-home");
 });
 await step("computer screen: side menu and two-column Home; phone keeps one column", async () => {
@@ -841,6 +846,31 @@ await step("Load & Unloading Truck checklist (51): Trade Assistants tab, no Supe
   if (!m2 || !/DO NOT PROCEED/.test(m2.subject) || !/specify the weight: 6\.5 t – YES/.test(m2.body) || !/Loading area clear\? – NO/.test(m2.body)) throw new Error("stop email: " + (m2 && m2.subject));
   const rows = relay.sheet("Sent").data.slice(1).filter(r => String(r[6]) === "51"); if (rows.length !== 2 || rows[1][9] !== 1) throw new Error("Sent log rows for 51");
   await p.context().close();
+});
+await step("Lightning tracker: being set up → STOP within 10 km (banner, tile, map, countdown, ERP actions), I'm sheltered, alerts set-up with the push topic, I heard thunder, test alert, Emergency link", async () => {
+  const p = await newPage({ name: "Jayden Mullan", hash: "#home" }); await p.waitForSelector(".lt-tile");
+  if (!/Being set up/.test(await p.textContent(".lt-tile")) || await p.$(".lt-banner")) throw new Error("before the keys are set the tile says being set up, no banner");
+  relay.props.set("XWEATHER_ID", "id"); relay.props.set("XWEATHER_SECRET", "secret"); relay.props.set("LIGHTNING_HOURS", "00-24");
+  LTN.strikes = [[6.8, 270, 1], [24, 300, 8], [41, 280, 40]]; relay.ctx.lightningRun(true);
+  if (!LTN.push.length || !/STOP – lightning within 10 km of YMT/.test(LTN.push[0].title) || LTN.push[0].prio !== "5") throw new Error("STOP push: " + JSON.stringify(LTN.push));
+  await p.evaluate(() => go("#inspect")); await p.evaluate(() => go("#home")); await p.waitForSelector(".lt-banner.stop");
+  if (!/6.8 km W – STOP outdoor work/.test(await p.textContent(".lt-banner")) || !/STOP · 6.8 km/.test(await p.textContent(".lt-tile"))) throw new Error("home banner / tile");
+  await settle(p); await shot(p, "77-lightning-home");
+  await p.click(".lt-banner"); await p.waitForSelector(".lt-state.stop");
+  const t = await p.textContent("#app"); if (!/All clear not before/.test(t) || !/Lower EWP baskets and exit/.test(t) || !/does not replace it/.test(t)) throw new Error("stop screen");
+  if (await p.$$eval(".lt-radar circle[r='4.5'], .lt-radar circle[r='3.5']", e => e.length) !== 3) throw new Error("three strikes on the map");
+  await settle(p); await shot(p, "78-lightning-stop");
+  await p.click("text=I'm sheltered – tell my Supervisor"); await p.waitForSelector("text=You're marked as sheltered");
+  if (!/1 sheltered: Jayden Mullan/.test(await p.textContent("#app"))) throw new Error("sheltered list");
+  const topic = relay.get({ action: "lightning", key: relay.key }).topic; if (!(await p.textContent(".lt-topic code")).includes(topic) || !(await p.getAttribute('a[href^="ntfy://"]', "href")).endsWith(topic)) throw new Error("push topic");
+  await p.click("text=Done – alerts are set up on this phone"); await p.waitForSelector(".lt-on");
+  await p.click(".lt-thunder"); await p.click("#aYes"); await p.waitForFunction(() => /Recorded/.test(document.body.textContent));
+  if (!relay.sheet("Lightning").data.slice(1).some(r => r[1] === "THUNDER HEARD" && r[6] === "Jayden Mullan")) throw new Error("thunder logged");
+  await p.evaluate(() => { ls("mgrPin", "2468"); ltDraw(); }); await p.click("text=Send a test alert to everyone"); await p.click("#aYes"); await p.waitForFunction(() => /Test alert sent/.test(document.body.textContent));
+  if (!/^TEST/.test(LTN.push.at(-1).title)) throw new Error("test push");
+  await p.evaluate(() => go("#emergency")); await p.waitForSelector("text=Lightning tracker");
+  await p.context().close();
+  relay.props.set("XWEATHER_ID", ""); LTN.strikes = [];
 });
 await step("Team suggestions: Genus logo goes Home from anywhere (form saved); extra captioned photos on the TMP check (21) in the PDF; 'Email me a copy' adds the inspector", async () => {
   const p = await newPage({ name: "Matthew Smith", hash: "#inspect" }); await p.waitForSelector(".tiles .tile");

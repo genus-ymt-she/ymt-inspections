@@ -81,6 +81,8 @@ function setup() {
   ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'remindersRun') ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('remindersRun').timeBased().atHour(REMINDER_HOUR).everyDays(1).inTimezone(TZ).create();
   installHistoryTrigger();
+  ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'lightningRun') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('lightningRun').timeBased().everyMinutes(1).create(); ltTopic_(); sheet_(ss, 'Lightning', LT_HEAD);
   if (ARCHIVE_PDFS) folder_('PARRON – Reports');
   const pin = PropertiesService.getScriptProperties().getProperty('MANAGER_PIN');
   MailApp.sendEmail(TO, 'PARRON relay v3 is connected',
@@ -93,6 +95,7 @@ function setup() {
     '\nMy SHEQ Planner: your obligations register (SHEQ Register sheet). Reminder emails are ' + ({ off: 'OFF – nobody is emailed', me: 'on – to you only', all: 'on – to you and each owner' })[plannerEmails_()] + ' (change it on the planner screen).' +
     '\nInspection forms you add in the app are kept in the Custom Forms sheet.' +
     '\nFire danger days: on High-or-above days an email goes between 5 and 6 am to ' + fireTo_().length + ' people (SHE team, supervisors, Construction Manager) – Inspection 25 before work; the evening before an Extreme or Catastrophic day they get a plan-ahead email.' +
+    '\nLightning tracker: ' + (ltConfigured_() ? 'ON – checking Xweather for strikes near YMT ' + ltHours_().join(':00–') + ':00 (Perth); push alerts to everyone who turned them on in PARRON' : 'NOT SET – add XWEATHER_KEY (your Xweather API key) under Script properties') + '.' +
     '\nSHEQ Alerts: published from the app in Manager mode – tick who must acknowledge; the register is in the Alert Acks sheet.' +
     '\nToday on site status PIN: ' + (PropertiesService.getScriptProperties().getProperty('STATUS_PIN') ? 'set' : 'NOT SET – add STATUS_PIN under Script properties so the site status can be updated.') +
     '\nFire Danger Rating: ' + (fdrFetch_(true).today ? 'reading from the Bureau of Meteorology' : 'could not be read automatically – set it in the app (Manager mode) or choose the district') +
@@ -155,6 +158,7 @@ function doPost(e) {
     if (d.action === 'saveForm') return saveForm_(d);
     if (d.action === 'submitted') return submitted_(d);
     if (d.action === 'reportPdf') return reportPdf_(d);
+    if (/^ltn(Shelter|Thunder|Restart|Test)$/.test(d.action)) return ltAction_(d);
     if (d.action === 'pin') return out_({ ok: pinOK_(d.pin), error: pinOK_(d.pin) ? '' : 'Incorrect PIN' });
     return send_(d);
   } catch (err) {
@@ -390,11 +394,12 @@ function upsert_(ss, uid, m, state, sentAt) {
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  if (['weather', 'dashboard', 'reports', 'photo', 'getStatus', 'getHistory', 'alerts', 'alertFile', 'forms'].includes(p.action) && p.key === KEY && !codeOK_(p.code)) return out_({ ok: false, error: 'Site code required', needCode: true });
+  if (['weather', 'dashboard', 'reports', 'photo', 'getStatus', 'getHistory', 'alerts', 'alertFile', 'forms', 'lightning'].includes(p.action) && p.key === KEY && !codeOK_(p.code)) return out_({ ok: false, error: 'Site code required', needCode: true });
   if (p.action === 'weather') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_({ ok: true, fdr: fdrFetch_(false) }); }
   if (p.action === 'getStatus') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_(Object.assign({ ok: true }, statusOut_())); }
   if (p.action === 'getHistory') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_(history_(false)); }
   if (p.action === 'alerts') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_(Object.assign({ ok: true }, alertsOut_())); }
+  if (p.action === 'lightning') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_(Object.assign({ ok: true }, ltOut_())); }
   if (p.action === 'forms') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_({ ok: true, forms: formsOut_() }); }
   if (p.action === 'alertFile') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return alertFile_(p.id); }
   if (p.action === 'reports') { if (p.key !== KEY) return out_({ ok: false, error: 'Not authorised' }); return out_({ ok: true, reports: reports_() }); }
@@ -1069,3 +1074,117 @@ function iso_(v) { return v instanceof Date ? v.toISOString() : (v ? String(v) :
 function clean_(s) { return String(s || '').trim().replace(/\s+/g, ' ').slice(0, 120); }
 function esc_(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+
+/* ---------- Lightning tracker (ERP J1084-HSE-PLN-YMT-0002 §10.2.1 – 30/30 rule) ----------
+   Every strike detected by Xweather (Vaisala network) is measured against the fixed YMT site point – no phone location.
+   STOP = a strike (or thunder reported in the app) within 10 km in the last 30 min; WATCH = a strike 10–30 km away in the
+   last 30 min; CLEAR otherwise. ALL CLEAR comes 30 min after the last strike within 10 km. Push alerts (ntfy) go out only
+   when the level changes, inside LIGHTNING_HOURS. Every change is logged in the Lightning sheet.
+   Script Properties: XWEATHER_KEY (the API key on the Xweather dashboard) – or XWEATHER_ID + XWEATHER_SECRET –, NTFY_TOPIC (made by setup),
+   LIGHTNING_HOURS (default 05-19 Perth; checks run from 30 min before), XWEATHER_PARAMS (optional query override). */
+const LT_SITE = { lat: -30.3456, lon: 115.3370, name: 'YMT' };
+const LT_STOP_KM = 10, LT_WATCH_KM = 30, LT_RANGE_KM = 50, LT_CLEAR_MIN = 30, LT_DOWN_MIN = 10;
+const LT_HEAD = ['Time', 'Event', 'Level', 'Closest (km)', 'Direction', 'Detail', 'By'];
+const ltProps_ = () => PropertiesService.getScriptProperties();
+function ltState_() { try { return JSON.parse(ltProps_().getProperty('LTN_STATE') || 'null') || {}; } catch (e) { return {}; } }
+function ltSave_(s) { ltProps_().setProperty('LTN_STATE', JSON.stringify(s)); }
+/* the Xweather portal's single "API key" is the client ID and secret joined by "_"; XWEATHER_ID + XWEATHER_SECRET also work */
+function ltCreds_() { const p = ltProps_(); const k = String(p.getProperty('XWEATHER_KEY') || '').trim(); const i = k.indexOf('_');
+  if (i > 0) return { id: k.slice(0, i), secret: k.slice(i + 1) };
+  return p.getProperty('XWEATHER_ID') && p.getProperty('XWEATHER_SECRET') ? { id: p.getProperty('XWEATHER_ID'), secret: p.getProperty('XWEATHER_SECRET') } : null; }
+const ltConfigured_ = () => !!ltCreds_();
+function ltTopic_() { const p = ltProps_(); let t = p.getProperty('NTFY_TOPIC');
+  if (!t) { const c = 'abcdefghjkmnpqrstuvwxyz23456789'; t = 'parron-ymt-ltn-' + Array.from({ length: 18 }, () => c[Math.floor(Math.random() * c.length)]).join(''); p.setProperty('NTFY_TOPIC', t); } return t; }
+function ltHours_() { const m = String(ltProps_().getProperty('LIGHTNING_HOURS') || '05-19').match(/^(\d{1,2})-(\d{1,2})$/); return m ? [+m[1], +m[2]] : [5, 19]; }
+/* minutes after midnight, Perth */
+const ltMinOfDay_ = d => +Utilities.formatDate(d, TZ, 'HH') * 60 + +Utilities.formatDate(d, TZ, 'mm');
+function ltInHours_(d, early) { const [a, b] = ltHours_(); const m = ltMinOfDay_(d); return m >= a * 60 - (early || 0) && m < b * 60 + (early ? 30 : 0); }
+function ltKm_(lat, lon) { const R = 6371, r = x => x * Math.PI / 180; const dLa = r(lat - LT_SITE.lat), dLo = r(lon - LT_SITE.lon);
+  const a = Math.sin(dLa / 2) ** 2 + Math.cos(r(LT_SITE.lat)) * Math.cos(r(lat)) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(a)); }
+function ltBearing_(lat, lon) { const r = x => x * Math.PI / 180; const y = Math.sin(r(lon - LT_SITE.lon)) * Math.cos(r(lat));
+  const x = Math.cos(r(LT_SITE.lat)) * Math.sin(r(lat)) - Math.sin(r(LT_SITE.lat)) * Math.cos(r(lat)) * Math.cos(r(lon - LT_SITE.lon)); return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360; }
+const ltDir_ = b => ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(b / 45) % 8];
+/* strikes from Xweather: [{at (ms), km, brg, ic}] within LT_RANGE_KM over the last hour; null if the feed failed */
+function ltFetch_() { const p = ltProps_();
+  const q = p.getProperty('XWEATHER_PARAMS') || `radius=${LT_RANGE_KM}km&limit=1000&from=-1hour`;
+  const url = `https://data.api.xweather.com/lightning/${LT_SITE.lat},${LT_SITE.lon}?format=json&${q}&client_id=${encodeURIComponent(ltCreds_().id)}&client_secret=${encodeURIComponent(ltCreds_().secret)}`;
+  try { const r = UrlFetchApp.fetch(url, { muteHttpExceptions: true }); if (r.getResponseCode() !== 200) return null;
+    const j = JSON.parse(r.getContentText()); if (!j || (j.success === false && !(j.error && j.error.code === 'warn_no_data'))) return null;
+    return (j.response || []).map(s => { const la = +(s.loc && s.loc.lat), lo = +(s.loc && (s.loc.long != null ? s.loc.long : s.loc.lon)); const ob = s.ob || {};
+      const at = ob.timestamp ? ob.timestamp * 1000 : Date.parse(ob.dateTimeISO || ''); if (!isFinite(la) || !isFinite(lo) || !isFinite(at)) return null;
+      return { at, km: Math.round(ltKm_(la, lo) * 10) / 10, brg: Math.round(ltBearing_(la, lo)), ic: !!(ob.pulse && ob.pulse.type === 'ic') }; })
+      .filter(s => s && s.km <= LT_RANGE_KM).sort((a, b) => b.at - a.at).slice(0, 400);
+  } catch (e) { return null; } }
+/* the level from the strikes and any thunder report: {level, lastNear, closest} */
+function ltLevel_(strikes, s, now) { const win = now - LT_CLEAR_MIN * 60000;
+  const recent = strikes.filter(x => x.at >= win); const near = recent.filter(x => x.km <= LT_STOP_KM);
+  let lastNear = Math.max(0, ...near.map(x => x.at), s.thunderAt && s.thunderAt >= win ? s.thunderAt : 0);
+  const watch = recent.some(x => x.km > LT_STOP_KM && x.km <= LT_WATCH_KM);
+  const closest = recent.slice().sort((a, b) => a.km - b.km)[0] || null;
+  return { level: lastNear ? 'stop' : watch ? 'watch' : 'clear', lastNear: lastNear || null, closest }; }
+function ltLog_(ev, level, c, detail, by) {
+  sheet_(book_(), 'Lightning', LT_HEAD).appendRow([new Date(), ev, level, c ? c.km : '', c ? ltDir_(c.brg) : '', str_(detail, 300), clean_(by)]); }
+function ltPush_(title, msg, prio, tags) {
+  try { UrlFetchApp.fetch('https://ntfy.sh/' + ltTopic_(), { method: 'post', payload: msg, muteHttpExceptions: true,
+    headers: { Title: title, Priority: String(prio || 3), Tags: tags || 'zap', Click: APP_URL + '#lightning' } }); return true; } catch (e) { return false; } }
+const ltT_ = ms => Utilities.formatDate(new Date(ms), TZ, 'h:mm a').toLowerCase();
+const ltWhere_ = c => c ? `${c.km} km ${ltDir_(c.brg)} of ${LT_SITE.name}` : LT_SITE.name;
+/* time-driven, every minute (setup installs it): checks every 5 min when calm and every minute once lightning is within 30 km */
+function lightningRun(force) {
+  if (!ltConfigured_()) return null;
+  const lock = LockService.getScriptLock(); if (lock.tryLock && !lock.tryLock(20000)) return null;
+  try {
+    const now = Date.now(); const d = new Date(now); const s = ltState_();
+    if (!force && !ltInHours_(d, 30)) return null;
+    if (!force && (s.level || 'clear') === 'clear' && ltMinOfDay_(d) % 5 !== 0) return null;
+    const strikes = ltFetch_(); s.lastCheck = now;
+    if (!strikes) { if (!s.down && s.lastOK && now - s.lastOK > LT_DOWN_MIN * 60000) { s.down = now; ltLog_('DATA DOWN', s.level || 'clear', null, 'No lightning data for ' + LT_DOWN_MIN + ' min');
+        if (ltInHours_(d)) ltPush_('Lightning data unavailable – YMT', 'PARRON cannot get lightning data. Use the 30/30 rule: if thunder follows lightning within 30 seconds, stop outdoor work.', 3, 'warning'); }
+      ltSave_(s); return s; }
+    if (s.down) { ltLog_('DATA BACK', s.level || 'clear', null, ''); s.down = null; }
+    s.lastOK = now; s.strikes = strikes;
+    return ltApply_(s, now);
+  } finally { try { lock.releaseLock(); } catch (e) {} } }
+/* works out the level, logs and pushes on a change */
+function ltApply_(s, now) { const L = ltLevel_(s.strikes || [], s, now); const was = s.level || 'clear'; const d = new Date(now); const hrs = ltInHours_(d);
+  s.closest = L.closest; s.lastNear = L.lastNear;
+  if (L.level !== was) {
+    s.level = L.level; s.since = now;
+    if (L.level === 'stop') { s.stopStart = now; s.sheltered = {}; s.restartBy = null;
+      const c = L.closest && L.closest.km <= LT_STOP_KM ? L.closest : null; const allClear = ltT_(L.lastNear + LT_CLEAR_MIN * 60000);
+      const msg = c ? `Lightning ${ltWhere_(c)} at ${ltT_(c.at)}. Cease all outdoor work and shelter in hard-roof vehicles or buildings. All clear not before ${allClear}.`
+        : `Thunder reported at ${LT_SITE.name}${s.thunderBy ? ' by ' + s.thunderBy : ''}. Cease all outdoor work and shelter. All clear not before ${allClear}.`;
+      ltLog_('STOP', 'stop', c, msg, c ? '' : s.thunderBy); if (hrs) ltPush_(`⚡ STOP – lightning within ${LT_STOP_KM} km of ${LT_SITE.name}`, msg, 5, 'zap,rotating_light');
+    } else if (was === 'stop') { const mins = Math.round((now - (s.stopStart || now)) / 60000); s.lastStop = { start: s.stopStart, end: now, mins };
+      const msg = `No lightning within ${LT_STOP_KM} km for ${LT_CLEAR_MIN} minutes (stopped ${mins} min). Supervisors may restart work.` + (L.level === 'watch' ? ` Lightning is still ${ltWhere_(L.closest)} – stay alert.` : '');
+      ltLog_('ALL CLEAR', L.level, L.closest, msg, ''); if (hrs) ltPush_(`✅ ALL CLEAR – ${LT_SITE.name}`, msg, 4, 'white_check_mark');
+    } else if (L.level === 'watch') { const msg = `Lightning ${ltWhere_(L.closest)} at ${ltT_(L.closest.at)}. Prepare to stop: lower EWPs and booms, finish hot work and refuelling, know where you will shelter.`;
+      ltLog_('WATCH', 'watch', L.closest, msg, ''); if (hrs) ltPush_(`⚠️ WATCH – lightning ${L.closest.km} km from ${LT_SITE.name}`, msg, 4, 'warning');
+    } else { const msg = `No lightning within ${LT_WATCH_KM} km for ${LT_CLEAR_MIN} minutes.`; ltLog_('CLEAR', 'clear', null, msg, ''); if (hrs) ltPush_(`Lightning has moved away – ${LT_SITE.name}`, msg, 2, 'partly_sunny'); }
+  }
+  ltSave_(s); return s; }
+function ltOut_() { const s = ltState_(); const now = Date.now(); const lv = s.level || 'clear';
+  const sh = book_().getSheetByName('Lightning'); const rows = sh ? rows_(sh).filter(r => r[0]) : [];
+  const log = rows.slice(-12).reverse().map(r => ({ at: iso_(r[0]), event: r[1], level: r[2], km: r[3], dir: r[4], detail: r[5], by: r[6] }));
+  const stops = []; let open = null; rows.forEach(r => { if (r[1] === 'STOP') open = new Date(r[0]).getTime(); else if (r[1] === 'ALL CLEAR' && open) { stops.push({ start: open, end: new Date(r[0]).getTime() }); open = null; } });
+  const months = {}; stops.forEach(x => { const k = Utilities.formatDate(new Date(x.start), TZ, 'yyyy-MM'); const m = months[k] = months[k] || { stops: 0, mins: 0 }; m.stops++; m.mins += Math.round((x.end - x.start) / 60000); });
+  return { configured: ltConfigured_(), level: lv, since: s.since ? new Date(s.since).toISOString() : '', allClearAt: lv === 'stop' && s.lastNear ? new Date(s.lastNear + LT_CLEAR_MIN * 60000).toISOString() : '',
+    closest: s.closest ? { km: s.closest.km, dir: ltDir_(s.closest.brg), at: new Date(s.closest.at).toISOString() } : null,
+    strikes: (s.strikes || []).filter(x => now - x.at <= 3600000).map(x => ({ km: x.km, brg: x.brg, age: Math.round((now - x.at) / 60000) })),
+    lastCheck: s.lastCheck ? new Date(s.lastCheck).toISOString() : '', lastOK: s.lastOK ? new Date(s.lastOK).toISOString() : '', down: !!s.down,
+    hours: ltHours_(), inHours: ltInHours_(new Date(now), 30), topic: ltTopic_(), sheltered: Object.keys(s.sheltered || {}).sort(), restartBy: s.restartBy || '',
+    lastStop: s.lastStop ? { start: new Date(s.lastStop.start).toISOString(), end: new Date(s.lastStop.end).toISOString(), mins: s.lastStop.mins } : null, log, months,
+    km: { stop: LT_STOP_KM, watch: LT_WATCH_KM, range: LT_RANGE_KM }, clearMin: LT_CLEAR_MIN }; }
+/* app actions: sheltered, thunder heard (restarts the 30 min), supervisor restart, test alert (Manager PIN) */
+function ltAction_(d) { const s = ltState_(); const name = clean_(d.name); const now = Date.now();
+  if (d.action === 'ltnShelter') { if (!name) return out_({ ok: false, error: 'Pick your name in Settings first' });
+    if ((s.level || 'clear') !== 'stop') return out_({ ok: false, error: 'There is no lightning stop at the moment' });
+    s.sheltered = s.sheltered || {}; if (!s.sheltered[name]) { s.sheltered[name] = now; ltLog_('SHELTERED', 'stop', null, '', name); } ltSave_(s); }
+  else if (d.action === 'ltnThunder') { if (!name) return out_({ ok: false, error: 'Pick your name in Settings first' });
+    s.thunderAt = now; s.thunderBy = name; ltLog_('THUNDER HEARD', s.level || 'clear', null, 'Reported in PARRON – 30 minutes restart', name); if (!s.strikes) s.strikes = []; ltApply_(s, now); }
+  else if (d.action === 'ltnRestart') { if (!name) return out_({ ok: false, error: 'Pick your name in Settings first' });
+    if ((s.level || 'clear') === 'stop') return out_({ ok: false, error: 'Still a lightning stop – work cannot restart yet' });
+    s.restartBy = name + ' · ' + ltT_(now); ltLog_('RESTART CONFIRMED', s.level || 'clear', null, 'Supervisor confirmed work restarted', name); ltSave_(s); }
+  else if (d.action === 'ltnTest') { if (!pinOK_(d.pin)) return out_({ ok: false, error: 'Incorrect Manager PIN', badPin: true });
+    const ok = ltPush_('TEST – PARRON lightning alert', 'This is a test. If you can read this, lightning alerts work on your phone. No action needed.', 4, 'test_tube'); ltLog_('TEST', s.level || 'clear', null, ok ? 'Test alert sent' : 'Test alert failed', name || 'SHE Manager'); }
+  return out_(Object.assign({ ok: true }, ltOut_())); }
