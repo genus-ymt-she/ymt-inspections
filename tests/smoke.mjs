@@ -857,7 +857,9 @@ await step("Lightning tracker: being set up → STOP within 10 km (banner, tile,
   if (!/6.8 km W – STOP outdoor work/.test(await p.textContent(".lt-banner")) || !/STOP · 6.8 km/.test(await p.textContent(".lt-tile"))) throw new Error("home banner / tile");
   await settle(p); await shot(p, "77-lightning-home");
   await p.click(".lt-banner"); await p.waitForSelector(".lt-state.stop");
-  const t = await p.textContent("#app"); if (!/All clear not before/.test(t) || !/Lower EWP baskets and exit/.test(t) || !/does not replace it/.test(t)) throw new Error("stop screen");
+  const t = await p.textContent("#app"); if (!/All clear not before/.test(t) || !/does not replace it/.test(t)) throw new Error("stop screen");
+  // protocol by distance, ERP wording; the current band (within 10 km) is open and marked NOW
+  if ((await p.$$(".lt-pb")).length !== 4 || !await p.$(".lt-pb.stop.cur[open] .lt-now") || !/lower the basket immediately using primary controls/.test(t) || !/Work may resume only when 30 minutes have elapsed/.test(t)) throw new Error("lightning protocol");
   if (await p.$$eval(".lt-radar circle[r='4.5'], .lt-radar circle[r='3.5']", e => e.length) !== 3) throw new Error("three strikes on the map");
   await settle(p); await shot(p, "78-lightning-stop");
   await p.click("text=I'm sheltered – tell my Supervisor"); await p.waitForSelector("text=You're marked as sheltered");

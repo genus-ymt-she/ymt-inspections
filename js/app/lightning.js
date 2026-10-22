@@ -13,7 +13,7 @@ const ltMinsAgo=iso=>iso?Math.round((Date.now()-new Date(iso).getTime())/60000):
 const ltTime=iso=>iso?new Date(iso).toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit"}):"–";
 /* what the screen shows: setup / nodata / quiet (outside hours) / clear / watch / stop */
 function ltState(L){L=L||ltData();if(!L||!L.configured)return "setup";
-  const ago=ltMinsAgo(L.lastOK);if(L.inHours&&(L.down||ago===null||ago>12))return "nodata";if(!L.inHours&&L.level==="clear")return "quiet";return L.level||"clear"}
+  const ago=ltMinsAgo(L.lastOK);const ev=L.every||{calm:30,active:3};if(L.inHours&&(L.down||ago===null||ago>(L.active?ev.active:ev.calm)+10))return "nodata";if(!L.inHours&&L.level==="clear")return "quiet";return L.level||"clear"}
 const LT_COPY={stop:["STOP – LIGHTNING WITHIN 10 KM","Cease all outdoor work and shelter now"],watch:["WATCH – LIGHTNING 10–30 KM","Prepare to stop work"],clear:["ALL CLEAR","No lightning within 30 km in the last 30 minutes"],
   nodata:["LIGHTNING DATA UNAVAILABLE","Use the 30/30 rule: thunder within 30 seconds of lightning = stop"],quiet:["TRACKER RESTS OVERNIGHT","Use the 30/30 rule outside tracker hours"],setup:["LIGHTNING TRACKER – BEING SET UP","Use the 30/30 rule until it is switched on"]};
 const ltIsSup=()=>{const p=teamBy(ls("inspector")||"");return !!p&&/Supervisor|Manager|SHE|Director|Engineer/i.test(p.role||"")};
@@ -38,8 +38,28 @@ function ltRadarSVG(L){const W=300,C=150,S=132/((L&&L.km&&L.km.range)||50);const
    <text x="${C}" y="14" text-anchor="middle" class="lt-rl" fill="var(--muted)">N</text>${dots}
    <rect x="${C-7}" y="${C-7}" width="14" height="14" rx="3" fill="var(--brand)" stroke="#fff" stroke-width="2"/><text x="${C+11}" y="${C+16}" class="lt-rl" fill="var(--ink)">YMT site</text>
    <g class="lt-key"><circle cx="12" cy="${W+8}" r="4" fill="var(--ua)"/><text x="20" y="${W+12}">under 10 min</text><circle cx="108" cy="${W+8}" r="4" fill="var(--ni)"/><text x="116" y="${W+12}">10–30 min</text><circle cx="196" cy="${W+8}" r="4" fill="var(--muted)" opacity=".55"/><text x="204" y="${W+12}">30–60 min</text></g></svg>`}
-const LT_DO={stop:["Lower EWP baskets and exit","Booms down and secured – stop crane lifts","Stop energised electrical work, work on or near the 330 kV gantry, towers or fencing, refuelling and hot work","Shelter in hard-roof vehicles, site offices or substantial buildings – never under trees or towers, or in open ground"],
-  watch:["Plan to lower EWPs and booms","Finish or make safe hot work and refuelling","Know where your crew will shelter","Listen for thunder – thunder within 30 seconds of lightning means stop now"]};
+/* Lightning protocol by distance – ERP J1084-HSE-PLN-YMT-0002 §10.2.1 wording; the 10–30 km band is the PARRON early warning (not an ERP trigger) */
+const LT_PROTO=[
+ {k:"stop",band:"Within 10 km – STOP",tag:"ERP §10.2.1",lead:"Cease all outdoor work immediately.",items:[
+   "If thunder is heard within 30 seconds of seeing lightning, the storm is within 10 km — cease all outdoor work immediately.",
+   "Cessation triggers: all work at heights, EWP work (lower basket and exit), crane lifting (boom down, secure), energised electrical work, any work on or near metallic structures (330kV gantry, lattice towers, fencing), refuelling, hot work.",
+   "EWP operators with personnel at height: lower the basket immediately using primary controls; if controls unresponsive due to electrical interference, use the emergency descent device.",
+   "Personnel shelter inside hard-roof vehicles, site offices, or substantial buildings — never under isolated trees, towers, or in open ground.",
+   "Tap “I'm sheltered” in PARRON so your Supervisor knows you are safe."]},
+ {k:"resume",band:"All clear – resuming work",tag:"ERP §10.2.1",lead:"Wait 30 minutes.",items:[
+   "Work may resume only when 30 minutes have elapsed after the last thunder is heard (or the last strike within 10 km).",
+   "Every new strike within 10 km, or thunder heard, restarts the 30 minutes – tap “I heard thunder” in PARRON.",
+   "Supervisors confirm the restart in PARRON before crews return to work."]},
+ {k:"watch",band:"10–30 km – WATCH",tag:"PARRON early warning",lead:"Prepare to stop.",items:[
+   "Plan to lower EWP baskets and booms, and finish or make safe hot work and refuelling.",
+   "Know where your crew will shelter: hard-roof vehicles, site offices or substantial buildings.",
+   "Watch and listen: thunder within 30 seconds of lightning means the storm is within 10 km – stop now, whatever the tracker shows."]},
+ {k:"clear",band:"More than 30 km – monitor",tag:"ERP §10.2",lead:"Normal work.",items:[
+   "Monitor BoM / MetEye and this tracker, more often when severe weather is forecast.",
+   "On detection of lightning by sight, sound, or BoM/MetEye advisory, the 30/30 rule applies."]}];
+function ltProtoHTML(s){const cur=s==="stop"?"stop":s==="watch"?"watch":s==="clear"?"clear":"";
+  return `<h2>Lightning protocol</h2><div class="lt-proto">${LT_PROTO.map(p=>`<details class="lt-pb ${p.k} ${p.k===cur?"cur":""}" ${p.k===cur||(cur===""&&p.k==="stop")?"open":""}><summary><span class="lt-pk"></span><span class="lt-pt"><b>${esc(p.band)}</b><small>${esc(p.lead)} · ${esc(p.tag)}</small></span>${p.k===cur?'<span class="lt-now">NOW</span>':""}${ic("down","s")}</summary><ul>${p.items.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></details>`).join("")}</div>`}
+
 let LT_TIMER=null;
 async function viewLightning(sub){const seq=ROUTE_SEQ;setHeader("Lightning","YMT site · ERP §10.2.1",{icon:"back",aria:"Back",fn:()=>go("#home")});
   ltDraw(sub);clearInterval(LT_TIMER);LT_TIMER=setInterval(()=>{if(!/^#lightning/.test(location.hash)){clearInterval(LT_TIMER);return}ltRefresh().then(ch=>{if(ch&&!stale(seq))ltDraw()})},60000);
@@ -49,14 +69,15 @@ function ltDraw(sub){const L=ltData();const s=ltState(L);const [t1,t2]=LT_COPY[s
   if(L&&L.configured){h+=ltRadarSVG(L);
     const n10=(L.strikes||[]).filter(x=>x.km<=L.km.stop&&x.age<=30).length,n30=(L.strikes||[]).filter(x=>x.km<=L.km.watch&&x.age<=30).length;
     h+=`<div class="card"><dl class="kv">${L.closest?`<dt>Closest strike (30 min)</dt><dd><b>${esc(L.closest.km)} km ${esc(L.closest.dir)}</b> · ${ltTime(L.closest.at)}</dd>`:""}<dt>Within 10 km</dt><dd>${n10} in the last 30 min</dd><dt>Within 30 km</dt><dd>${n30} in the last 30 min</dd>
-      <dt>Checked</dt><dd>${L.lastCheck?`${ltTime(L.lastCheck)} (${ltMinsAgo(L.lastCheck)} min ago)`:"–"} · every 5 min, every minute once lightning is within 30 km</dd><dt>Tracker hours</dt><dd>${pad(L.hours[0])}:00 – ${pad(L.hours[1])}:00 (alerts in these hours)</dd></dl></div>`}
-  if(s==="stop"||s==="watch")h+=`<h2>${s==="stop"?"Do now – ERP §10.2.1":"Get ready"}</h2><div class="card"><ul class="lt-do">${LT_DO[s].map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
+      <dt>Checked</dt><dd>${L.lastCheck?`${ltTime(L.lastCheck)} (${ltMinsAgo(L.lastCheck)} min ago)`:"–"} · ${L.active?`every ${(L.every||{}).active||3} min while lightning is around`:`every ${(L.every||{}).calm||30} min when calm, every ${(L.every||{}).active||3} min once lightning is within 30 km`}</dd><dt>Tracker hours</dt><dd>${pad(L.hours[0])}:00 – ${pad(L.hours[1])}:00 (alerts in these hours)</dd></dl></div>`}
+  if(s==="stop"||s==="watch")h+=ltProtoHTML(s);
   if(s==="stop"){const sh=L.sheltered||[];const mine=sh.some(n=>nameEq(n,me));
     h+=`<div class="card"><button class="btn ${mine?"g":"o"} w" ${mine?"disabled":""} onclick="ltPost('ltnShelter')">${ic("check","s")} ${mine?"You're marked as sheltered":"I'm sheltered – tell my Supervisor"}</button>
       <div class="muted" style="margin-top:8px">${sh.length?`<b>${sh.length} sheltered:</b> ${sh.map(esc).join(", ")}`:"Nobody has confirmed yet."}</div></div>`}
   if(L&&L.configured&&s!=="setup")h+=`<button class="btn g w lt-thunder" onclick="ltThunder()">${ic("zap","s")} I heard thunder – ${s==="stop"?"restart the 30 minutes":"stop work now"}</button>`;
   if(L&&L.lastStop&&s!=="stop"&&ltMinsAgo(L.lastStop.end)<=180){h+=`<div class="card"><b>Last stop</b> ${ltTime(L.lastStop.start)} – ${ltTime(L.lastStop.end)} (${L.lastStop.mins} min)<div class="muted" style="margin-top:4px">${L.restartBy?`Restart confirmed by ${esc(L.restartBy)}`:"Restart not yet confirmed by a Supervisor."}</div>
     ${!L.restartBy&&ltIsSup()?`<button class="btn o w" style="margin-top:10px" onclick="ltPost('ltnRestart')">${ic("check","s")} Confirm work has restarted</button>`:""}</div>`}
+  if(s!=="stop"&&s!=="watch")h+=ltProtoHTML(s);
   h+=`<h2 id="lt-alerts">Alerts on this phone</h2>${ltAlertsHTML(L)}`;
   if(isManager()&&L&&L.configured)h+=`<button class="btn g w" onclick="ltTest()">${ic("bell","s")} Send a test alert to everyone</button>`;
   if(L&&L.log&&L.log.length)h+=`<h2>Storm log</h2><div class="card"><div class="lt-log">${L.log.map(e=>`<div><span>${new Date(e.at).toLocaleDateString("en-AU",{day:"numeric",month:"short"})} ${ltTime(e.at)}</span><b class="ev ${esc(String(e.event).toLowerCase().replace(/[^a-z]+/g,"-"))}">${esc(e.event)}</b><span>${e.km!==""&&e.km!=null?`${esc(e.km)} km ${esc(e.dir||"")}`:""}${e.by?` ${esc(e.by)}`:""}</span></div>`).join("")}</div></div>`;

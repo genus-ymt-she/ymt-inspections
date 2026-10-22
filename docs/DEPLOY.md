@@ -322,7 +322,7 @@ The tracker follows ERP §10.2.1 (the 30/30 rule):
 - **WATCH:** a strike 10–30 km away.
 - **ALL CLEAR:** 30 minutes after the last strike within 10 km.
 
-Strikes come from Xweather (Vaisala) and are measured from the fixed YMT site point; phone location is not used. The relay checks every 5 minutes when it is calm, and every minute once lightning is within 30 km. Checks run in `LIGHTNING_HOURS` (default `05-19` Perth), starting 30 minutes before.
+Strikes come from Xweather (Vaisala) and are measured from the fixed YMT site point; phone location is not used. The relay checks every 30 minutes when it is calm. From the first strike within 30 km it checks every 3 minutes, and keeps doing so until nothing has been within 30 km for 30 minutes; then it goes back to every 30 minutes. A failed check is retried the next minute. To change the intervals, set `LIGHTNING_CALM_MIN` and `LIGHTNING_ACTIVE_MIN`. Checks run in `LIGHTNING_HOURS` (default `05-19` Perth), starting 30 minutes before.
 
 Push alerts go through the free **ntfy** app and are sent only when the level changes. Every change is logged in the *Lightning* sheet, and the stops are counted in Monthly figures.
 
@@ -332,3 +332,5 @@ Push alerts go through the free **ntfy** app and are sent only when the level ch
 3. **Install the new relay code:** paste the new `PARRON_Relay_Code.gs`, save, then run **setup** once. setup adds the 1-minute check and creates `NTFY_TOPIC`; it also emails you a summary. Then go to **Deploy › Manage deployments › Edit › New version**.
 4. **Set up phones:** each person opens PARRON › Lightning › *Alerts on this phone*, installs ntfy, taps **Open in ntfy**, and allows notifications (on iPhone, including *Time Sensitive*).
 5. **Test:** in Manager mode, go to Lightning › **Send a test alert to everyone**.
+
+**Lightning protocol (v3.20):** the Lightning screen shows what to do for each distance band, in ERP §10.2.1 wording: within 10 km STOP, all clear / resuming work, 10–30 km WATCH (PARRON early warning) and more than 30 km. The current band is opened and marked NOW.
