@@ -628,11 +628,27 @@ test("lightning: 'I heard thunder' starts a STOP with no detected strike; alerts
   const n = st.push.length; r.props.set("LIGHTNING_HOURS", "00-00"); st.strikes = []; r.props.set("LTN_STATE", JSON.stringify({ level: "stop", stopStart: Date.now() - 40 * 60000, thunderAt: Date.now() - 31 * 60000 }));
   r.ctx.lightningRun(true); assert.equal(r.get({ action: "lightning", key: r.key }).level, "clear"); assert.equal(st.push.length, n, "outside hours: logged, not pushed");
 });
-test("lightning: feed down for 10 min → one 'use the 30/30 rule' alert, and DATA BACK when it returns", () => {
+test("lightning: feed down for 3 checks in a row → one 'use the 30/30 rule' alert, and DATA BACK when it returns", () => {
   const { r, st } = ltnRelay(); r.props.set("XWEATHER_ID", "a"); r.props.set("XWEATHER_SECRET", "b");
-  r.props.set("LTN_STATE", JSON.stringify({ level: "clear", lastOK: Date.now() - 11 * 60000 })); st.fail = true;
+  r.props.set("LTN_STATE", JSON.stringify({ level: "clear", lastOK: Date.now() - 31 * 60000 })); st.fail = true;
+  r.ctx.lightningRun(true); r.ctx.lightningRun(true); assert.equal(st.push.length, 0, "one or two failed checks are retried quietly");
+  assert.equal(JSON.parse(r.props.get("LTN_STATE")).retry, true, "a failed check is retried the next minute");
   r.ctx.lightningRun(true); r.ctx.lightningRun(true); assert.equal(st.push.length, 1); assert.match(st.push[0].body, /30\/30 rule/);
   assert.equal(r.get({ action: "lightning", key: r.key }).down, true);
   st.fail = false; r.ctx.lightningRun(true); assert.equal(r.get({ action: "lightning", key: r.key }).down, false);
   assert.deepEqual(r.sheet("Lightning").data.slice(1).map(x => x[1]), ["DATA DOWN", "DATA BACK"]);
+});
+
+test("lightning: checks every 30 min when calm; every 3 min from the first strike within 30 km until 30 min after it is clear", () => {
+  const { r, st } = ltnRelay(); r.props.set("XWEATHER_KEY", "id_secret"); const now = Date.now();
+  assert.deepEqual({ ...r.ctx.ltEvery_() }, { calm: 30, active: 3 });
+  assert.equal(r.ctx.ltActive_({ level: "clear" }, now), false, "calm");
+  assert.equal(r.ctx.ltActive_({ level: "watch" }, now), true); assert.equal(r.ctx.ltActive_({ level: "stop" }, now), true);
+  assert.equal(r.ctx.ltActive_({ level: "clear", since: now - 10 * 60000, wasActive: true }, now), true, "still 3-minute checks 10 min after the all clear");
+  assert.equal(r.ctx.ltActive_({ level: "clear", since: now - 31 * 60000, wasActive: true }, now), false, "back to 30-minute checks after 30 min clear");
+  // a storm passing: watch → clear keeps the 3-minute checks going for 30 minutes
+  st.strikes = [[20, 90, 2]]; r.ctx.lightningRun(true); st.strikes = [[20, 90, 31]]; r.ctx.lightningRun(true);
+  const S = JSON.parse(r.props.get("LTN_STATE")); assert.equal(S.level, "clear"); assert.equal(r.ctx.ltActive_(S, Date.now()), true);
+  const g = r.get({ action: "lightning", key: r.key }); assert.equal(g.active, true); assert.deepEqual(g.every, { calm: 30, active: 3 });
+  r.props.set("LIGHTNING_CALM_MIN", "15"); r.props.set("LIGHTNING_ACTIVE_MIN", "2"); assert.deepEqual({ ...r.ctx.ltEvery_() }, { calm: 15, active: 2 });
 });

@@ -322,7 +322,7 @@ The tracker follows ERP §10.2.1 (the 30/30 rule):
 - **WATCH:** a strike 10–30 km away.
 - **ALL CLEAR:** 30 minutes after the last strike within 10 km.
 
-Strikes come from Xweather (Vaisala) and are measured from the fixed YMT site point; phone location is not used. The relay checks every 5 minutes when it is calm, and every minute once lightning is within 30 km. Checks run in `LIGHTNING_HOURS` (default `05-19` Perth), starting 30 minutes before.
+Strikes come from Xweather (Vaisala) and are measured from the fixed YMT site point; phone location is not used. The relay checks every 30 minutes when it is calm. From the first strike within 30 km it checks every 3 minutes, and keeps doing so until nothing has been within 30 km for 30 minutes; then it goes back to every 30 minutes. A failed check is retried the next minute. To change the intervals, set `LIGHTNING_CALM_MIN` and `LIGHTNING_ACTIVE_MIN`. Checks run in `LIGHTNING_HOURS` (default `05-19` Perth), starting 30 minutes before.
 
 Push alerts go through the free **ntfy** app and are sent only when the level changes. Every change is logged in the *Lightning* sheet, and the stops are counted in Monthly figures.
 

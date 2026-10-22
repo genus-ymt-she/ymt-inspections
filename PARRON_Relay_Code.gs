@@ -1081,9 +1081,15 @@ function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).set
    last 30 min; CLEAR otherwise. ALL CLEAR comes 30 min after the last strike within 10 km. Push alerts (ntfy) go out only
    when the level changes, inside LIGHTNING_HOURS. Every change is logged in the Lightning sheet.
    Script Properties: XWEATHER_KEY (the API key on the Xweather dashboard) – or XWEATHER_ID + XWEATHER_SECRET –, NTFY_TOPIC (made by setup),
-   LIGHTNING_HOURS (default 05-19 Perth; checks run from 30 min before), XWEATHER_PARAMS (optional query override). */
+   LIGHTNING_HOURS (default 05-19 Perth; checks run from 30 min before), LIGHTNING_CALM_MIN (default 30), LIGHTNING_ACTIVE_MIN (default 3),
+   XWEATHER_PARAMS (optional query override). */
 const LT_SITE = { lat: -30.3456, lon: 115.3370, name: 'YMT' };
-const LT_STOP_KM = 10, LT_WATCH_KM = 30, LT_RANGE_KM = 50, LT_CLEAR_MIN = 30, LT_DOWN_MIN = 10;
+const LT_STOP_KM = 10, LT_WATCH_KM = 30, LT_RANGE_KM = 50, LT_CLEAR_MIN = 30, LT_DOWN_FAILS = 3;
+/* how often to check: every LIGHTNING_CALM_MIN (default 30) when calm; every LIGHTNING_ACTIVE_MIN (default 3) from the first
+   strike within 30 km until it has been clear (nothing within 30 km) for 30 minutes */
+function ltEvery_() { const p = ltProps_(); const n = (k, d) => { const v = parseInt(p.getProperty(k), 10); return v >= 1 && v <= 60 ? v : d; };
+  return { calm: n('LIGHTNING_CALM_MIN', 30), active: n('LIGHTNING_ACTIVE_MIN', 3) }; }
+function ltActive_(s, now) { return (s.level || 'clear') !== 'clear' || !!(s.wasActive && s.since && now - s.since < LT_CLEAR_MIN * 60000); }
 const LT_HEAD = ['Time', 'Event', 'Level', 'Closest (km)', 'Direction', 'Detail', 'By'];
 const ltProps_ = () => PropertiesService.getScriptProperties();
 function ltState_() { try { return JSON.parse(ltProps_().getProperty('LTN_STATE') || 'null') || {}; } catch (e) { return {}; } }
@@ -1129,19 +1135,20 @@ function ltPush_(title, msg, prio, tags) {
     headers: { Title: title, Priority: String(prio || 3), Tags: tags || 'zap', Click: APP_URL + '#lightning' } }); return true; } catch (e) { return false; } }
 const ltT_ = ms => Utilities.formatDate(new Date(ms), TZ, 'h:mm a').toLowerCase();
 const ltWhere_ = c => c ? `${c.km} km ${ltDir_(c.brg)} of ${LT_SITE.name}` : LT_SITE.name;
-/* time-driven, every minute (setup installs it): checks every 5 min when calm and every minute once lightning is within 30 km */
+/* time-driven, every minute (setup installs it): checks on the calm or active interval (ltEvery_); a failed check is retried the next minute */
 function lightningRun(force) {
   if (!ltConfigured_()) return null;
   const lock = LockService.getScriptLock(); if (lock.tryLock && !lock.tryLock(20000)) return null;
   try {
     const now = Date.now(); const d = new Date(now); const s = ltState_();
     if (!force && !ltInHours_(d, 30)) return null;
-    if (!force && (s.level || 'clear') === 'clear' && ltMinOfDay_(d) % 5 !== 0) return null;
+    if (!force && !s.retry && ltMinOfDay_(d) % (ltActive_(s, now) ? ltEvery_().active : ltEvery_().calm) !== 0) return null;
     const strikes = ltFetch_(); s.lastCheck = now;
-    if (!strikes) { if (!s.down && s.lastOK && now - s.lastOK > LT_DOWN_MIN * 60000) { s.down = now; ltLog_('DATA DOWN', s.level || 'clear', null, 'No lightning data for ' + LT_DOWN_MIN + ' min');
+    if (!strikes) { s.fails = (s.fails || 0) + 1; s.retry = true;
+      if (!s.down && s.fails >= LT_DOWN_FAILS) { s.down = now; ltLog_('DATA DOWN', s.level || 'clear', null, 'Lightning data failed ' + s.fails + ' checks in a row');
         if (ltInHours_(d)) ltPush_('Lightning data unavailable – YMT', 'PARRON cannot get lightning data. Use the 30/30 rule: if thunder follows lightning within 30 seconds, stop outdoor work.', 3, 'warning'); }
       ltSave_(s); return s; }
-    if (s.down) { ltLog_('DATA BACK', s.level || 'clear', null, ''); s.down = null; }
+    if (s.down) { ltLog_('DATA BACK', s.level || 'clear', null, ''); s.down = null; } s.fails = 0; s.retry = false;
     s.lastOK = now; s.strikes = strikes;
     return ltApply_(s, now);
   } finally { try { lock.releaseLock(); } catch (e) {} } }
@@ -1149,7 +1156,7 @@ function lightningRun(force) {
 function ltApply_(s, now) { const L = ltLevel_(s.strikes || [], s, now); const was = s.level || 'clear'; const d = new Date(now); const hrs = ltInHours_(d);
   s.closest = L.closest; s.lastNear = L.lastNear;
   if (L.level !== was) {
-    s.level = L.level; s.since = now;
+    s.wasActive = was !== 'clear'; s.level = L.level; s.since = now;
     if (L.level === 'stop') { s.stopStart = now; s.sheltered = {}; s.restartBy = null;
       const c = L.closest && L.closest.km <= LT_STOP_KM ? L.closest : null; const allClear = ltT_(L.lastNear + LT_CLEAR_MIN * 60000);
       const msg = c ? `Lightning ${ltWhere_(c)} at ${ltT_(c.at)}. Cease all outdoor work and shelter in hard-roof vehicles or buildings. All clear not before ${allClear}.`
@@ -1172,7 +1179,7 @@ function ltOut_() { const s = ltState_(); const now = Date.now(); const lv = s.l
     closest: s.closest ? { km: s.closest.km, dir: ltDir_(s.closest.brg), at: new Date(s.closest.at).toISOString() } : null,
     strikes: (s.strikes || []).filter(x => now - x.at <= 3600000).map(x => ({ km: x.km, brg: x.brg, age: Math.round((now - x.at) / 60000) })),
     lastCheck: s.lastCheck ? new Date(s.lastCheck).toISOString() : '', lastOK: s.lastOK ? new Date(s.lastOK).toISOString() : '', down: !!s.down,
-    hours: ltHours_(), inHours: ltInHours_(new Date(now), 30), topic: ltTopic_(), sheltered: Object.keys(s.sheltered || {}).sort(), restartBy: s.restartBy || '',
+    hours: ltHours_(), inHours: ltInHours_(new Date(now), 30), every: ltEvery_(), active: !!ltActive_(s, now), topic: ltTopic_(), sheltered: Object.keys(s.sheltered || {}).sort(), restartBy: s.restartBy || '',
     lastStop: s.lastStop ? { start: new Date(s.lastStop.start).toISOString(), end: new Date(s.lastStop.end).toISOString(), mins: s.lastStop.mins } : null, log, months,
     km: { stop: LT_STOP_KM, watch: LT_WATCH_KM, range: LT_RANGE_KM }, clearMin: LT_CLEAR_MIN }; }
 /* app actions: sheltered, thunder heard (restarts the 30 min), supervisor restart, test alert (Manager PIN) */

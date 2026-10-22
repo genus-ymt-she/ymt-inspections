@@ -13,7 +13,7 @@ const ltMinsAgo=iso=>iso?Math.round((Date.now()-new Date(iso).getTime())/60000):
 const ltTime=iso=>iso?new Date(iso).toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit"}):"–";
 /* what the screen shows: setup / nodata / quiet (outside hours) / clear / watch / stop */
 function ltState(L){L=L||ltData();if(!L||!L.configured)return "setup";
-  const ago=ltMinsAgo(L.lastOK);if(L.inHours&&(L.down||ago===null||ago>12))return "nodata";if(!L.inHours&&L.level==="clear")return "quiet";return L.level||"clear"}
+  const ago=ltMinsAgo(L.lastOK);const ev=L.every||{calm:30,active:3};if(L.inHours&&(L.down||ago===null||ago>(L.active?ev.active:ev.calm)+10))return "nodata";if(!L.inHours&&L.level==="clear")return "quiet";return L.level||"clear"}
 const LT_COPY={stop:["STOP – LIGHTNING WITHIN 10 KM","Cease all outdoor work and shelter now"],watch:["WATCH – LIGHTNING 10–30 KM","Prepare to stop work"],clear:["ALL CLEAR","No lightning within 30 km in the last 30 minutes"],
   nodata:["LIGHTNING DATA UNAVAILABLE","Use the 30/30 rule: thunder within 30 seconds of lightning = stop"],quiet:["TRACKER RESTS OVERNIGHT","Use the 30/30 rule outside tracker hours"],setup:["LIGHTNING TRACKER – BEING SET UP","Use the 30/30 rule until it is switched on"]};
 const ltIsSup=()=>{const p=teamBy(ls("inspector")||"");return !!p&&/Supervisor|Manager|SHE|Director|Engineer/i.test(p.role||"")};
@@ -69,7 +69,7 @@ function ltDraw(sub){const L=ltData();const s=ltState(L);const [t1,t2]=LT_COPY[s
   if(L&&L.configured){h+=ltRadarSVG(L);
     const n10=(L.strikes||[]).filter(x=>x.km<=L.km.stop&&x.age<=30).length,n30=(L.strikes||[]).filter(x=>x.km<=L.km.watch&&x.age<=30).length;
     h+=`<div class="card"><dl class="kv">${L.closest?`<dt>Closest strike (30 min)</dt><dd><b>${esc(L.closest.km)} km ${esc(L.closest.dir)}</b> · ${ltTime(L.closest.at)}</dd>`:""}<dt>Within 10 km</dt><dd>${n10} in the last 30 min</dd><dt>Within 30 km</dt><dd>${n30} in the last 30 min</dd>
-      <dt>Checked</dt><dd>${L.lastCheck?`${ltTime(L.lastCheck)} (${ltMinsAgo(L.lastCheck)} min ago)`:"–"} · every 5 min, every minute once lightning is within 30 km</dd><dt>Tracker hours</dt><dd>${pad(L.hours[0])}:00 – ${pad(L.hours[1])}:00 (alerts in these hours)</dd></dl></div>`}
+      <dt>Checked</dt><dd>${L.lastCheck?`${ltTime(L.lastCheck)} (${ltMinsAgo(L.lastCheck)} min ago)`:"–"} · ${L.active?`every ${(L.every||{}).active||3} min while lightning is around`:`every ${(L.every||{}).calm||30} min when calm, every ${(L.every||{}).active||3} min once lightning is within 30 km`}</dd><dt>Tracker hours</dt><dd>${pad(L.hours[0])}:00 – ${pad(L.hours[1])}:00 (alerts in these hours)</dd></dl></div>`}
   if(s==="stop"||s==="watch")h+=ltProtoHTML(s);
   if(s==="stop"){const sh=L.sheltered||[];const mine=sh.some(n=>nameEq(n,me));
     h+=`<div class="card"><button class="btn ${mine?"g":"o"} w" ${mine?"disabled":""} onclick="ltPost('ltnShelter')">${ic("check","s")} ${mine?"You're marked as sheltered":"I'm sheltered – tell my Supervisor"}</button>
