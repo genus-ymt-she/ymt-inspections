@@ -333,4 +333,4 @@ Push alerts go through the free **ntfy** app and are sent only when the level ch
 4. **Set up phones:** each person opens PARRON › Lightning › *Alerts on this phone*, installs ntfy, taps **Open in ntfy**, and allows notifications (on iPhone, including *Time Sensitive*).
 5. **Test:** in Manager mode, go to Lightning › **Send a test alert to everyone**.
 
-**Lightning protocol (v3.20):** the Lightning screen shows what to do for each distance band, in ERP §10.2.1 wording: within 10 km STOP, all clear / resuming work, 10–30 km WATCH (PARRON early warning) and more than 30 km. The current band is opened and marked NOW.
+**Lightning protocol (v3.20):** the Lightning screen shows what to do for each distance band, in ERP §10.2.1 wording: more than 30 km, 10–30 km WATCH (PARRON early warning), within 10 km STOP, and all clear / resuming work – in that order. The current band is opened and marked NOW.
