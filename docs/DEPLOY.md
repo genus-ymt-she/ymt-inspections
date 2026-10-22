@@ -327,11 +327,8 @@ Strikes come from Xweather (Vaisala) and are measured from the fixed YMT site po
 Push alerts go through the free **ntfy** app and are sent only when the level changes. Every change is logged in the *Lightning* sheet, and the stops are counted in Monthly figures.
 
 **Switching it on:**
-1. **Xweather account:**
-   - Sign up at xweather.com (30-day free trial), then subscribe to the Flex plan.
-   - Under **Apps › New Application**, enter the name `PARRON relay` and the namespace `script.google.com`.
-   - Copy the **Client ID** and **Client Secret**.
-2. **Apps Script › Project Settings › Script properties:** add `XWEATHER_ID` and `XWEATHER_SECRET`. Optionally add `LIGHTNING_HOURS`, for example `05-19`.
+1. **Xweather account:** sign up at xweather.com (30-day free trial). The dashboard shows **Your API key**; copy it with the copy button. Before the trial ends, choose a paid plan that includes the Lightning API.
+2. **Apps Script › Project Settings › Script properties:** add `XWEATHER_KEY` with the API key as its value. Optionally add `LIGHTNING_HOURS`, for example `05-19`. The older `XWEATHER_ID` + `XWEATHER_SECRET` pair still works.
 3. **Install the new relay code:** paste the new `PARRON_Relay_Code.gs`, save, then run **setup** once. setup adds the 1-minute check and creates `NTFY_TOPIC`; it also emails you a summary. Then go to **Deploy › Manage deployments › Edit › New version**.
 4. **Set up phones:** each person opens PARRON › Lightning › *Alerts on this phone*, installs ntfy, taps **Open in ntfy**, and allows notifications (on iPhone, including *Time Sensitive*).
 5. **Test:** in Manager mode, go to Lightning › **Send a test alert to everyone**.

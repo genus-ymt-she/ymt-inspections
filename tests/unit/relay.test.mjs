@@ -619,7 +619,8 @@ test("lightning: 10–30 km → WATCH, within 10 km → STOP (urgent push, all c
   g = r.get({ action: "lightning", key: r.key }); const m = Object.values(g.months)[0]; assert.equal(m.stops, 1);
 });
 test("lightning: 'I heard thunder' starts a STOP with no detected strike; alerts stay quiet outside the set hours; test alert needs the Manager PIN", () => {
-  const { r, st } = ltnRelay(); r.props.set("XWEATHER_ID", "a"); r.props.set("XWEATHER_SECRET", "b");
+  const { r, st } = ltnRelay(); r.props.set("XWEATHER_KEY", "AbC123xyz_s3cretPart_with_underscore");
+  r.ctx.lightningRun(true); assert.match(st.urls[0], /client_id=AbC123xyz&client_secret=s3cretPart_with_underscore$/, "portal API key = client ID _ secret");
   const g = r.post({ key: r.key, action: "ltnThunder", name: "Matthew Smith" }); assert.equal(g.level, "stop");
   assert.match(st.push[0].body, /Thunder reported at YMT by Matthew Smith/);
   assert.equal(r.post({ key: r.key, action: "ltnTest", pin: "1" }).badPin, true);

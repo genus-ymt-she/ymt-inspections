@@ -95,7 +95,7 @@ function setup() {
     '\nMy SHEQ Planner: your obligations register (SHEQ Register sheet). Reminder emails are ' + ({ off: 'OFF – nobody is emailed', me: 'on – to you only', all: 'on – to you and each owner' })[plannerEmails_()] + ' (change it on the planner screen).' +
     '\nInspection forms you add in the app are kept in the Custom Forms sheet.' +
     '\nFire danger days: on High-or-above days an email goes between 5 and 6 am to ' + fireTo_().length + ' people (SHE team, supervisors, Construction Manager) – Inspection 25 before work; the evening before an Extreme or Catastrophic day they get a plan-ahead email.' +
-    '\nLightning tracker: ' + (ltConfigured_() ? 'ON – checking Xweather for strikes near YMT ' + ltHours_().join(':00–') + ':00 (Perth); push alerts to everyone who turned them on in PARRON' : 'NOT SET – add XWEATHER_ID and XWEATHER_SECRET under Script properties') + '.' +
+    '\nLightning tracker: ' + (ltConfigured_() ? 'ON – checking Xweather for strikes near YMT ' + ltHours_().join(':00–') + ':00 (Perth); push alerts to everyone who turned them on in PARRON' : 'NOT SET – add XWEATHER_KEY (your Xweather API key) under Script properties') + '.' +
     '\nSHEQ Alerts: published from the app in Manager mode – tick who must acknowledge; the register is in the Alert Acks sheet.' +
     '\nToday on site status PIN: ' + (PropertiesService.getScriptProperties().getProperty('STATUS_PIN') ? 'set' : 'NOT SET – add STATUS_PIN under Script properties so the site status can be updated.') +
     '\nFire Danger Rating: ' + (fdrFetch_(true).today ? 'reading from the Bureau of Meteorology' : 'could not be read automatically – set it in the app (Manager mode) or choose the district') +
@@ -1080,7 +1080,7 @@ function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).set
    STOP = a strike (or thunder reported in the app) within 10 km in the last 30 min; WATCH = a strike 10–30 km away in the
    last 30 min; CLEAR otherwise. ALL CLEAR comes 30 min after the last strike within 10 km. Push alerts (ntfy) go out only
    when the level changes, inside LIGHTNING_HOURS. Every change is logged in the Lightning sheet.
-   Script Properties: XWEATHER_ID, XWEATHER_SECRET (from xweather.com › Apps), NTFY_TOPIC (made by setup),
+   Script Properties: XWEATHER_KEY (the API key on the Xweather dashboard) – or XWEATHER_ID + XWEATHER_SECRET –, NTFY_TOPIC (made by setup),
    LIGHTNING_HOURS (default 05-19 Perth; checks run from 30 min before), XWEATHER_PARAMS (optional query override). */
 const LT_SITE = { lat: -30.3456, lon: 115.3370, name: 'YMT' };
 const LT_STOP_KM = 10, LT_WATCH_KM = 30, LT_RANGE_KM = 50, LT_CLEAR_MIN = 30, LT_DOWN_MIN = 10;
@@ -1088,7 +1088,11 @@ const LT_HEAD = ['Time', 'Event', 'Level', 'Closest (km)', 'Direction', 'Detail'
 const ltProps_ = () => PropertiesService.getScriptProperties();
 function ltState_() { try { return JSON.parse(ltProps_().getProperty('LTN_STATE') || 'null') || {}; } catch (e) { return {}; } }
 function ltSave_(s) { ltProps_().setProperty('LTN_STATE', JSON.stringify(s)); }
-const ltConfigured_ = () => !!(ltProps_().getProperty('XWEATHER_ID') && ltProps_().getProperty('XWEATHER_SECRET'));
+/* the Xweather portal's single "API key" is the client ID and secret joined by "_"; XWEATHER_ID + XWEATHER_SECRET also work */
+function ltCreds_() { const p = ltProps_(); const k = String(p.getProperty('XWEATHER_KEY') || '').trim(); const i = k.indexOf('_');
+  if (i > 0) return { id: k.slice(0, i), secret: k.slice(i + 1) };
+  return p.getProperty('XWEATHER_ID') && p.getProperty('XWEATHER_SECRET') ? { id: p.getProperty('XWEATHER_ID'), secret: p.getProperty('XWEATHER_SECRET') } : null; }
+const ltConfigured_ = () => !!ltCreds_();
 function ltTopic_() { const p = ltProps_(); let t = p.getProperty('NTFY_TOPIC');
   if (!t) { const c = 'abcdefghjkmnpqrstuvwxyz23456789'; t = 'parron-ymt-ltn-' + Array.from({ length: 18 }, () => c[Math.floor(Math.random() * c.length)]).join(''); p.setProperty('NTFY_TOPIC', t); } return t; }
 function ltHours_() { const m = String(ltProps_().getProperty('LIGHTNING_HOURS') || '05-19').match(/^(\d{1,2})-(\d{1,2})$/); return m ? [+m[1], +m[2]] : [5, 19]; }
@@ -1103,7 +1107,7 @@ const ltDir_ = b => ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(b / 
 /* strikes from Xweather: [{at (ms), km, brg, ic}] within LT_RANGE_KM over the last hour; null if the feed failed */
 function ltFetch_() { const p = ltProps_();
   const q = p.getProperty('XWEATHER_PARAMS') || `radius=${LT_RANGE_KM}km&limit=1000&from=-1hour`;
-  const url = `https://data.api.xweather.com/lightning/${LT_SITE.lat},${LT_SITE.lon}?format=json&${q}&client_id=${encodeURIComponent(p.getProperty('XWEATHER_ID'))}&client_secret=${encodeURIComponent(p.getProperty('XWEATHER_SECRET'))}`;
+  const url = `https://data.api.xweather.com/lightning/${LT_SITE.lat},${LT_SITE.lon}?format=json&${q}&client_id=${encodeURIComponent(ltCreds_().id)}&client_secret=${encodeURIComponent(ltCreds_().secret)}`;
   try { const r = UrlFetchApp.fetch(url, { muteHttpExceptions: true }); if (r.getResponseCode() !== 200) return null;
     const j = JSON.parse(r.getContentText()); if (!j || (j.success === false && !(j.error && j.error.code === 'warn_no_data'))) return null;
     return (j.response || []).map(s => { const la = +(s.loc && s.loc.lat), lo = +(s.loc && (s.loc.long != null ? s.loc.long : s.loc.lon)); const ob = s.ob || {};
