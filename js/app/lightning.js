@@ -40,6 +40,13 @@ function ltRadarSVG(L){const W=300,C=150,S=132/((L&&L.km&&L.km.range)||50);const
    <g class="lt-key"><circle cx="12" cy="${W+8}" r="4" fill="var(--ua)"/><text x="20" y="${W+12}">under 10 min</text><circle cx="108" cy="${W+8}" r="4" fill="var(--ni)"/><text x="116" y="${W+12}">10–30 min</text><circle cx="196" cy="${W+8}" r="4" fill="var(--muted)" opacity=".55"/><text x="204" y="${W+12}">30–60 min</text></g></svg>`}
 /* Lightning protocol by distance – ERP J1084-HSE-PLN-YMT-0002 §10.2.1 wording; the 10–30 km band is the PARRON early warning (not an ERP trigger) */
 const LT_PROTO=[
+ {k:"clear",band:"More than 30 km – monitor",tag:"ERP §10.2",lead:"Normal work.",items:[
+   "Monitor BoM / MetEye and this tracker, more often when severe weather is forecast.",
+   "On detection of lightning by sight, sound, or BoM/MetEye advisory, the 30/30 rule applies."]},
+ {k:"watch",band:"10–30 km – WATCH",tag:"PARRON early warning",lead:"Prepare to stop.",items:[
+   "Plan to lower EWP baskets and booms, and finish or make safe hot work and refuelling.",
+   "Know where your crew will shelter: hard-roof vehicles, site offices or substantial buildings.",
+   "Watch and listen: thunder within 30 seconds of lightning means the storm is within 10 km – stop now, whatever the tracker shows."]},
  {k:"stop",band:"Within 10 km – STOP",tag:"ERP §10.2.1",lead:"Cease all outdoor work immediately.",items:[
    "If thunder is heard within 30 seconds of seeing lightning, the storm is within 10 km — cease all outdoor work immediately.",
    "Cessation triggers: all work at heights, EWP work (lower basket and exit), crane lifting (boom down, secure), energised electrical work, any work on or near metallic structures (330kV gantry, lattice towers, fencing), refuelling, hot work.",
@@ -49,14 +56,7 @@ const LT_PROTO=[
  {k:"resume",band:"All clear – resuming work",tag:"ERP §10.2.1",lead:"Wait 30 minutes.",items:[
    "Work may resume only when 30 minutes have elapsed after the last thunder is heard (or the last strike within 10 km).",
    "Every new strike within 10 km, or thunder heard, restarts the 30 minutes – tap “I heard thunder” in PARRON.",
-   "Supervisors confirm the restart in PARRON before crews return to work."]},
- {k:"watch",band:"10–30 km – WATCH",tag:"PARRON early warning",lead:"Prepare to stop.",items:[
-   "Plan to lower EWP baskets and booms, and finish or make safe hot work and refuelling.",
-   "Know where your crew will shelter: hard-roof vehicles, site offices or substantial buildings.",
-   "Watch and listen: thunder within 30 seconds of lightning means the storm is within 10 km – stop now, whatever the tracker shows."]},
- {k:"clear",band:"More than 30 km – monitor",tag:"ERP §10.2",lead:"Normal work.",items:[
-   "Monitor BoM / MetEye and this tracker, more often when severe weather is forecast.",
-   "On detection of lightning by sight, sound, or BoM/MetEye advisory, the 30/30 rule applies."]}];
+   "Supervisors confirm the restart in PARRON before crews return to work."]}];
 function ltProtoHTML(s){const cur=s==="stop"?"stop":s==="watch"?"watch":s==="clear"?"clear":"";
   return `<h2>Lightning protocol</h2><div class="lt-proto">${LT_PROTO.map(p=>`<details class="lt-pb ${p.k} ${p.k===cur?"cur":""}" ${p.k===cur||(cur===""&&p.k==="stop")?"open":""}><summary><span class="lt-pk"></span><span class="lt-pt"><b>${esc(p.band)}</b><small>${esc(p.lead)} · ${esc(p.tag)}</small></span>${p.k===cur?'<span class="lt-now">NOW</span>':""}${ic("down","s")}</summary><ul>${p.items.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></details>`).join("")}</div>`}
 
