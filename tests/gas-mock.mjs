@@ -73,10 +73,10 @@ export function createRelay({ pin = "2468", fetch: fetchHandler = null } = {}) {
     SpreadsheetApp: { create: (n) => (ss = new Spreadsheet(n)), openById: () => { if (!ss) throw new Error("missing"); return ss; } },
     PropertiesService: { getScriptProperties: () => ({ getProperty: k => props.has(k) ? props.get(k) : null, setProperty: (k, v) => props.set(k, v) }) },
     CacheService: { getScriptCache: () => ({ get: k => cache.has(k) ? cache.get(k) : null, put: (k, v) => cache.set(k, v), remove: k => cache.delete(k) }) },
-    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    LockService: { getScriptLock: () => ({ waitLock() {}, tryLock: () => true, releaseLock() {} }) },
     MailApp: { sendEmail: (a, b, c) => mail.push(typeof a === "object" ? a : { to: a, subject: b, body: c }), getRemainingDailyQuota: () => 100 },
     DriveApp: { getFileById: id => { const f = files[+id - 1]; if (!f) throw new Error("no file"); return { getBlob: () => ({ getBytes: () => f.blob.getBytes(), getContentType: () => f.blob.type || "image/jpeg" }), getSize: () => f.bytes }; }, createFolder: mkFolder, getFolderById: id => { const f = folders.get(id); if (!f) throw new Error("no folder"); return f; } },
-    ScriptApp: { WeekDay: { MONDAY: 'MONDAY' }, getProjectTriggers: () => [], deleteTrigger() {}, newTrigger: (fn) => { const t = { fn, timeBased: () => t, atHour: () => t, everyDays: () => t, onWeekDay: () => t, inTimezone: () => t, create: () => (triggers.push(fn), t) }; return t; } },
+    ScriptApp: { WeekDay: { MONDAY: 'MONDAY' }, getProjectTriggers: () => [], deleteTrigger() {}, newTrigger: (fn) => { const t = { fn, timeBased: () => t, everyMinutes: () => t, atHour: () => t, everyDays: () => t, onWeekDay: () => t, inTimezone: () => t, create: () => (triggers.push(fn), t) }; return t; } },
     Utilities: { formatDate, base64Decode: s => Buffer.from(s, "base64"), base64Encode: b => Buffer.from(b).toString("base64"), newBlob: (bytes, type, name) => ({ getBytes: () => bytes, getName: () => name, type }) },
     ContentService: { MimeType: { JSON: "json" }, createTextOutput: s => ({ content: s, setMimeType() { return this; } }) },
   };

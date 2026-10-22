@@ -38,8 +38,9 @@ async function route(){const seq=++ROUTE_SEQ;const h=location.hash||"#home";cons
   if(v==="forms")return viewForms(id);
   if(v==="submitted")return viewSubmitted();
   if(v==="figures")return viewFigures();
+  if(v==="lightning")return viewLightning(id);
   return viewHome()}
-function setNav(v){const m={home:"home","":"home",inspect:"inspect",inspections:"inspect",report:"inspect",ta:"inspect",myday:"home",radio:"home",insights:"insights",dash:"insights",actions:"actions",reports:"actions",emergency:"emergency",traffic:"traffic",status:"home",history:"home",reference:"home",alerts:"home",planner:"home",forms:"home",submitted:"home",figures:"home"};const k=m[v]||"";
+function setNav(v){const m={home:"home","":"home",inspect:"inspect",inspections:"inspect",report:"inspect",ta:"inspect",myday:"home",radio:"home",insights:"insights",dash:"insights",actions:"actions",reports:"actions",emergency:"emergency",traffic:"traffic",status:"home",history:"home",reference:"home",alerts:"home",planner:"home",forms:"home",submitted:"home",figures:"home",lightning:"home"};const k=m[v]||"";
   document.querySelectorAll("#tabs a").forEach(a=>{const on=a.dataset.t===k;a.classList.toggle("on",on);if(on)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")})}
 function setHeader(title,sub,btn){$("#hTitle").textContent=title;$("#hSub").textContent=sub;const b=$("#hBtn");
   if(btn){b.innerHTML=(btn.icon?ic(btn.icon):"")+(btn.label?`<span>${esc(btn.label)}</span>`:"");b.setAttribute("aria-label",btn.aria||btn.label||"");b.onclick=btn.fn;b.classList.remove("hide")}else b.classList.add("hide")}
@@ -64,7 +65,7 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   const me=ls("inspector")||"";const drafts=await dbAll("drafts");const ob=await dbAll("outbox");if(stale(seq))return;
   const reg=regAll();const st=regStats(reg);const mine=reg.filter(f=>isMine(f)&&f.status==="Open");
   const mon=new Date();mon.setDate(1);mon.setHours(0,0,0,0);const sentMonth=(await dbAll("sent")).filter(s=>s.sentAt>=mon.getTime()).length;if(stale(seq))return;
-  const A=`<div id="alb">${alertBannerHTML()}</div><div id="fdb">${fdBannerHTML()}</div><div id="stp">${statusPanelHTML()}</div><div id="hcd">${historyCardHTML()}</div>`;
+  const A=`<div id="ltb">${ltBannerHTML()}</div><div id="alb">${alertBannerHTML()}</div><div id="fdb">${fdBannerHTML()}</div><div id="stp">${statusPanelHTML()}</div><div id="hcd">${historyCardHTML()}</div>`;
   let h=`<section class="hero"><div class="hi">${esc(greeting())}${me?",":""}</div><h1>${esc(firstName(me)||"Welcome")}</h1>
    <div class="proj">${ic("pin","s")} ${esc(CONFIG.jobNo)} · ${esc(CONFIG.projectShort)} · ${new Date().toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"})}</div>
    ${wxHTML()}
@@ -78,6 +79,7 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   {const n=mdTodayCount();h+=`<div class="tiles">
    <button class="tile wide myday" onclick="go('#myday')"><span class="ti">${ic("cal","l")}</span><span class="tw"><b>My Day ${ic("lock","s")}</b><small>${n?`${n} to do today`:"Plan your day"} · private to you</small></span>${ic("chev")}</button>
    <button class="tile wide" onclick="go('#inspect')"><span class="ti t-info">${ic("clipboard","l")}</span><span class="tw"><b>Inspect &amp; report</b><small>Inspections · observations · hazards${drafts.length?` · ${drafts.length} in progress`:""}</small></span>${ic("chev")}</button>
+   ${ltTileHTML()}
    ${plTileHTML()}
    <button class="tile wide radio ${RADIO.playing?"on":""}" onclick="go('#radio')"><span class="ti t-blue">${ic("radio","l")}</span><span class="tw"><b>PARRON Radio</b><small>${RADIO.playing?"Now playing":"Shuffle play"}</small></span>${ic("chev")}</button></div>`}
   const B=h,R=`<div id="refsec">${referenceHTML()}</div>`;
@@ -87,6 +89,7 @@ async function viewHome(){const seq=ROUTE_SEQ;setHeader("PARRON",CONFIG.projectS
   h+=`<p class="foot">PARRON v${esc(CONFIG.appVersion)} · Proactive Assessment, Reporting, Risk &amp; Observation Network<br>Works offline · Data stays on this phone until you send it</p>`;
   render(h);
   regRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home"&&!stale(seq))viewHome()});
+  ltRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home"&&!stale(seq)){const b=document.getElementById("ltb"),t=document.querySelector(".lt-tile");if(b)b.innerHTML=ltBannerHTML();if(t)t.outerHTML=ltTileHTML()}});
   if(isManager())plRefresh().then(ch=>{if(ch&&(location.hash||"#home")==="#home"&&!stale(seq))viewHome()});
   const fdUpd=()=>{const e=document.getElementById("fdb");if(e&&!stale(seq)){e.innerHTML=fdBannerHTML();fdPopup()}};
   stRefresh().then(ch=>{const e=document.getElementById("stp");if(ch&&e&&!stale(seq))e.innerHTML=statusPanelHTML();if(ch)fdUpd()});
