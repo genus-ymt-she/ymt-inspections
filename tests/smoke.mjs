@@ -197,7 +197,7 @@ await step("send directly through the relay (findings reach the log)", async () 
   if (j.findings.length !== 2) throw new Error("findings logged: " + j.findings.length);
   if (!relay.mail.length || !relay.mail[0].attachments) throw new Error("no email with PDF");
   const rep = relay.mail.find(m => m.attachments); if (!/Risk/.test(rep.htmlBody)) throw new Error("email lacks risk column");
-  { const n = rep.attachments[0].getName(); if (!/^\d{4}-\d{2}-\d{2} - [^/\\]+ - [A-Z][a-z]+ [A-Z][a-z]+\.pdf$/.test(n)) throw new Error("attachment name: " + n); }
+  { const n = rep.attachments[0].getName(); if (!/^\d{8} - [^/\\]+ - [A-Z][a-z]+ [A-Z][a-z]+\.pdf$/.test(n)) throw new Error("attachment name: " + n); }
   if (/Risk: /.test(rep.body)) throw new Error("checklist findings should not show a risk line in the email");
   const asg = relay.mail.find(m => m.to === "zane.patten@genus.com.au"); if (!asg) throw new Error("assignee not emailed");
   if (!relay.mail.find(m => /^URGENT/.test(m.subject || ""))) throw new Error("no urgent alert for the UA finding");
@@ -394,7 +394,7 @@ await step("Trade Assistants: fuel register – one sheet a day (pre-starts, hou
   const before = relay.mail.length; await page.click("#bShare"); await page.waitForFunction(() => location.hash === "#inspect", null, { timeout: 15000 });
   const m = relay.mail.slice(before).find(x => /Fuel, Hours/.test(x.subject || ""));
   if (!m || m.to !== "amie.smith@genus.com.au,darren.frizzell@genus.com.au") throw new Error("register email: " + (m && m.to));
-  { const n = m.attachments[0].getName(); if (!/^\d{4}-\d{2}-\d{2} - Fuel, Hours & Pre-Start Register - Jayden Mullan\.pdf$/.test(n)) throw new Error("register file name: " + n); }
+  { const n = m.attachments[0].getName(); if (!/^\d{8} - Fuel, Hours & Pre-Start Register - Jayden Mullan\.pdf$/.test(n)) throw new Error("register file name: " + n); }
   if (!/Recorded by: Jayden Mullan/.test(m.body) || !/Completed: [0-9:]+ \(end of day\)/.test(m.body) || /Start of day:/.test(m.body)) throw new Error("register body: " + m.body.slice(0, 400));
   if (!/142.5 L/.test(m.subject) || !/PRE-START NOT DONE/.test(m.subject)) throw new Error("subject: " + m.subject);
   const rows = relay.sheet("Fuel").getLastRow() - 1; if (rows !== 9) throw new Error("fuel rows logged: " + rows);

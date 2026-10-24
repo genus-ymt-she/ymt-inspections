@@ -1,10 +1,10 @@
 "use strict";
 function reportId(d){if(d.reportId)return d.reportId;const dt=new Date(d.details.datetime||Date.now());
   d.reportId=`YMT-${pad(d.tab)}-${dt.getFullYear()}${pad(dt.getMonth()+1)}${pad(dt.getDate())}-${pad(dt.getHours())}${pad(dt.getMinutes())}-${initials(d.details.inspector)}`;save(d);return d.reportId}
-/* every emailed / saved document: "YYYY-MM-DD - Title of the document - First Last.pdf" (date the document was completed, the form
-   title, the person who completed it). Dashes in the date because "/" cannot be used in a file name on Windows, Mac or Gmail downloads. */
+/* every emailed / saved document: "YYYYMMDD - Title of the document - First Last.pdf" (date the document was completed, the form
+   title, the person who completed it). */
 const docSafe=v=>String(v||"").replace(/[\\/:*?"<>|\u0000-\u001f]+/g," ").replace(/\s+/g," ").trim();
-function docFileName(date,title,who){return `${String(date||todayISO()).slice(0,10)} - ${docSafe(title)||"Document"} - ${docSafe(who)||"Unknown"}.pdf`}
+function docFileName(date,title,who){return `${String(date||todayISO()).slice(0,10).replace(/-/g,"")} - ${docSafe(title)||"Document"} - ${docSafe(who)||"Unknown"}.pdf`}
 function fileName(d){const t=tabByNum(d.tab);return docFileName(String(d.details.datetime||nowLocal()).slice(0,10),t.short,(d.details.inspector||ls("inspector")||"").trim())}
 function subject(d){const t=tabByNum(d.tab);const s=stats(d);
   if(t.kind==="fuel")return fuelSubject(d);
