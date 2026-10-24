@@ -55,7 +55,7 @@ async function wkPreview(){const s=WK.start;const box=$("#wkPrev");if(!box)retur
   catch(e){console.error(e);box.innerHTML=`<div class="alert red">${ic("wifioff")}<div>Could not load that week – check signal and try again.</div></div>`}}
 function weeklyText(W){const s=W.s;return [`PARRON weekly report – Week ${wkNo(s)} (${wkRange(s)})`,CONFIG.project,"",...wkKpis(W).map(([k,v])=>`${k}: ${v}`)].join("\n")}
 function weeklyCopy(){if(WK.data)copyText(weeklyText(WK.data),"KPI figures")}
-async function weeklyPDF(){const W=WK.data;if(!W)return;try{const blob=buildWeeklyPDF(W);const name=`PARRON-Weekly-HSE-Report-${wkISO(W.s)}.pdf`;const f=new File([blob],name,{type:"application/pdf"});
+async function weeklyPDF(){const W=WK.data;if(!W)return;try{const blob=buildWeeklyPDF(W);const name=docFileName(wkISO(W.s),"Weekly HSE Report",ls("inspector"));const f=new File([blob],name,{type:"application/pdf"});
     if(isMobile()&&navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:`Weekly HSE report – week ${wkNo(W.s)}`});return}catch(e){if(e&&e.name==="AbortError")return}}
     downloadBlob(blob,name);toast("Weekly report saved")}catch(e){console.error(e);toast("Could not build the report")}}
 function buildWeeklyPDF(W){const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:"mm",format:"a4"});const x=wkFacts(W);const s=W.s;

@@ -26,7 +26,7 @@ function safetySummaryText(j){const x=monthlyFacts(j);const D=x.D;const m=monthL
   return s.join(" ")}
 function copySafetySummary(){if(!DASH.j){toast("Insights still loading");return}copyText(safetySummaryText(DASH.j),"2.1 Safety summary")}
 async function monthlyPDF(){const j=DASH.j;if(!j){toast("Insights still loading");return}toast("Building the monthly summary…",2000);
-  try{const blob=buildMonthlyPDF(j);const name=`PARRON-Monthly-HSE-Summary-${j.month}.pdf`;
+  try{const blob=buildMonthlyPDF(j);const name=docFileName(`${j.month}-01`,"Monthly HSE Summary",ls("inspector"));
     const f=new File([blob],name,{type:"application/pdf"});
     if(isMobile()&&navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:`Monthly HSE summary – ${monthLabel(j.month)}`});return}catch(e){if(e&&e.name==="AbortError")return}}
     downloadBlob(blob,name);toast("Monthly summary saved")}catch(e){console.error(e);toast("Could not build the summary")}}
